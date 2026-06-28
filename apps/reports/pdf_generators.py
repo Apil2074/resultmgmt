@@ -351,7 +351,6 @@ class MarksheetPDFGenerator:
             Paragraph('Grade Point (GP)', th_style),
             Paragraph('Grade', th_style),
             Paragraph('Final Grade (FG)', th_style),
-            Paragraph('Remarks', th_style),
         ]
         
         table_data = [table_headers]
@@ -383,7 +382,6 @@ class MarksheetPDFGenerator:
                         Paragraph(val_display, cell_danger_style),
                         Paragraph(val_display, cell_danger_style),
                         Paragraph(val_display, cell_danger_style),
-                        Paragraph(val_display, cell_danger_style),
                     ]
                     row_in = [
                         Paragraph(internal_code, cell_style),
@@ -392,7 +390,6 @@ class MarksheetPDFGenerator:
                         Paragraph(val_display, cell_danger_style),
                         Paragraph(val_display, cell_danger_style),
                         "",
-                        Paragraph(val_display, cell_danger_style),
                     ]
                 else:
                     th_gp = f"{sr.theory_grade_point:.2f}" if sr and sr.theory_grade_point is not None else "0.00"
@@ -440,7 +437,6 @@ class MarksheetPDFGenerator:
                         Paragraph(val_display, cell_danger_style),
                         Paragraph(val_display, cell_danger_style),
                         Paragraph(val_display, cell_danger_style),
-                        Paragraph(val_display, cell_danger_style),
                     ]
                 else:
                     gp = f"{sr.grade_point:.2f}" if sr and sr.grade_point is not None else "0.00"
@@ -462,9 +458,9 @@ class MarksheetPDFGenerator:
         if len(table_data) == 1:
             table_data.append([
                 Paragraph('No marks recorded.', cell_style),
-                '', '', '', '', '', ''
+                '', '', '', '', ''
             ])
-            span_rules.append(('SPAN', (0, row_idx), (6, row_idx)))
+            span_rules.append(('SPAN', (0, row_idx), (5, row_idx)))
             row_idx += 1
             
         if self.result:
@@ -477,13 +473,13 @@ class MarksheetPDFGenerator:
             
             row_gpa = [
                 Paragraph('Grade Point Average (GPA)', footer_label_style),
-                '', '', '', '',
+                '', '', '',
                 Paragraph(gpa_val, cell_fg_style),
                 ''
             ]
             row_rank = [
                 Paragraph('Rank in Class', footer_label_style),
-                '', '', '', '',
+                '', '', '',
                 Paragraph(rank_val, cell_bold_style),
                 ''
             ]
@@ -491,8 +487,8 @@ class MarksheetPDFGenerator:
             table_data.append(row_gpa)
             table_data.append(row_rank)
             
-            span_rules.append(('SPAN', (0, row_idx), (4, row_idx)))
-            span_rules.append(('SPAN', (0, row_idx + 1), (4, row_idx + 1)))
+            span_rules.append(('SPAN', (0, row_idx), (3, row_idx)))
+            span_rules.append(('SPAN', (0, row_idx + 1), (3, row_idx + 1)))
             row_idx += 2
 
         if non_credit_mark_entries:
@@ -502,10 +498,10 @@ class MarksheetPDFGenerator:
             )
             row_header = [
                 Paragraph('Non-Credit Subjects', th_non_credit_style),
-                '', '', '', '', '', ''
+                '', '', '', '', ''
             ]
             table_data.append(row_header)
-            span_rules.append(('SPAN', (0, row_idx), (6, row_idx)))
+            span_rules.append(('SPAN', (0, row_idx), (5, row_idx)))
             row_idx += 1
             
             for me in non_credit_mark_entries:
@@ -530,7 +526,6 @@ class MarksheetPDFGenerator:
                             Paragraph(val_display, cell_danger_style),
                             Paragraph(val_display, cell_danger_style),
                             Paragraph(val_display, cell_danger_style),
-                            Paragraph(val_display, cell_danger_style),
                         ]
                         row_in = [
                             Paragraph(internal_code, cell_style),
@@ -539,7 +534,6 @@ class MarksheetPDFGenerator:
                             Paragraph(val_display, cell_danger_style),
                             Paragraph(val_display, cell_danger_style),
                             "",
-                            Paragraph(val_display, cell_danger_style),
                         ]
                     else:
                         th_gp = f"{sr.theory_grade_point:.2f}" if sr and sr.theory_grade_point is not None else "0.00"
@@ -587,7 +581,6 @@ class MarksheetPDFGenerator:
                             Paragraph(val_display, cell_danger_style),
                             Paragraph(val_display, cell_danger_style),
                             Paragraph(val_display, cell_danger_style),
-                            Paragraph(val_display, cell_danger_style),
                         ]
                     else:
                         gp = f"{sr.grade_point:.2f}" if sr and sr.grade_point is not None else "0.00"
@@ -606,7 +599,7 @@ class MarksheetPDFGenerator:
                     table_data.append(row)
                     row_idx += 1
             
-        col_widths = [3.0*cm, 5.5*cm, 2.2*cm, 2.2*cm, 2.0*cm, 2.4*cm, 2.1*cm]
+        col_widths = [3.0*cm, 5.5*cm, 2.2*cm, 2.2*cm, 2.0*cm, 2.4*cm]
         marks_table = Table(table_data, colWidths=col_widths)
         
         table_style_commands = [
