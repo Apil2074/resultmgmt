@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Subject Analysis: {{ subject.name }}{% endblock %}
+{% block page_title %}📊 Subject Performance Analysis{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="{% url 'class_detail' subject.class_obj.slug %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Class Details
+  </a>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom py-3">
+    <h5 class="card-title mb-0 fw-semibold text-slate-800">
+      <i class="bi bi-book-half text-primary me-2"></i>{{ subject.name }} Performance Hub
+    </h5>
+    <div class="text-muted small mt-1">
+      Exam: {{ exam.name }} &bull; Class: {{ subject.class_obj.full_name }} &bull; Code: {{ subject.code }}
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 80px;">Roll No</th>
+          <th class="text-start">Student Name</th>
+          <th>Theory Obtained</th>
+          <th>Internal Obtained</th>
+          <th>Grade Point</th>
+          <th>Grade</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr>
+            <td><strong>{{ entry.student.roll_number }}</strong></td>
+            <td class="text-start fw-semibold text-slate-800">
+              {{ entry.student.name }}
+            </td>
+            
+            {% if entry.special_value %}
+              <td colspan="2" class="text-danger fw-semibold">{{ entry.get_special_value_display }}</td>
+              <td class="font-monospace fw-bold text-danger">0.00</td>
+              <td><span class="badge bg-danger-subtle text-danger font-monospace">{{ entry.special_value }}</span></td>
+              <td><span class="badge bg-danger-subtle text-danger">Fail</span></td>
+            {% else %}
+              <td class="font-monospace text-slate-600">
+                {% if entry.subject.marking_structure.has_theory %}
+                  {{ entry.theory_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.marking_structure.theory_full_marks }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="font-monospace text-slate-600">
+                {% if entry.subject.marking_structure.has_internal %}
+                  {{ entry.internal_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.marking_structure.internal_full_marks }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="font-monospace fw-bold">{{ entry.subject_result.grade_point|default:"0.00" }}</td>
+              <td>
+                <span class="badge bg-light text-dark border font-monospace">{{ entry.subject_result.grade|default:"NG" }}</span>
+              </td>
+              <td>
+                {% if entry.subject_result.is_pass %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">Pass</span>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1">Fail</span>
+                {% endif %}
+              </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              No mark entries found for this subject in the database.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

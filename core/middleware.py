@@ -1,0 +1,63 @@
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.urls import resolve, Resolver404
+
+class SchoolRequiredMiddleware:
+    """
+    Enforces that authenticated users must have a school assigned to their profile
+    before they can access school-scoped resources (e.g. classes, sessions, exams, marks, reports).
+    If they do not have a school assigned (like a floating Super Admin), they are redirected
+    to the dashboard with a warning message.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            try:
+                resolver_match = resolve(request.path_info)
+                url_name = resolver_match.url_name
+            except Resolver404:
+                url_name = None
+
+            # 1. Enforce subscription validity check for non-superadmin accounts
+            if not request.user.is_super_admin and request.user.school:
+                if not request.user.school.has_active_subscription():
+                    exempt_sub_urls = ['logout', 'subscription_expired']
+                    if url_name not in exempt_sub_urls:
+                        return redirect('subscription_expired')
+
+            # Skip checking for public/auth/dashboard paths and django admin / static files / REST APIs
+            exempt_url_names = [
+                'login', 'logout', 'change_password', 'profile', 'dashboard',
+                'api_login', 'api_logout', 'api_change_password', 'api_me',
+                'super_schools', 'create_school_and_admin', 'subscription_expired', 'edit_school'
+            ]
+            exempt_prefixes = ['/admin/', '/static/', '/media/', '/api/']
+
+            is_exempt = False
+            if url_name in exempt_url_names:
+                is_exempt = True
+            else:
+                for prefix in exempt_prefixes:
+                    if request.path_info.startswith(prefix):
+                        is_exempt = True
+                        break
+
+            # 2. Enforce Teacher Access Control
+            if request.user.is_authenticated and getattr(request.user, 'is_teacher', False):
+                allowed_teacher_urls = {
+                    'teacher_dashboard', 'login', 'logout', 'change_password', 'profile',
+                    'exam_list', 'mark_entry', 'save_mark', 'save_full_marks',
+                    'bulk_mark_import', 'mark_entry_template', 'subject_analysis'
+                }
+                
+                if url_name not in allowed_teacher_urls and not request.path_info.startswith('/static/') and not request.path_info.startswith('/media/') and not request.path_info.startswith('/api/'):
+                    messages.error(request, 'Access denied. Teachers cannot access this section.')
+                    return redirect('teacher_dashboard')
+
+            if not is_exempt and not getattr(request.user, 'school', None):
+                messages.error(request, 'No school is assigned to your account. You must have an assigned school to manage this section.')
+                return redirect('dashboard')
+
+        return self.get_response(request)

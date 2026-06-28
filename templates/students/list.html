@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block title %}Students{% endblock %}
+{% block page_title %}Students{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">👥 Students</h1>
+    <div class="page-subtitle">{{ students|length }} students found</div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'student_import' %}" class="btn btn-secondary">
+      <i class="bi bi-upload"></i> Import Excel
+    </a>
+    <a href="{% url 'student_export' %}{% if class_id %}?class_id={{ class_id }}{% endif %}" class="btn btn-secondary">
+      <i class="bi bi-download"></i> Export Excel
+    </a>
+    <a href="{% url 'student_create' %}" class="btn btn-primary">
+      <i class="bi bi-person-plus-fill"></i> Add Student
+    </a>
+  </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card mb-3">
+  <form method="GET" class="d-flex gap-3 flex-wrap align-items-end">
+    <div class="form-group mb-0" style="flex:1; min-width:200px;">
+      <label class="form-label">Search</label>
+      <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Name or roll number...">
+    </div>
+    <div class="form-group mb-0" style="min-width:200px;">
+      <label class="form-label">Filter by Class</label>
+      <select name="class_id" class="form-control">
+        <option value="">All Classes</option>
+        {% for cls in classes %}
+        <option value="{{ cls.id }}" {% if class_id == cls.id|stringformat:"i" %}selected{% endif %}>
+          {{ cls.full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-secondary">
+      <i class="bi bi-search"></i> Search
+    </button>
+    <a href="{% url 'student_list' %}" class="btn btn-secondary">Clear</a>
+  </form>
+</div>
+
+<!-- Students Table -->
+<div class="table-container">
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>S.N.</th>
+          <th>Photo</th>
+          <th>Student Name</th>
+          <th>Class</th>
+          <th>Reg. Number</th>
+          <th>Gender</th>
+          <th>Contact</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr>
+          <td><strong>{{ forloop.counter }}</strong></td>
+          <td>
+            <img src="{{ student.photo_url }}" width="32" height="32"
+              style="border-radius:50%; object-fit:cover; border:2px solid var(--color-border);"
+              onerror="this.style.display='none'">
+          </td>
+          <td>
+            <a href="{% url 'student_detail' student.pk %}" style="color:var(--color-text); font-weight:600; text-decoration:none;">
+              {{ student.name }}
+            </a>
+            {% if student.dob_bs %}<div style="font-size:0.7rem; color:var(--color-text-muted);">DOB: {{ student.dob_bs }}</div>{% endif %}
+          </td>
+          <td><span class="badge badge-blue">{{ student.class_obj.full_name }}</span></td>
+          <td style="color:var(--color-text-muted);">
+            {{ student.registration_number|default:'—' }}
+            {% if student.symbol_number %}<div style="font-size:0.7rem; color:var(--color-text-muted);">Symbol: {{ student.symbol_number }}</div>{% endif %}
+          </td>
+          <td>{{ student.get_gender_display }}</td>
+          <td style="color:var(--color-text-muted);">{{ student.contact_number|default:'—' }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'student_detail' student.pk %}" class="btn btn-icon btn-secondary" data-tooltip="View">
+                <i class="bi bi-eye-fill"></i>
+              </a>
+              <a href="{% url 'student_edit' student.pk %}" class="btn btn-icon btn-secondary" data-tooltip="Edit">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+              <a href="{% url 'student_delete' student.pk %}" class="btn btn-icon btn-danger" data-tooltip="Delete">
+                <i class="bi bi-trash-fill"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center" style="padding:40px;">
+            <div class="empty-state">
+              <div class="empty-icon">👤</div>
+              <p>No students found</p>
+              <a href="{% url 'student_create' %}" class="btn btn-primary mt-2">Add First Student</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

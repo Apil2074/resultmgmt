@@ -1,0 +1,626 @@
+{% extends 'base.html' %}
+{% block title %}Marksheet: {{ student.name }}{% endblock %}
+{% block page_title %}📄 Student Marksheet{% endblock %}
+
+{% block extra_css %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+.marksheet-outer-border {
+  border: 4px double #1e3a8a;
+  padding: 32px;
+  background: #ffffff;
+  position: relative;
+}
+.marksheet-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 350px;
+  height: 350px;
+  opacity: 0.04;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  z-index: 0;
+}
+.marksheet-card {
+  max-width: 980px;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.school-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 2.2rem;
+  color: #1e3a8a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.school-address {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.school-estd {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.marksheet-header-banner {
+  background: linear-gradient(135deg, #1e3a8a, #0f172a);
+  color: #ffffff;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  font-size: 1.3rem;
+  margin-top: 16px;
+  margin-bottom: 24px;
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+  position: relative;
+}
+.info-label {
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.3px;
+}
+.info-value {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.96rem;
+  border-bottom: 1.5px solid #475569;
+  display: inline-block;
+  min-width: 80px;
+  padding-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+.marksheet-table {
+  border: 2px solid #0f172a !important;
+  z-index: 1;
+  position: relative;
+}
+.marksheet-table th {
+  background-color: #f8fafc !important;
+  color: #1e3a8a !important;
+  font-weight: 700 !important;
+  border: 1.5px solid #0f172a !important;
+  text-transform: uppercase;
+  font-size: 0.88rem;
+  vertical-align: middle;
+  padding: 10px 8px;
+  letter-spacing: 0.3px;
+}
+.marksheet-table td {
+  border: 1.5px solid #0f172a !important;
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  vertical-align: middle;
+  color: #0f172a;
+}
+.font-monospace {
+  font-family: 'Inter', monospace;
+  font-weight: 600;
+}
+.legend-table {
+  border: 1.5px solid #0f172a !important;
+}
+.legend-table th, .legend-table td {
+  border: 1px solid #0f172a !important;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+.legend-table th {
+  background-color: #f8fafc !important;
+  color: #1e3a8a !important;
+  font-weight: 700;
+}
+.note-box {
+  background-color: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #334155;
+  z-index: 1;
+  position: relative;
+}
+.note-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+.signature-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.88rem;
+  letter-spacing: 0.5px;
+}
+.signature-line-box {
+  width: 180px;
+  margin: 0 auto;
+  border-top: 1.5px dashed #0f172a;
+  padding-top: 8px;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .btn, .max-width-950, header, footer, nav {
+    display: none !important;
+  }
+  .marksheet-card {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .marksheet-outer-border {
+    border: 4px double #000000 !important;
+    padding: 20px !important;
+  }
+  .marksheet-header-banner {
+    background: #000000 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .marksheet-table th {
+    background-color: #f8fafc !important;
+    color: #000000 !important;
+    border: 1.5px solid #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .marksheet-table td, .legend-table td, .legend-table th {
+    border: 1px solid #000000 !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Marksheet Navigation Header -->
+<div class="d-flex justify-content-between align-items-center mb-4 max-width-950 mx-auto" style="max-width: 950px;">
+  <div class="d-flex gap-2">
+    {% if prev_student_id %}
+      <a href="{% url 'marksheet' exam.id prev_student_id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-chevron-left me-1"></i>Previous Student
+      </a>
+    {% else %}
+      <button class="btn btn-outline-secondary" disabled>
+        <i class="bi bi-chevron-left me-1"></i>Previous Student
+      </button>
+    {% endif %}
+    
+    {% if next_student_id %}
+      <a href="{% url 'marksheet' exam.id next_student_id %}" class="btn btn-outline-secondary">
+        Next Student<i class="bi bi-chevron-right ms-1"></i>
+      </a>
+    {% else %}
+      <button class="btn btn-outline-secondary" disabled>
+        Next Student<i class="bi bi-chevron-right ms-1"></i>
+      </button>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{% url 'class_detail' student.class_obj.slug %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Back to Class
+    </a>
+    <a href="{% url 'class_marksheets_pdf' exam.id student.class_obj.id %}" class="btn btn-success" target="_blank">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download All (Merged)
+    </a>
+    <a href="{% url 'marksheet_pdf' exam.id student.id %}" class="btn btn-primary" target="_blank">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
+    </a>
+  </div>
+</div>
+
+<!-- Marksheet Card -->
+<div class="card marksheet-card shadow-lg p-4 mb-5">
+  <div class="marksheet-outer-border">
+    {% if school.logo %}
+      <div class="marksheet-watermark" style="background-image: url('{{ school.logo.url }}');"></div>
+    {% endif %}
+    <!-- School Heading -->
+    <div class="text-center position-relative mb-2">
+      <div class="d-flex align-items-center justify-content-center gap-3">
+        {% if school.logo %}
+          <img src="{{ school.logo.url }}" alt="{{ school.name }}" style="height: 75px; object-fit: contain;">
+        {% endif %}
+        <div class="text-center">
+          <h2 class="school-name">{{ school.name }}</h2>
+          <p class="school-address">{{ school.address }}</p>
+          {% if school.establishment_year %}
+            <p class="school-estd">Estd {{ school.establishment_year }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="marksheet-header-banner">
+        GRADE-SHEET
+      </div>
+    </div>
+
+    <!-- Student Info Grid -->
+    <div class="row g-3 mb-4 px-2" style="line-height: 1.8; z-index: 1; position: relative;">
+      <div class="col-md-6">
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">THE GRADE(S) SECURED BY :</span>
+          <span class="info-value text-uppercase px-2 flex-grow-1" style="min-width: 150px;">{{ student.name }}</span>
+        </div>
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">REGISTRATION NO :</span>
+          <span class="info-value px-2 flex-grow-1" style="min-width: 120px;">{{ student.registration_number|default:"—" }}</span>
+        </div>
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">CLASS :</span>
+          <span class="info-value px-2" style="width: 60px; min-width: 60px; flex-grow: 0;">{{ student.class_obj.name }}</span>
+          <span class="info-label text-uppercase text-nowrap ms-3">IN THE :</span>
+          <span class="info-value px-2 flex-grow-1 text-uppercase" style="min-width: 120px;">{{ exam.name }}</span>
+        </div>
+      </div>
+      <div class="col-md-6 ps-md-4">
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">SYMBOL NO :</span>
+          <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ student.symbol_number|default:"—" }}</span>
+        </div>
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">DATE OF BIRTH :</span>
+          <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ student.dob_full|default:"—" }}</span>
+        </div>
+        <div class="d-flex align-items-baseline mb-2">
+          <span class="info-label text-uppercase text-nowrap">EXAMINATION HELD IN :</span>
+          <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ exam.session.name }}</span>
+          <span class="info-label fw-bold small ms-1">B.S.</span>
+        </div>
+      </div>
+      <div class="col-12 mt-1">
+        <span class="info-label text-uppercase text-muted" style="font-size: 0.78rem;">ARE GIVEN BELOW.</span>
+      </div>
+    </div>
+
+    <!-- Grading Table -->
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered align-middle marksheet-table mb-0">
+        <thead class="text-center">
+          <tr>
+            <th style="width: 110px;">Subject Code</th>
+            <th class="text-start">Subjects</th>
+            <th style="width: 130px;">Credit Hour (CH)</th>
+            <th style="width: 130px;">Grade Point (GP)</th>
+            <th style="width: 100px;">Grade</th>
+            <th style="width: 130px;">Final Grade (FG)</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for me in credit_mark_entries %}
+            {% if me.subject.has_practical %}
+              <!-- Row 1: Theory Component -->
+              <tr>
+                <td class="text-center font-monospace">{{ me.subject.code }}</td>
+                <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} Th</td>
+                <td class="text-center font-monospace">{{ me.subject.theory_credit_hour|floatformat:2 }}</td>
+                
+                {% if me.special_value %}
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td rowspan="2" class="text-center fw-bold align-middle bg-light text-danger">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                {% else %}
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.theory_grade_point|default:"0.00" }}
+                  </td>
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.theory_grade|default:"NG" }}
+                  </td>
+                  <td rowspan="2" class="text-center fw-bold align-middle bg-light text-primary font-monospace" style="font-size: 1.05rem;">
+                    {{ me.subject_result.grade|default:"NG" }}
+                  </td>
+                  <td class="text-center fw-medium text-slate-700">
+                    {{ me.subject_result.theory_remark|default:"—" }}
+                  </td>
+                {% endif %}
+              </tr>
+              <!-- Row 2: Practical/Internal Component -->
+              <tr>
+                <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code|add:"P" }}</td>
+                <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} In</td>
+                <td class="text-center font-monospace">{{ me.subject.practical_credit_hour|floatformat:2 }}</td>
+                
+                {% if me.special_value %}
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                {% else %}
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.internal_grade_point|default:"0.00" }}
+                  </td>
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.internal_grade|default:"NG" }}
+                  </td>
+                  <td class="text-center fw-medium text-slate-700">
+                    {{ me.subject_result.internal_remark|default:"—" }}
+                  </td>
+                {% endif %}
+              </tr>
+            {% else %}
+              <!-- Single Row Subject (No Practical) -->
+              <tr>
+                <td class="text-center font-monospace">{{ me.subject.code }}</td>
+                <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }}</td>
+                <td class="text-center font-monospace">{{ me.subject.theory_credit_hour|floatformat:2 }}</td>
+                
+                {% if me.special_value %}
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                  <td class="text-center fw-bold align-middle bg-light text-danger">{{ me.get_special_value_display }}</td>
+                  <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                {% else %}
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.grade_point|default:"0.00" }}
+                  </td>
+                  <td class="text-center font-monospace">
+                    {{ me.subject_result.grade|default:"NG" }}
+                  </td>
+                  <td class="text-center fw-bold align-middle bg-light text-primary font-monospace" style="font-size: 1.05rem;">
+                    {{ me.subject_result.grade|default:"NG" }}
+                  </td>
+                  <td class="text-center fw-medium text-slate-700">
+                    {{ me.subject_result.overall_remark|default:"—" }}
+                  </td>
+                {% endif %}
+              </tr>
+            {% endif %}
+          {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">No marks recorded.</td>
+            </tr>
+          {% endfor %}
+
+          <!-- GPA and Class Rank Footer Rows inside table -->
+          {% if result %}
+            <tr>
+              <td colspan="5" class="text-end fw-bold text-uppercase py-2" style="font-size:0.85rem; color: #1e3a8a;">Grade Point Average (GPA)</td>
+              <td class="text-center fw-bold bg-light text-primary font-monospace py-2" style="font-size:1.1rem;">{{ result.overall_gpa|default:"0.00" }}</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="5" class="text-end fw-bold text-uppercase py-2" style="font-size:0.85rem; color: #1e3a8a;">Rank in Class</td>
+              <td class="text-center fw-bold bg-light text-slate-800 font-monospace py-2" style="font-size:1.05rem;">{{ result.class_rank|default:"—" }}</td>
+              <td></td>
+            </tr>
+          {% endif %}
+
+          <!-- Non-Credit Subjects Footer Rows inside table -->
+          {% if non_credit_mark_entries %}
+            <tr>
+              <td colspan="7" class="fw-bold text-uppercase bg-light py-2 text-start" style="font-size:0.85rem; color: #1e3a8a; padding-left: 12px;">Non-Credit Subjects</td>
+            </tr>
+            {% for me in non_credit_mark_entries %}
+              {% if me.subject.has_practical %}
+                <!-- Row 1: Theory Component -->
+                <tr>
+                  <td class="text-center font-monospace">{{ me.subject.code }}</td>
+                  <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} Th</td>
+                  <td class="text-center font-monospace">{{ me.subject.theory_credit_hour|floatformat:2 }}</td>
+                  
+                  {% if me.special_value %}
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td rowspan="2" class="text-center fw-bold align-middle bg-light text-danger">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                  {% else %}
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.theory_grade_point|default:"0.00" }}
+                    </td>
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.theory_grade|default:"NG" }}
+                    </td>
+                    <td rowspan="2" class="text-center fw-bold align-middle bg-light text-primary font-monospace" style="font-size: 1.05rem;">
+                      {{ me.subject_result.grade|default:"NG" }}
+                    </td>
+                    <td class="text-center fw-medium text-slate-700">
+                      {{ me.subject_result.theory_remark|default:"—" }}
+                    </td>
+                  {% endif %}
+                </tr>
+                <!-- Row 2: Practical/Internal Component -->
+                <tr>
+                  <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code|add:"P" }}</td>
+                  <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} In</td>
+                  <td class="text-center font-monospace">{{ me.subject.practical_credit_hour|floatformat:2 }}</td>
+                  
+                  {% if me.special_value %}
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                  {% else %}
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.internal_grade_point|default:"0.00" }}
+                    </td>
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.internal_grade|default:"NG" }}
+                    </td>
+                    <td class="text-center fw-medium text-slate-700">
+                      {{ me.subject_result.internal_remark|default:"—" }}
+                    </td>
+                  {% endif %}
+                </tr>
+              {% else %}
+                <!-- Single Row Subject (No Practical) -->
+                <tr>
+                  <td class="text-center font-monospace">{{ me.subject.code }}</td>
+                  <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }}</td>
+                  <td class="text-center font-monospace">{{ me.subject.theory_credit_hour|floatformat:2 }}</td>
+                  
+                  {% if me.special_value %}
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-bold">{{ me.get_special_value_display }}</td>
+                    <td class="text-center fw-bold align-middle bg-light text-danger">{{ me.get_special_value_display }}</td>
+                    <td class="text-center text-danger fw-semibold">{{ me.get_special_value_display }}</td>
+                  {% else %}
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.grade_point|default:"0.00" }}
+                    </td>
+                    <td class="text-center font-monospace">
+                      {{ me.subject_result.grade|default:"NG" }}
+                    </td>
+                    <td class="text-center fw-bold align-middle bg-light text-primary font-monospace" style="font-size: 1.05rem;">
+                      {{ me.subject_result.grade|default:"NG" }}
+                    </td>
+                    <td class="text-center fw-medium text-slate-700">
+                      {{ me.subject_result.overall_remark|default:"—" }}
+                    </td>
+                  {% endif %}
+                </tr>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Signatures & Bottom Meta Block -->
+    <div class="row mt-4 pt-3 align-items-end g-3">
+      <!-- Left side: Attendance and Notes -->
+      <div class="col-md-7 text-start">
+        <div class="row g-2 mb-3">
+          <div class="col-12 text-start" style="font-size: 0.82rem; line-height: 1.6;">
+            <div>
+              <span class="fw-bold text-slate-800">ATTENDANCE :</span>
+              <span class="fw-bold px-2 border-bottom text-center d-inline-block" style="min-width: 60px;">{{ present_days }}</span>
+              <span class="fw-bold text-slate-800">OUT OF</span>
+              <span class="fw-bold px-2 border-bottom text-center d-inline-block" style="min-width: 60px;">{{ total_days }}</span>
+              <span class="fw-bold text-slate-800">DAYS</span>
+            </div>
+            <div class="mt-2">
+              <span class="fw-bold text-slate-800">DATE OF ISSUE :</span>
+              <span class="fw-bold px-2 border-bottom d-inline-block" style="min-width: 120px;">{% now "Y-m-d" %}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="note-box text-start">
+          <h6 class="note-title mb-1">NOTE :</h6>
+          <h7 class="mb-1">&bull; One credit hour equals 32 working hours.</h7>
+          <h7 class="mb-1">&bull; Internal (In): This covers the participation, practical/project works, community works, internship, presentations and terminal examinations.</h7>
+          <h7 class="mb-0">&bull; Theory (Th): This covers written external examination.</h7>
+        </div>
+      </div>
+
+      <!-- Right side: Grading Legend Scale -->
+      <div class="col-md-5">
+        <table class="table table-bordered text-center legend-table mb-0" style="background:#ffffff;">
+          <thead>
+            <tr>
+              <th>Grade Point</th>
+              <th>Grade</th>
+              <th>Interval</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="font-monospace">4.0</td>
+              <td class="fw-bold">A+</td>
+              <td>90 To 100</td>
+              <td>Outstanding</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">3.6</td>
+              <td class="fw-bold">A</td>
+              <td>80 To Below 90</td>
+              <td>Excellent</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">3.2</td>
+              <td class="fw-bold">B+</td>
+              <td>70 To Below 80</td>
+              <td>Very Good</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">2.8</td>
+              <td class="fw-bold">B</td>
+              <td>60 To Below 70</td>
+              <td>Good</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">2.4</td>
+              <td class="fw-bold">C+</td>
+              <td>50 To Below 60</td>
+              <td>Satisfactory</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">2.0</td>
+              <td class="fw-bold">C</td>
+              <td>40 To Below 50</td>
+              <td>Acceptable</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">1.6</td>
+              <td class="fw-bold">D</td>
+              <td>35 To Below 40</td>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <td class="font-monospace">0.0</td>
+              <td class="fw-bold">NG</td>
+              <td>0 To Below 35</td>
+              <td>Not Graded</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Signature lines -->
+    <div class="row mt-5 pt-4 text-center g-3">
+      <div class="col-4">
+        <div class="signature-line-box">
+          <p class="signature-title mb-0">CLASS TEACHER</p>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="signature-line-box">
+          <p class="signature-title mb-0">CHECKED BY</p>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="signature-line-box">
+          <p class="signature-title mb-0">HEAD TEACHER</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

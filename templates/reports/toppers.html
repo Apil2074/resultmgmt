@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Toppers Report: {{ exam.name }}{% endblock %}
+{% block page_title %}🏆 Toppers: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div class="mb-4">
+  <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Reports Hub
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0 fw-semibold text-slate-800">
+      <i class="bi bi-trophy-fill text-warning me-2"></i>Top 20 Performers
+    </h5>
+    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1.5 rounded-pill">
+      {{ toppers.count }} Students
+    </span>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 80px;">Rank</th>
+          <th class="text-start">Student Name</th>
+          <th>Roll No</th>
+          <th>Class Name</th>
+          <th>GPA</th>
+          <th>Grade</th>
+          <th>Percentage</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for topper in toppers %}
+          <tr>
+            <td>
+              {% if forloop.counter == 1 %}
+                <span class="fs-5 text-warning"><i class="bi bi-trophy-fill"></i> 1</span>
+              {% elif forloop.counter == 2 %}
+                <span class="fs-6 text-secondary"><i class="bi bi-trophy-fill"></i> 2</span>
+              {% elif forloop.counter == 3 %}
+                <span class="text-amber-700" style="color: #b45309;"><i class="bi bi-trophy-fill"></i> 3</span>
+              {% else %}
+                <span class="fw-bold text-slate-600">{{ forloop.counter }}</span>
+              {% endif %}
+            </td>
+            <td class="text-start fw-semibold text-slate-800">
+              {{ topper.student.name }}
+            </td>
+            <td>{{ topper.student.roll_number }}</td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
+                {{ topper.student.class_obj.full_name }}
+              </span>
+            </td>
+            <td class="fw-bold text-primary font-monospace">{{ topper.overall_gpa|default:"0.00" }}</td>
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">{{ topper.final_grade|default:"NG" }}</span>
+            </td>
+            <td class="font-monospace text-slate-600">{{ topper.percentage|default:"0.0" }}%</td>
+            <td class="text-end">
+              <a href="{% url 'marksheet' exam.id topper.student.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-text-fill"></i> View Marksheet
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-emoji-frown d-block fs-3 mb-2"></i>
+              No toppers found. Make sure results are processed and students have passed.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

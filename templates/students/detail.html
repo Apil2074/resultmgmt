@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% block title %}Student Details: {{ student.name }}{% endblock %}
+{% block page_title %}👤 Student Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Profile details card -->
+  <div class="col-lg-4 mb-4">
+    <div class="card shadow-sm text-center">
+      <div class="card-body py-4">
+        <div class="mb-3 position-relative d-inline-block">
+          {% if student.photo %}
+            <img src="{{ student.photo.url }}" alt="{{ student.name }}" class="rounded-circle border p-1" style="width: 130px; height: 130px; object-fit: cover;">
+          {% else %}
+            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center mx-auto" style="width: 130px; height: 130px; font-size: 3rem; font-weight: bold;">
+              {{ student.name|first|upper }}
+            </div>
+          {% endif %}
+        </div>
+        <h4 class="fw-bold text-slate-800 mb-1">{{ student.name }}</h4>
+        <div class="text-slate-600 mb-2">Class: {{ student.class_obj.full_name }}</div>
+        
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill mb-3">
+          Roll No: {{ student.roll_number }}
+        </span>
+
+        <div class="border-top pt-3 text-start mt-3">
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Reg. No:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.registration_number|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Symbol No:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.symbol_number|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Gender:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.get_gender_display }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">D.O.B:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.dob_full|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Contact:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.contact_number|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Parent:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.parent_name|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Address:</div>
+            <div class="col-7 text-slate-700 small">{{ student.address|default:"-" }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer bg-light-subtle d-flex justify-content-center gap-2 border-top py-3">
+        <a href="{% url 'student_edit' student.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-pencil-fill me-1"></i>Edit Profile
+        </a>
+        <a href="{% url 'student_delete' student.pk %}" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-trash-fill"></i> Delete
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance History -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-graph-up text-primary me-2"></i>Academic History
+        </h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Exam Name</th>
+              <th>Overall GPA</th>
+              <th>Grade</th>
+              <th>Percentage</th>
+              <th>Rank</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in results %}
+              <tr>
+                <td class="fw-semibold text-slate-800">{{ r.exam.name }}</td>
+                <td>
+                  <span class="fw-bold text-primary">{{ r.overall_gpa|default:"-" }}</span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark border px-2.5 py-1">{{ r.final_grade|default:"NG" }}</span>
+                </td>
+                <td class="text-slate-600">{{ r.percentage|default:"-" }}%</td>
+                <td>
+                  {% if r.class_rank %}
+                    <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">
+                      Rank {{ r.class_rank }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted small">-</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if r.is_pass %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">Pass</span>
+                  {% else %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1">Fail</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <div class="d-inline-flex gap-2">
+                    <a href="{% url 'marksheet' r.exam.id student.id %}" class="btn btn-sm btn-outline-primary" title="View Marksheet">
+                      <i class="bi bi-file-earmark-text-fill me-1"></i>Marksheet
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center py-5 text-muted">
+                  <i class="bi bi-journal-x d-block fs-3 mb-2"></i>
+                  No results or exam records found for this student.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

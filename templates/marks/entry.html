@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% block title %}Mark Entry — {{ exam.name }}{% endblock %}
+{% block page_title %}Mark Entry{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Custom scrollbar for horizontal scrolling */
+.marks-grid {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+.marks-grid::-webkit-scrollbar {
+  height: 10px;
+}
+.marks-grid::-webkit-scrollbar-track {
+  background: var(--color-bg, #f8fafc);
+  border-radius: 6px;
+}
+.marks-grid::-webkit-scrollbar-thumb {
+  background: var(--color-gold, #d97706);
+  border-radius: 6px;
+  border: 2px solid var(--color-bg, #f8fafc);
+}
+.marks-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary, #b45309);
+}
+
+#marksTable {
+  min-width: max-content;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.sticky-roll {
+  position: sticky;
+  left: 0;
+  background: var(--color-bg-card, #ffffff) !important;
+  z-index: 6;
+  width: 60px;
+  min-width: 60px;
+  border-right: 1px solid var(--color-border, #e2e8f0) !important;
+}
+
+.sticky-name {
+  position: sticky;
+  left: 60px;
+  background: var(--color-bg-card, #ffffff) !important;
+  z-index: 6;
+  min-width: 160px;
+  border-right: 2px solid var(--color-border, #cbd5e1) !important;
+}
+
+/* Ensure sticky elements stay on top of other cells when scrolling */
+th.sticky-roll, th.sticky-name {
+  z-index: 7 !important;
+}
+
+.restricted-input {
+  background-color: var(--color-bg-card, #f1f5f9) !important;
+  color: var(--color-text-muted, #94a3b8) !important;
+  border-color: transparent !important;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* Make inputs look clean inside the table */
+.full-marks-input:focus {
+  outline: none;
+  border-color: var(--color-gold, #d97706) !important;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+
+/* Hide number inputs spinner/arrows */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header flex-column align-items-start gap-3">
+  <div>
+    <h1 class="page-title">📝 Mark Entry</h1>
+    <div class="page-subtitle">
+      <strong>{{ exam.name }}</strong> &nbsp;|&nbsp; {{ class_obj.full_name }}
+      &nbsp;|&nbsp; {{ students.count }} students
+    </div>
+  </div>
+  <div class="d-flex justify-content-start align-items-center gap-2 flex-wrap w-100">
+    <a href="{% url 'mark_entry_template' exam.id class_obj.id %}" class="btn btn-secondary">
+      <i class="bi bi-download"></i> Download Template
+    </a>
+    <a href="{% url 'bulk_mark_import' exam.id class_obj.id %}" class="btn btn-info">
+      <i class="bi bi-upload"></i> Bulk Import
+    </a>
+    {% if not exam_class.is_locked %}
+    <button class="btn btn-primary" id="saveAllBtn" onclick="saveAllPending()">
+      <i class="bi bi-save-fill"></i> Save Marks
+    </button>
+    {% endif %}
+    {% if request.user.can_manage_school %}
+      <form method="POST" action="{% url 'toggle_class_lock' exam.id class_obj.id %}" style="display:inline;" onsubmit="return confirm('Are you sure? Locking will process results and publish them for this class.')">
+        {% csrf_token %}
+        {% if exam_class.is_locked %}
+          <input type="hidden" name="action" value="unlock">
+          <button type="submit" class="btn btn-warning">
+            <i class="bi bi-unlock-fill"></i> Unlock Marks
+          </button>
+        {% else %}
+          <input type="hidden" name="action" value="lock">
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-lock-fill"></i> Lock & Process Results
+          </button>
+        {% endif %}
+      </form>
+    {% endif %}
+    <span id="saveStatus" class="auto-save-indicator ms-2" style="display:none;">
+      <i class="bi bi-check-circle-fill" style="color:var(--color-emerald);"></i>
+      <span style="color:var(--color-emerald);font-size:0.78rem;">Saved</span>
+    </span>
+  </div>
+</div>
+
+{% if exam_class.is_locked %}
+<div class="alert alert-warning">
+  <i class="bi bi-lock-fill"></i>
+  Results for this class are <strong>locked and processed</strong>. Only an Admin can unlock for editing.
+</div>
+{% endif %}
+
+<!-- Workflow status -->
+<div class="workflow-steps mb-4">
+  <div class="workflow-step {% if exam.status in 'DRAFT,VERIFICATION,APPROVED,PUBLISHED' %}done{% endif %}">
+    <div class="workflow-dot done">1</div>
+    <div class="workflow-label">Draft</div>
+  </div>
+  <div class="workflow-step {% if exam.status in 'VERIFICATION,APPROVED,PUBLISHED' %}done{% endif %}">
+    <div class="workflow-dot {% if exam.status == 'VERIFICATION' %}active{% elif exam.status in 'APPROVED,PUBLISHED' %}done{% endif %}">2</div>
+    <div class="workflow-label">Verification</div>
+  </div>
+  <div class="workflow-step {% if exam.status in 'APPROVED,PUBLISHED' %}done{% endif %}">
+    <div class="workflow-dot {% if exam.status == 'APPROVED' %}active{% elif exam.status == 'PUBLISHED' %}done{% endif %}">3</div>
+    <div class="workflow-label">Approved</div>
+  </div>
+  <div class="workflow-step {% if exam.status == 'PUBLISHED' %}done{% endif %}">
+    <div class="workflow-dot {% if exam.status == 'PUBLISHED' %}done{% endif %}">4</div>
+    <div class="workflow-label">Published</div>
+  </div>
+</div>
+
+<!-- Mark Entry Table -->
+<div class="card">
+  <div class="marks-grid">
+{% if not subjects %}
+  <div class="alert alert-info d-flex justify-content-between align-items-center" style="margin:1rem;">
+    <span>No subjects are defined for this class.</span>
+    <a href="{% url 'subject_list' %}?class_id={{ class_obj.id }}" class="btn btn-primary btn-sm">Add Subjects</a>
+  </div>
+{% endif %}
+<table class="marks-entry-table data-table" id="marksTable">
+  <thead>
+        <!-- Row 1: Subject names spanning columns -->
+        <tr>
+          <th class="sticky-roll" rowspan="2">#</th>
+          <th class="sticky-name" rowspan="2">Student Name</th>
+          {% for subject in subjects %}
+          <th colspan="{% if subject.marking_structure.has_internal %}3{% else %}2{% endif %}"
+              style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center;">
+            {{ subject.name }}
+            <span class="badge badge-gray ms-1" style="font-size:0.6rem;">{{ subject.get_subject_type_display }}</span>
+          </th>
+          {% endfor %}
+          {% if not request.user.is_teacher %}
+          <th colspan="1" style="background:var(--color-bg); color:var(--color-text-muted); text-align:center;">
+            Attendance
+            <div class="d-flex align-items-center justify-content-center mt-1" style="font-size: 0.7rem; font-weight: normal;">
+              <span class="me-1">Total Days:</span>
+              <input type="number" id="global_total_days" class="full-marks-input" 
+                     value="{{ students.0.total_days_val|default:'' }}" 
+                     {% if exam_class.is_locked %}disabled{% endif %} 
+                     onchange="handleGlobalTotalDaysChange()"
+                     style="width: 40px; height: 20px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px;">
+            </div>
+          </th>
+          {% endif %}
+        </tr>
+        <!-- Row 2: Sub-headers -->
+        <tr>
+          {% for subject in subjects %}
+            <th>
+              Th.
+              <input type="number" 
+                     class="full-marks-input" 
+                     value="{{ subject.marking_structure.theory_full_marks }}" 
+                     data-subject="{{ subject.id }}" 
+                     data-field="theory"
+                     {% if exam_class.is_locked %}disabled{% endif %}
+                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;">
+            </th>
+            {% if subject.marking_structure.has_internal %}
+            <th>
+              Int.
+              <input type="number" 
+                     class="full-marks-input" 
+                     value="{{ subject.marking_structure.internal_full_marks }}" 
+                     data-subject="{{ subject.id }}" 
+                     data-field="internal"
+                     {% if exam_class.is_locked %}disabled{% endif %}
+                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;">
+            </th>
+            {% endif %}
+            <th>Special</th>
+          {% endfor %}
+          {% if not request.user.is_teacher %}
+          <th>Present Days</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
+        <tr id="row-{{ student.id }}">
+          <td class="sticky-roll" style="color:var(--color-text-muted); font-size:0.75rem;">{{ student.roll_number }}</td>
+          <td class="sticky-name">
+            <div style="font-weight:600; font-size:0.82rem;">{{ student.name }}</div>
+          </td>
+
+          {% for sm in student.subject_marks %}
+            <td>
+              <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                step="1"
+                value="{{ sm.me.theory_obtained|default:'' }}"
+                data-student="{{ student.id }}"
+                data-subject="{{ sm.subject.id }}"
+                data-field="theory"
+                data-max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                oninput="scheduleSave(this)"
+                title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.marking_structure.theory_full_marks }}){% endif %}">
+            </td>
+            {% if sm.subject.marking_structure.has_internal %}
+            <td>
+              <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                step="1"
+                value="{{ sm.me.internal_obtained|default:'' }}"
+                data-student="{{ student.id }}"
+                data-subject="{{ sm.subject.id }}"
+                data-field="internal"
+                data-max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                oninput="scheduleSave(this)"
+                title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.marking_structure.internal_full_marks }}){% endif %}">
+            </td>
+            {% endif %}
+            <td>
+              <select class="special-select {% if sm.is_restricted %}restricted-input{% endif %}"
+                data-student="{{ student.id }}"
+                data-subject="{{ sm.subject.id }}"
+                data-field="special"
+                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                onchange="scheduleSave(this)">
+                <option value="" {% if sm.is_restricted %}disabled{% endif %}>—</option>
+                <option value="AB" {% if sm.me.special_value == 'AB' %}selected{% endif %}>AB</option>
+                <option value="WH" {% if sm.me.special_value == 'WH' %}selected{% endif %}>WH</option>
+                <option value="EX" {% if sm.me.special_value == 'EX' %}selected{% endif %}>EX</option>
+              </select>
+            </td>
+          {% endfor %}
+
+          <!-- Attendance -->
+          {% if not request.user.is_teacher %}
+          <td>
+            <input type="number" class="mark-input" min="0" placeholder="Days"
+              value="{{ student.present_days_val }}"
+              data-student="{{ student.id }}"
+              data-subject="{{ subjects.0.id }}"
+              data-field="present_days"
+              {% if exam_class.is_locked %}disabled{% endif %}
+              oninput="scheduleSave(this)">
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="99" class="text-center" style="padding: 40px; color: var(--color-text-muted);">
+            No students in this class
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const EXAM_ID = {{ exam.id }};
+const SAVE_URL = "{% url 'save_mark' %}";
+const CSRF = "{{ csrf_token }}";
+
+let saveTimers = {};
+let pendingSaves = {};
+
+function handleGlobalTotalDaysChange() {
+  // when the global total days input changes, save all currently rendered attendance values 
+  // so the new total is updated across all records on the server.
+  const totalDaysInput = document.getElementById('global_total_days');
+  const totalDaysVal = parseInt(totalDaysInput.value);
+  if (totalDaysVal < 0) {
+    totalDaysInput.value = 0;
+  }
+  
+  document.querySelectorAll('input[data-field="present_days"]').forEach(input => {
+    scheduleSave(input);
+  });
+}
+
+function scheduleSave(input) {
+  const studentId = input.dataset.student;
+  const subjectId = input.dataset.subject;
+  const field = input.dataset.field;
+  const key = `${studentId}-${subjectId}`;
+
+  // Validate max
+  if (field !== 'special' && field !== 'present_days') {
+    const max = parseFloat(input.dataset.max);
+    const val = parseFloat(input.value);
+    if (!isNaN(val) && !isNaN(max) && val > max) {
+      input.classList.add('error');
+      input.value = max;
+      return;
+    } else {
+      input.classList.remove('error');
+    }
+    if (val < 0) { input.value = 0; return; }
+  }
+
+  // Validate present_days against global_total_days
+  if (field === 'present_days') {
+    const totalDaysInput = document.getElementById('global_total_days');
+    const totalDaysVal = parseInt(totalDaysInput.value);
+    const presentVal = parseInt(input.value);
+    if (!isNaN(presentVal) && presentVal < 0) { input.value = 0; return; }
+    if (!isNaN(presentVal) && !isNaN(totalDaysVal) && presentVal > totalDaysVal) {
+      input.classList.add('error');
+      input.value = totalDaysVal;
+      return;
+    } else {
+      input.classList.remove('error');
+    }
+  }
+
+  if (!pendingSaves[key]) pendingSaves[key] = {};
+  pendingSaves[key][field] = input.value;
+  if (subjectId) pendingSaves[key].subject_id = subjectId;
+  pendingSaves[key].student_id = studentId;
+
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(() => doSave(key), 800);
+}
+
+async function doSave(key) {
+  const data = pendingSaves[key];
+  if (!data) return;
+
+  const studentId = data.student_id;
+  const subjectId = data.subject_id;
+
+  const theoryInput = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="theory"]`);
+  const internalInput = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="internal"]`);
+  const specialSelect = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="special"]`);
+  const presentInput = document.querySelector(`[data-student="${studentId}"][data-field="present_days"]`);
+  
+  const totalDaysInput = document.getElementById('global_total_days');
+
+  const payload = {
+    exam_id: EXAM_ID,
+    student_id: studentId,
+    subject_id: subjectId,
+    theory_obtained: theoryInput ? (theoryInput.value === '' ? '' : parseFloat(theoryInput.value)) : null,
+    internal_obtained: internalInput ? (internalInput.value === '' ? '' : parseFloat(internalInput.value)) : null,
+    special_value: specialSelect ? specialSelect.value : null,
+    present_days: (presentInput && presentInput.dataset.subject === subjectId) ? (presentInput.value === '' ? '' : parseInt(presentInput.value)) : null,
+    total_days: (presentInput && presentInput.dataset.subject === subjectId && totalDaysInput) ? (totalDaysInput.value === '' ? '' : parseInt(totalDaysInput.value)) : null,
+  };
+
+  try {
+    const res = await fetch(SAVE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      showSaved();
+      delete pendingSaves[key];
+      // Mark inputs as saved
+      document.querySelectorAll(`[data-student="${studentId}"][data-subject="${subjectId}"]`)
+        .forEach(el => {
+          el.classList.remove('error');
+          el.classList.add('saved');
+          setTimeout(() => el.classList.remove('saved'), 2000);
+        });
+    } else {
+      const err = await res.json();
+      console.error('Save failed:', err.error);
+      document.querySelectorAll(`[data-student="${studentId}"][data-subject="${subjectId}"]`)
+        .forEach(el => {
+          el.classList.add('error');
+        });
+      alert(`Error saving marks: ${err.error || 'Unknown error'}`);
+    }
+  } catch (e) {
+    console.error('Save failed:', e);
+  }
+}
+
+async function saveAllPending() {
+  const keys = Object.keys(pendingSaves);
+  if (keys.length === 0) {
+    alert("All marks are already saved!");
+    return;
+  }
+  
+  const saveButton = document.getElementById('saveAllBtn');
+  const originalText = saveButton.innerHTML;
+  saveButton.disabled = true;
+  saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+
+  // Build bulk payload array
+  const payloads = [];
+  for (const key of keys) {
+    clearTimeout(saveTimers[key]);
+    const data = pendingSaves[key];
+    const studentId = data.student_id;
+    const subjectId = data.subject_id;
+
+    const theoryInput = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="theory"]`);
+    const internalInput = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="internal"]`);
+    const specialSelect = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="special"]`);
+    const presentInput = document.querySelector(`[data-student="${studentId}"][data-field="present_days"]`);
+    const totalDaysInput = document.getElementById('global_total_days');
+
+    payloads.push({
+      exam_id: EXAM_ID,
+      student_id: studentId,
+      subject_id: subjectId,
+      theory_obtained: theoryInput ? (theoryInput.value === '' ? '' : parseFloat(theoryInput.value)) : null,
+      internal_obtained: internalInput ? (internalInput.value === '' ? '' : parseFloat(internalInput.value)) : null,
+      special_value: specialSelect ? specialSelect.value : null,
+      present_days: (presentInput && presentInput.dataset.subject === subjectId) ? (presentInput.value === '' ? '' : parseInt(presentInput.value)) : null,
+      total_days: (presentInput && presentInput.dataset.subject === subjectId && totalDaysInput) ? (totalDaysInput.value === '' ? '' : parseInt(totalDaysInput.value)) : null,
+    });
+  }
+
+  try {
+    const res = await fetch("{% url 'save_marks_bulk' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': CSRF,
+      },
+      body: JSON.stringify(payloads),
+    });
+
+    if (res.ok) {
+      showSaved();
+      // Mark all as saved
+      for (const key of keys) {
+        const data = pendingSaves[key];
+        document.querySelectorAll(`[data-student="${data.student_id}"][data-subject="${data.subject_id}"]`)
+          .forEach(el => {
+            el.classList.remove('error');
+            el.classList.add('saved');
+            setTimeout(() => el.classList.remove('saved'), 2000);
+          });
+        delete pendingSaves[key];
+      }
+      alert("All marks saved successfully!");
+    } else {
+      const err = await res.json();
+      console.error('Bulk save failed:', err.error);
+      for (const key of keys) {
+        const data = pendingSaves[key];
+        document.querySelectorAll(`[data-student="${data.student_id}"][data-subject="${data.subject_id}"]`)
+          .forEach(el => el.classList.add('error'));
+      }
+      alert(`Error saving marks: ${err.error || 'Unknown error'}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Network error. Could not save marks.");
+  } finally {
+    saveButton.disabled = false;
+    saveButton.innerHTML = originalText;
+  }
+}
+
+// Inline full marks auto-saving
+document.querySelectorAll('.full-marks-input').forEach(input => {
+  input.addEventListener('change', async (e) => {
+    const subjectId = e.target.dataset.subject;
+    const field = e.target.dataset.field;
+    const value = parseFloat(e.target.value);
+
+    if (isNaN(value) || value < 0) {
+      alert("Please enter a valid positive number.");
+      return;
+    }
+
+    try {
+      const res = await fetch("{% url 'save_full_marks' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF,
+        },
+        body: JSON.stringify({
+          subject_id: subjectId,
+          field: field,
+          value: value
+        })
+      });
+
+      if (res.ok) {
+        showSaved();
+        
+        // Dynamically update max validation of all inputs in this column
+        document.querySelectorAll(`[data-subject="${subjectId}"][data-field="${field}"]`).forEach(inp => {
+          inp.max = value;
+          inp.dataset.max = value;
+          const titleField = field === 'theory' ? 'Theory' : 'Internal';
+          inp.title = `${titleField} Marks (Max: ${value})`;
+          
+          // If existing value exceeds new max, highlight as error
+          const val = parseFloat(inp.value);
+          if (!isNaN(val) && val > value) {
+            inp.classList.add('error');
+          } else {
+            inp.classList.remove('error');
+          }
+        });
+      } else {
+        const err = await res.json();
+        alert(`Failed to save full marks: ${err.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Failed to save full marks:', err);
+    }
+  });
+});
+
+function showSaved() {
+  const indicator = document.getElementById('saveStatus');
+  indicator.style.display = 'inline-flex';
+  clearTimeout(window._savedTimer);
+  window._savedTimer = setTimeout(() => indicator.style.display = 'none', 2000);
+}
+
+function processResults() {
+  // Not used anymore - handled by the lock endpoint
+}
+
+// Prevent up/down arrow keys and mouse wheel from changing values in number inputs
+document.addEventListener('keydown', function(e) {
+  if (e.target.type === 'number') {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+    }
+  }
+});
+
+document.addEventListener('wheel', function(e) {
+  if (document.activeElement && document.activeElement.type === 'number') {
+    document.activeElement.blur();
+  }
+});
+</script>
+{% endblock %}

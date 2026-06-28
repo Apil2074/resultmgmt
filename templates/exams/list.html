@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% block title %}Exams{% endblock %}
+{% block page_title %}Exams{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">📋 Examinations</h1>
+    <div class="page-subtitle">Manage exams and result workflow</div>
+  </div>
+  {% if user.can_publish_results %}
+  <button class="btn btn-primary" onclick="document.getElementById('createExamModal').classList.add('active')">
+    <i class="bi bi-clipboard2-plus-fill"></i> Create Exam
+  </button>
+  {% endif %}
+</div>
+
+<!-- Exam Cards -->
+<div class="row g-3">
+  {% for exam in exams %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <div style="font-size:1rem; font-weight:700; color:var(--color-text);">{{ exam.name }}</div>
+          <div style="font-size:0.75rem; color:var(--color-text-muted);">{{ exam.session.name }}</div>
+        </div>
+        <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% elif exam.status == 'APPROVED' %}badge-blue{% elif exam.status == 'VERIFICATION' %}badge-gold{% else %}badge-gray{% endif %}">
+          {% if exam.status == 'PUBLISHED' %}<i class="bi bi-patch-check-fill me-1"></i>{% endif %}
+          {{ exam.get_status_display }}
+        </span>
+      </div>
+
+      {% if exam.start_date %}
+      <div style="font-size:0.75rem; color:var(--color-text-muted); margin-bottom:10px;">
+        <i class="bi bi-calendar3 me-1"></i>
+        {{ exam.start_date }} — {{ exam.end_date|default:'—' }}
+      </div>
+      {% endif %}
+
+      <div class="mt-3 pt-3 border-top" style="border-color: var(--color-border) !important;">
+        <div class="row g-2">
+          <div class="col-6">
+            <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-secondary w-100 h-100 d-flex flex-column justify-content-center align-items-center p-2">
+              <i class="bi bi-gear-fill fs-5 mb-1"></i> Manage Exam
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="{% url 'mark_entry_select' %}?exam={{ exam.id }}" class="btn btn-sm btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center p-2">
+              <i class="bi bi-pencil-square fs-5 mb-1"></i> Mark Entry
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="{% url 'grade_ledger_select' %}?exam={{ exam.id }}" class="btn btn-sm btn-outline-success w-100 h-100 d-flex flex-column justify-content-center align-items-center p-2">
+              <i class="bi bi-journal-text fs-5 mb-1"></i> Grade Ledger
+            </a>
+          </div>
+          <div class="col-6">
+            <a href="{% url 'marksheet_select' %}?exam={{ exam.id }}" class="btn btn-sm btn-outline-info w-100 h-100 d-flex flex-column justify-content-center align-items-center p-2">
+              <i class="bi bi-file-earmark-pdf fs-5 mb-1"></i> Grade Sheet
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="empty-state card">
+      <div class="empty-icon">📋</div>
+      <p>No exams created yet</p>
+      {% if user.can_publish_results %}
+      <button class="btn btn-primary mt-2" onclick="document.getElementById('createExamModal').classList.add('active')">
+        Create First Exam
+      </button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Create Exam Modal -->
+<div class="modal-overlay" id="createExamModal">
+  <div class="rms-modal">
+    <div class="rms-modal-header">
+      <h3 class="rms-modal-title">Create New Exam</h3>
+      <button type="button" class="rms-modal-close" onclick="document.getElementById('createExamModal').classList.remove('active')">✕</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="form-group">
+        <label class="form-label">Exam Name</label>
+        <input type="text" name="name" class="form-control" required placeholder="e.g. First Terminal Exam">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Academic Session</label>
+        <select name="session_id" class="form-control" required>
+          <option value="">Select Session</option>
+          {% for session in sessions %}
+          <option value="{{ session.id }}" {% if session.is_active %}selected{% endif %}>
+            {{ session.name }}{% if session.is_active %} (Active){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="row g-2">
+        <div class="col-6">
+          <div class="form-group">
+            <label class="form-label">Start Date</label>
+            <input type="text" placeholder="YYYY-MM-DD" name="start_date" class="form-control">
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="form-group">
+            <label class="form-label">End Date</label>
+            <input type="text" placeholder="YYYY-MM-DD" name="end_date" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Result Date (Date of Issue)</label>
+        <input type="text" placeholder="YYYY-MM-DD" name="result_date" class="form-control">
+      </div>
+      <div class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" role="switch" id="is_locked" name="is_locked">
+        <label class="form-check-label fw-medium" for="is_locked">Lock Results</label>
+        <div class="form-text mt-0">When locked, marks cannot be edited.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Include Classes</label>
+        {% for cls in classes %}
+        <label class="form-check">
+          <input type="checkbox" name="class_ids" value="{{ cls.id }}">
+          <span class="form-check-label">{{ cls.full_name }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary w-100">
+        <i class="bi bi-clipboard2-plus-fill"></i> Create Exam
+      </button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

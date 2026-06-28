@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+{% block title %}Grade Ledger Selector{% endblock %}
+{% block page_title %}📊 Grade Ledger Selector{% endblock %}
+
+{% block extra_css %}
+<style>
+.ledger-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.grade-A { color: #10B981; font-weight: 700; }
+.grade-B { color: #3B82F6; font-weight: 600; }
+.grade-C { color: #F59E0B; font-weight: 600; }
+.grade-D { color: #F97316; font-weight: 600; }
+.grade-E, .grade-NG { color: #EF4444; font-weight: 600; }
+
+.ledger-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 70vh;
+  margin-top: 20px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  min-width: 1600px;
+}
+.ledger-table th, .ledger-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  vertical-align: middle;
+  text-align: center;
+}
+.ledger-table th {
+  background-color: #f8fafc;
+  color: #1e3a8a;
+  font-weight: 700;
+}
+.subject-header {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.avg-gpa-col, .grade-col {
+  background-color: transparent !important;
+  font-weight: bold;
+}
+.pass-status {
+  color: #10b981;
+  font-weight: bold;
+}
+.fail-status {
+  color: #ef4444;
+  font-weight: bold;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .app-wrapper {
+    display: block !important;
+  }
+  .sidebar, .topbar, .card, .ledger-controls, footer {
+    display: none !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  .page-content {
+    padding: 0 !important;
+  }
+  .ledger-wrap {
+    box-shadow: none !important;
+    border: none !important;
+    margin-top: 0 !important;
+  }
+  .ledger-table th, .ledger-table td {
+    border: 1px solid #000000 !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+  
+  <div class="card shadow-sm mb-3 border-0 d-print-none sticky-top" style="top: 70px; z-index: 999; background: var(--color-bg-light); border: 1px solid var(--color-border) !important; border-radius: var(--radius-md);">
+    <div class="card-body p-2 px-3">
+      <form method="GET" action="" class="row g-2 align-items-center">
+        <div class="col-auto d-flex align-items-center">
+          <i class="bi bi-funnel text-primary me-2"></i>
+          <span class="fw-bold" style="color: var(--color-text); font-size: 0.9rem;">Select Exam & Class:</span>
+        </div>
+        <div class="col-md-4">
+          <select name="exam" id="examSelect" class="form-select select2" required>
+            <option value="">-- Select Exam --</option>
+            {% for ex in exams %}
+              <option value="{{ ex.id }}" {% if ex.id == selected_exam_id %}selected{% endif %}>
+                {{ ex.name }} ({{ ex.session.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <select name="class_obj" id="classSelect" class="form-select select2" required>
+            <option value="">-- Select Class --</option>
+          </select>
+        </div>
+        <div class="col-md-auto">
+          <button type="submit" class="btn btn-primary fw-semibold" style="border-radius: var(--radius-md);">
+            <i class="bi bi-eye-fill me-1"></i> View Ledger
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if not exam or not class_obj %}
+    <!-- Placeholder / Prompt State -->
+    <div class="text-center p-5 bg-white border border-dashed rounded-3 shadow-sm mt-4 d-print-none" style="border-color: var(--color-border) !important; border-radius: var(--radius-lg) !important;">
+      <div class="mb-3 text-primary" style="font-size: 3rem;">
+        <i class="bi bi-table"></i>
+      </div>
+      <h4 class="text-slate-800 fw-bold">No Grade Ledger Loaded</h4>
+      <p class="text-muted max-width-500 mx-auto">Select an examination and a class from the options above and click <strong>View Ledger</strong> to generate the horizontal marks breakdown.</p>
+    </div>
+  {% else %}
+    <!-- Loaded State Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-3">
+      <div class="ledger-controls d-print-none">
+        <button class="btn btn-outline-secondary" onclick="window.print()">
+          <i class="bi bi-printer-fill"></i> Print
+        </button>
+        <a href="{% url 'ledger_excel' exam.id class_obj.id %}" class="btn btn-success">
+          <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
+        </a>
+        <input type="text" class="form-control" id="ledgerSearch" placeholder="🔍 Search student..." style="width:180px; margin-left: 10px;">
+      </div>
+      <div class="text-end">
+        <h4 class="page-title mb-0 d-print-none">📊 {{ class_obj.full_name }} — Grade Ledger</h4>
+        <span class="text-muted d-print-none">{{ exam.name }} &nbsp;|&nbsp; {{ student_results|length }} students</span>
+      </div>
+    </div>
+
+    <!-- School Header for Print -->
+    <div class="d-none d-print-block text-center mb-4">
+      {% if school.logo %}<img src="{{ school.logo.url }}" height="60" class="mb-2"><br>{% endif %}
+      <h4>{{ school.name }}</h4>
+      <p style="font-size:0.82rem; margin-bottom: 4px;">{{ school.address }}</p>
+      <h5>Grade Ledger — {{ exam.name }} | {{ class_obj.full_name }} | {{ exam.session.name }}</h5>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="d-flex justify-content-end mb-2 d-print-none">
+      <small class="text-muted fw-medium"><i class="bi bi-arrows-expand me-1"></i> Scroll horizontally to view all columns</small>
+    </div>
+    <div class="ledger-wrap">
+      <table class="ledger-table" id="ledgerTable">
+        <thead>
+          <!-- Row 1: Subject names and main spans -->
+          <tr>
+            <th rowspan="4" class="sticky-col-1" style="min-width:40px;">SN</th>
+            <th rowspan="4" class="sticky-col-2" style="min-width:80px;">Symbol No</th>
+            <th rowspan="4" class="sticky-col-3" style="min-width:85px;">REG NO</th>
+            <th rowspan="4" class="sticky-col-4" style="min-width:180px; text-align:left;">Student Name</th>
+            <th rowspan="1" style="min-width:90px;">Date of Birth</th>
+            {% for subject in subjects %}
+              {% if subject.has_practical %}
+              <th colspan="6" class="subject-header">{{ subject.name }}</th>
+              {% else %}
+              <th colspan="4" class="subject-header">{{ subject.name }}</th>
+              {% endif %}
+            {% endfor %}
+            <th rowspan="4" style="min-width:55px;">Total Credit Hour</th>
+            <th rowspan="4" style="min-width:50px;">GPA</th>
+            <th rowspan="4" style="min-width:50px;">Grade</th>
+            <th rowspan="4" style="min-width:45px;">Rank</th>
+            <th rowspan="4" style="min-width:50px;">Attendance</th>
+            <th rowspan="4" style="min-width:50px;">Result</th>
+          </tr>
+          
+          <!-- Row 2: Credit Hour values -->
+          <tr>
+            <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Credit Hour</th>
+            {% for subject in subjects %}
+              {% if subject.has_practical %}
+              <th style="background-color:#f1f5f9; font-weight:bold;">{{ subject.theory_credit_hour|floatformat:2 }}</th>
+              <th style="background-color:#f1f5f9; font-weight:bold;">{{ subject.practical_credit_hour|floatformat:2 }}</th>
+              <th colspan="4" style="background-color:#f8fafc;"></th>
+              {% else %}
+              <th style="background-color:#f1f5f9; font-weight:bold;">{{ subject.theory_credit_hour|floatformat:2 }}</th>
+              <th colspan="3" style="background-color:#f8fafc;"></th>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          
+          <!-- Row 3: Full Marks values -->
+          <tr>
+            <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Full Marks</th>
+            {% for subject in subjects %}
+              {% if subject.has_practical %}
+              <th>{{ subject.marking_structure.theory_full_marks }}</th>
+              <th>{{ subject.marking_structure.internal_full_marks }}</th>
+              <th colspan="4" style="background-color:#f8fafc;"></th>
+              {% else %}
+              <th>{{ subject.marking_structure.theory_full_marks }}</th>
+              <th colspan="3" style="background-color:#f8fafc;"></th>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          
+          <!-- Row 4: Component headers -->
+          <tr>
+            <th style="background-color:#f8fafc; font-weight:bold; color:#475569;">DOB</th>
+            {% for subject in subjects %}
+              {% if subject.has_practical %}
+              <th>Th</th>
+              <th>In</th>
+              <th>Th GP</th>
+              <th>In GP</th>
+              <th style="background-color:#f8fafc;">AVG GPA</th>
+              <th style="background-color:#f8fafc;">Grade</th>
+              {% else %}
+              <th>Th</th>
+              <th>Th GP</th>
+              <th style="background-color:#f8fafc;">AVG GPA</th>
+              <th style="background-color:#f8fafc;">Grade</th>
+              {% endif %}
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody id="ledgerBody">
+          {% for sr in student_results %}
+          <tr class="ledger-row" data-name="{{ sr.student.name|lower }}">
+            <td class="sticky-col-1">{{ forloop.counter }}</td>
+            <td class="sticky-col-2">{{ sr.student.symbol_number|default:"—" }}</td>
+            <td class="sticky-col-3">{{ sr.student.registration_number|default:"—" }}</td>
+            <td class="sticky-col-4" style="text-align:left; font-weight:600;">{{ sr.student.name }}</td>
+            <td>{{ sr.student.dob_full|default:"—" }}</td>
+
+            {% for score in sr.subject_scores %}
+              {% if score.has_internal %}
+                <td>{{ score.theory_obtained }}</td>
+                <td>{{ score.internal_obtained }}</td>
+                <td>{{ score.theory_grade_point }}</td>
+                <td>{{ score.internal_grade_point }}</td>
+                <td class="avg-gpa-col">{{ score.grade_point }}</td>
+                <td class="grade-col">{{ score.grade }}</td>
+              {% else %}
+                <td>{{ score.theory_obtained }}</td>
+                <td>{{ score.theory_grade_point }}</td>
+                <td class="avg-gpa-col">{{ score.grade_point }}</td>
+                <td class="grade-col">{{ score.grade }}</td>
+              {% endif %}
+            {% endfor %}
+
+            <td>{{ sr.total_credit_hours }}</td>
+            <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.overall_gpa|default:'NG' }}</td>
+            <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.final_grade|default:'—' }}</td>
+            <td>{% if sr.class_rank %}{{ sr.class_rank }}{% else %}NG{% endif %}</td>
+            <td>{{ sr.attendance_pct|default:'—' }}%</td>
+            <td class="{% if sr.is_pass %}pass-status{% else %}fail-status{% endif %}">
+              {% if sr.is_pass %}P{% else %}F{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="99" class="text-center" style="padding:40px; color:var(--color-text-muted);">
+              No results processed yet for this class in this exam.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="d-flex gap-3 flex-wrap mt-3" style="font-size:0.72rem; color:var(--color-text-muted);">
+      <span><strong>Th</strong> = Theory Obtained</span>
+      <span><strong>In</strong> = Internal/Practical Obtained</span>
+      <span><strong>Th GP</strong> = Theory Grade Point</span>
+      <span><strong>In GP</strong> = Internal Grade Point</span>
+      <span><strong>AVG GPA</strong> = Average Grade Point (weighted by credit hours)</span>
+      <span><strong>P</strong> = Pass &nbsp; <strong>F</strong> = Fail</span>
+      <span><strong>AB</strong> = Absent &nbsp; <strong>WH</strong> = Withheld &nbsp; <strong>EX</strong> = Exempted</span>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  // Initialize Select2
+  if (jQuery().select2) {
+    $('.select2').select2({
+      theme: 'bootstrap-5',
+      width: '100%'
+    });
+  }
+
+  const examClasses = {{ exam_classes_json|safe }};
+  const examSelect = document.getElementById('examSelect');
+  const classSelect = document.getElementById('classSelect');
+  const selectedExamId = {{ selected_exam_id|default:"null" }};
+  const selectedClassId = {{ selected_class_id|default:"null" }};
+
+  function updateClasses() {
+    const examId = examSelect.value;
+    // Clear class select
+    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    
+    if (examId && examClasses[examId]) {
+      examClasses[examId].forEach(cls => {
+        const opt = document.createElement('option');
+        opt.value = cls.id;
+        opt.textContent = cls.name;
+        if (selectedClassId && cls.id === selectedClassId) {
+          opt.selected = true;
+        }
+        classSelect.appendChild(opt);
+      });
+    }
+    
+    // Trigger Select2 update
+    if (window.jQuery && $(classSelect).data('select2')) {
+      $(classSelect).trigger('change.select2');
+    }
+  }
+
+  // Bind change events
+  $('#examSelect').on('change', function() {
+    updateClasses();
+  });
+
+  // Run once to initialize
+  if (selectedExamId) {
+    examSelect.value = selectedExamId;
+    if (window.jQuery && $(examSelect).data('select2')) {
+      $(examSelect).trigger('change.select2');
+    }
+  }
+  updateClasses();
+
+  // Live search inside table
+  const ledgerSearch = document.getElementById('ledgerSearch');
+  if (ledgerSearch) {
+    ledgerSearch.addEventListener('input', function() {
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('.ledger-row').forEach(row => {
+        row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+{% block title %}Student Marksheet Selector{% endblock %}
+{% block page_title %}📄 Student Marksheet Selector{% endblock %}
+
+{% block extra_css %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+.marksheet-outer-border {
+  border: 4px double #1e3a8a;
+  padding: 32px;
+  background: #ffffff;
+  position: relative;
+}
+.marksheet-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 350px;
+  height: 350px;
+  opacity: 0.04;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  z-index: 0;
+}
+.marksheet-card {
+  max-width: 980px;
+  margin: 0 auto;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+.school-name-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 2.2rem;
+  color: #1e3a8a;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.school-address-title {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: #475569;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+.school-estd-title {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #64748b;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.marksheet-header-banner {
+  background: linear-gradient(135deg, #1e3a8a, #0f172a);
+  color: #ffffff;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  font-size: 1.3rem;
+  margin-top: 16px;
+  margin-bottom: 24px;
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1;
+  position: relative;
+}
+.info-label {
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.3px;
+}
+.info-value {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.96rem;
+  border-bottom: 1.5px solid #475569;
+  display: inline-block;
+  min-width: 80px;
+  padding-bottom: 2px;
+  letter-spacing: 0.5px;
+}
+.marksheet-table {
+  border: 2px solid #0f172a !important;
+  z-index: 1;
+  position: relative;
+}
+.marksheet-table th {
+  background-color: #f8fafc !important;
+  color: #1e3a8a !important;
+  font-weight: 700 !important;
+  border: 1.5px solid #0f172a !important;
+  text-transform: uppercase;
+  font-size: 0.88rem;
+  vertical-align: middle;
+  padding: 10px 8px;
+  letter-spacing: 0.3px;
+}
+.marksheet-table td {
+  border: 1.5px solid #0f172a !important;
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  vertical-align: middle;
+  color: #0f172a;
+}
+.font-monospace {
+  font-family: 'Inter', monospace;
+  font-weight: 600;
+}
+.legend-table {
+  border: 1.5px solid #0f172a !important;
+}
+.legend-table th, .legend-table td {
+  border: 1px solid #0f172a !important;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+.legend-table th {
+  background-color: #f8fafc !important;
+  color: #1e3a8a !important;
+  font-weight: 700;
+}
+.note-box {
+  background-color: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #334155;
+  z-index: 1;
+  position: relative;
+}
+.note-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+.signature-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.88rem;
+  letter-spacing: 0.5px;
+}
+.signature-line-box {
+  width: 180px;
+  margin: 0 auto;
+  border-top: 1.5px dashed #0f172a;
+  padding-top: 8px;
+}
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .app-wrapper {
+    display: block !important;
+  }
+  .sidebar, .topbar, .card, .btn, .d-print-none, footer {
+    display: none !important;
+  }
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+  .page-content {
+    padding: 0 !important;
+  }
+  .marksheet-card {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    page-break-after: always;
+    break-after: page;
+  }
+  .marksheet-outer-border {
+    border: 4px double #000000 !important;
+    padding: 20px !important;
+  }
+  .marksheet-header-banner {
+    background: #000000 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .marksheet-table th {
+    background-color: #f8fafc !important;
+    color: #000000 !important;
+    border: 1.5px solid #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .marksheet-table td, .legend-table td, .legend-table th {
+    border: 1px solid #000000 !important;
+  }
+}
+
+.sticky-sidebar {
+  position: sticky;
+  top: 20px;
+  z-index: 10;
+}
+@media (min-width: 768px) {
+  .sticky-sidebar {
+    top: 80px; /* Offset the sticky topbar of 64px */
+  }
+}
+@media print {
+  .marksheet-right-col {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+  <div class="row g-4">
+    <!-- Left Sidebar (Selection Form) -->
+    <div class="col-lg-3 col-md-4 d-print-none mb-4">
+      <div class="sticky-sidebar">
+        <!-- Selection Card -->
+        <div class="card shadow-sm border-0 mb-3" style="background: var(--color-bg-light); border: 1px solid var(--color-border) !important; border-radius: var(--radius-lg);">
+          <div class="card-body p-4">
+            <h5 class="card-title mb-3 fw-bold" style="color: var(--color-text);"><i class="bi bi-funnel text-primary me-2"></i>Select Student Details</h5>
+            <form method="GET" action="" class="row g-3">
+              <div class="col-12">
+                <label for="examSelect" class="form-label fw-semibold text-slate-700">Examination</label>
+                <select name="exam" id="examSelect" class="form-select select2" required>
+                  <option value="">-- Select Exam --</option>
+                  {% for ex in exams %}
+                    <option value="{{ ex.id }}" {% if ex.id == selected_exam_id %}selected{% endif %}>
+                      {{ ex.name }} ({{ ex.session.name }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="classSelect" class="form-label fw-semibold text-slate-700">Class</label>
+                <select name="class_obj" id="classSelect" class="form-select select2" required>
+                  <option value="">-- Select Class --</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="studentSelect" class="form-label fw-semibold text-slate-700">Student</label>
+                <select name="student" id="studentSelect" class="form-select select2" required>
+                  <option value="">-- Select Student --</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label for="templateSelect" class="form-label fw-semibold text-slate-700">Template Version</label>
+                <select name="template_version" id="templateSelect" class="form-select select2">
+                  <option value="default" {% if template_version == 'default' or not template_version %}selected{% endif %}>Default</option>
+                  <option value="neb11" {% if template_version == 'neb11' %}selected{% endif %}>NEB Grade 11</option>
+                </select>
+              </div>
+              <div class="col-12 pt-2">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" style="border-radius: var(--radius-md);">
+                  <i class="bi bi-file-earmark-text-fill me-1"></i> View Marksheet
+                </button>
+              </div>
+            </form>
+          </div>
+            {% if exam and selected_student_id %}
+        <!-- Actions Card -->
+        <div class="card shadow-sm border-0" style="background: var(--color-bg-light); border: 1px solid var(--color-border) !important; border-radius: var(--radius-lg);">
+          <div class="card-body p-2">
+            
+            <!-- Student Navigation -->
+            <div class="d-flex gap-2 mb-2">
+              {% if prev_student_id %}
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ prev_student_id }}&template_version={{ template_version|default:'default' }}" class="btn btn-outline-secondary flex-fill">
+                  <i class="bi bi-chevron-left me-1"></i>Prev
+                </a>
+              {% else %}
+                <button class="btn btn-outline-secondary flex-fill" disabled>
+                  <i class="bi bi-chevron-left me-1"></i>Prev
+                </button>
+              {% endif %}
+              
+              {% if next_student_id %}
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ next_student_id }}&template_version={{ template_version|default:'default' }}" class="btn btn-outline-secondary flex-fill">
+                  Next<i class="bi bi-chevron-right ms-1"></i>
+                </a>
+              {% else %}
+                <button class="btn btn-outline-secondary flex-fill" disabled>
+                  Next<i class="bi bi-chevron-right ms-1"></i>
+                </button>
+              {% endif %}
+            </div>
+
+            <!-- Print & Downloads -->
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-dark" onclick="window.print()">
+                <i class="bi bi-printer-fill me-2"></i>Print Marksheet
+              </button>
+              {% if selected_student_id != 'all' %}
+              <a href="{% url 'marksheet_pdf' exam.id selected_student_id %}?template_version={{ template_version|default:'default' }}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
+              </a>
+              {% endif %}
+              <a href="{% url 'class_marksheets_pdf' exam.id class_obj.id %}?template_version={{ template_version|default:'default' }}" class="btn btn-success" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export All (Class)
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        </div>
+
+      
+      </div>
+    </div>
+
+    <!-- Right Main Column (Loaded State/Placeholder) -->
+    <div class="col-lg-9 col-md-8 marksheet-right-col">
+      {% if not exam or not selected_student_id %}
+        <!-- Placeholder / Prompt State -->
+        <div class="text-center p-5 bg-white border border-dashed rounded-3 shadow-sm mt-0 d-print-none" style="border-color: var(--color-border) !important; border-radius: var(--radius-lg) !important;">
+          <div class="mb-3 text-primary" style="font-size: 3rem;">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <h4 class="text-slate-800 fw-bold">No Marksheet Loaded</h4>
+          <p class="text-muted max-width-500 mx-auto">Select an examination, class, and student from the options on the left and click <strong>View Marksheet</strong> to load the report card.</p>
+        </div>
+      {% else %}
+
+        {% for data in students_data %}
+        {% with student=data.student result=data.result credit_mark_entries=data.credit_mark_entries non_credit_mark_entries=data.non_credit_mark_entries present_days=data.present_days total_days=data.total_days %}
+        {% if template_version == 'neb11' %}
+          {% include 'results/partials/neb11_marksheet.html' %}
+        {% else %}
+          {% include 'results/partials/default_marksheet.html' %}
+        {% endif %}
+        {% endwith %}
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  // Initialize Select2
+  if (jQuery().select2) {
+    $('.select2').select2({
+      theme: 'bootstrap-5',
+      width: '100%'
+    });
+  }
+
+  const examClasses = {{ exam_classes_json|safe }};
+  const classStudents = {{ class_students_json|safe }};
+
+  const examSelect = document.getElementById('examSelect');
+  const classSelect = document.getElementById('classSelect');
+  const studentSelect = document.getElementById('studentSelect');
+
+  const selectedExamId = {{ selected_exam_id|default:"null" }};
+  const selectedClassId = {{ selected_class_id|default:"null" }};
+  const selectedStudentId = {% if selected_student_id == 'all' %}'all'{% else %}{{ selected_student_id|default:"null" }}{% endif %};
+
+  function updateClasses() {
+    const examId = examSelect.value;
+    // Clear class and student selectors
+    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+    
+    if (examId && examClasses[examId]) {
+      examClasses[examId].forEach(cls => {
+        const opt = document.createElement('option');
+        opt.value = cls.id;
+        opt.textContent = cls.name;
+        if (selectedClassId && cls.id === selectedClassId) {
+          opt.selected = true;
+        }
+        classSelect.appendChild(opt);
+      });
+    }
+    
+    // Trigger Select2 updates
+    if (window.jQuery && $(classSelect).data('select2')) {
+      $(classSelect).trigger('change.select2');
+    }
+    
+    updateStudents();
+  }
+
+  function updateStudents() {
+    const classId = classSelect.value;
+    studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+    
+    if (classId && classStudents[classId]) {
+      const optAll = document.createElement('option');
+      optAll.value = 'all';
+      optAll.textContent = '-- All Students --';
+      if (selectedStudentId === 'all') {
+        optAll.selected = true;
+      }
+      studentSelect.appendChild(optAll);
+
+      classStudents[classId].forEach(stu => {
+        const opt = document.createElement('option');
+        opt.value = stu.id;
+        opt.textContent = stu.name;
+        if (selectedStudentId && stu.id === selectedStudentId) {
+          opt.selected = true;
+        }
+        studentSelect.appendChild(opt);
+      });
+    }
+    
+    if (window.jQuery && $(studentSelect).data('select2')) {
+      $(studentSelect).trigger('change.select2');
+    }
+  }
+
+  // Bind change events
+  $('#examSelect').on('change', function() {
+    updateClasses();
+  });
+
+  $('#classSelect').on('change', function() {
+    updateStudents();
+  });
+
+  // Run initialization
+  if (selectedExamId) {
+    examSelect.value = selectedExamId;
+    if (window.jQuery && $(examSelect).data('select2')) {
+      $(examSelect).trigger('change.select2');
+    }
+  }
+  updateClasses();
+});
+</script>
+{% endblock %}

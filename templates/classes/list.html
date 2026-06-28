@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% block title %}Classes{% endblock %}
+{% block page_title %}🏫 Classes{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Class List Card -->
+  <div class="col-lg-8 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-list-nested text-primary me-2"></i>Class List
+        </h5>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill">
+          Total: {{ classes|length }}
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 40px;"></th>
+              <th>Class Name</th>
+              <th>Section</th>
+              <th>Session</th>
+              <th>Class Teacher</th>
+              <th>Students</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="classesTableBody">
+            {% for c in classes %}
+            <tr data-id="{{ c.id }}">
+              <td class="drag-handle text-muted" style="cursor: move; width: 40px; text-align: center;">
+                <i class="bi bi-grip-vertical fs-5"></i>
+              </td>
+              <td>
+                <a href="{% url 'class_detail' c.slug %}" class="fw-semibold text-primary text-decoration-none">
+                  {{ c.prefixed_name }}
+                </a>
+              </td>
+              <td>
+                {% if c.section %}
+                <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1 rounded">{{ c.section }}</span>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td class="text-slate-600">{{ c.session.name }}</td>
+              <td>
+                {% if c.class_teacher %}
+                <div class="fw-medium text-slate-700">{{ c.class_teacher.name }}</div>
+                {% if c.class_teacher.phone %}
+                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ c.class_teacher.phone }}</div>
+                {% endif %}
+                {% else %}
+                <span class="text-muted small italic">Not Assigned</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill">
+                  {{ c.student_count }} Students
+                </span>
+              </td>
+              <td class="text-end">
+                <div class="d-inline-flex gap-2">
+                  <a href="{% url 'class_detail' c.slug %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                    <i class="bi bi-eye-fill"></i>
+                  </a>
+                  <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-class"
+                    data-class-id="{{ c.id }}" data-class-name="{{ c.name|escapejs }}"
+                    data-class-section="{{ c.section|escapejs }}"
+                    data-numeric-level="{{ c.numeric_level }}"
+                    data-teacher-id="{% if c.class_teacher and c.class_teacher.teacher %}{{ c.class_teacher.teacher.id }}{% endif %}"
+                    data-teacher-name="{% if c.class_teacher %}{{ c.class_teacher.name|escapejs }}{% endif %}"
+                    data-teacher-phone="{% if c.class_teacher %}{{ c.class_teacher.phone|escapejs }}{% endif %}"
+                    data-teacher-email="{% if c.class_teacher %}{{ c.class_teacher.email|escapejs }}{% endif %}"
+                    data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Class">
+                    <i class="bi bi-pencil-fill"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger btn-delete-class"
+                    data-class-id="{{ c.id }}" data-class-name="{{ c.full_name|escapejs }}"
+                    data-student-count="{{ c.student_count }}" data-bs-toggle="modal" data-bs-target="#deleteClassModal"
+                    title="Delete Class">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-building d-block fs-2 mb-2"></i>
+                No classes found. Add a class on the right to get started.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Class Form Sidebar -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-plus-circle text-primary me-2"></i>Create New Class
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if active_session %}
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="create">
+
+          <div class="mb-3">
+            <label for="name" class="form-label fw-medium text-slate-700">Class Name *</label>
+            <input type="text" class="form-control" id="name" name="name" placeholder="e.g. Class 10, Grade 9" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="section" class="form-label fw-medium text-slate-700">Section (Optional)</label>
+            <input type="text" class="form-control" id="section" name="section" placeholder="e.g. A, B, C">
+          </div>
+
+          <div class="mb-3">
+            <label for="numeric_level" class="form-label fw-medium text-slate-700">Sort Order (Number)</label>
+            <input type="number" class="form-control" id="numeric_level" name="numeric_level" placeholder="e.g. 1 for Nursery" value="0">
+            <div class="form-text">Used to sort classes correctly (e.g. 1 for Nursery, 10 for Class 10).</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="session_id" class="form-label fw-medium text-slate-700">Academic Session *</label>
+            <select class="form-select" id="session_id" name="session_id" required>
+              {% for s in sessions %}
+              <option value="{{ s.id }}" {% if s.is_active %}selected{% endif %}>
+                {{ s.name }} {% if s.is_active %}(Active){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="border-top pt-3 mt-4">
+            <h6 class="fw-semibold text-slate-800 mb-3"><i class="bi bi-person-badge me-2 text-secondary"></i>Class
+              Teacher (Optional)</h6>
+
+            <div class="mb-3">
+              <label for="teacher_id" class="form-label fw-medium text-slate-700">Select Teacher</label>
+              <select class="form-select" id="teacher_id" name="teacher_id">
+                <option value="">-- Select from existing teachers --</option>
+                {% for t in teachers %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="mb-2"><span class="text-muted small fw-medium">OR Enter Manually:</span></div>
+
+            <div class="mb-3">
+              <label for="teacher_name" class="form-label fw-medium text-slate-700">Teacher Name</label>
+              <input type="text" class="form-control" id="teacher_name" name="teacher_name"
+                placeholder="e.g. Ram Bahadur">
+            </div>
+
+            <div class="mb-3">
+              <label for="teacher_phone" class="form-label fw-medium text-slate-700">Teacher Phone</label>
+              <input type="text" class="form-control" id="teacher_phone" name="teacher_phone"
+                placeholder="e.g. 98XXXXXXXX">
+            </div>
+
+            <div class="mb-3">
+              <label for="teacher_email" class="form-label fw-medium text-slate-700">Teacher Email</label>
+              <input type="email" class="form-control" id="teacher_email" name="teacher_email"
+                placeholder="e.g. teacher@school.edu.np">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 mt-3">
+            <i class="bi bi-plus-lg me-2"></i>Create Class
+          </button>
+        </form>
+        {% else %}
+        <div class="text-center py-4">
+          <i class="bi bi-exclamation-triangle text-warning fs-1 mb-2"></i>
+          <p class="text-muted">You must have an active Academic Session to create classes.</p>
+          <a href="{% url 'session_list' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-calendar3 me-2"></i>Manage Sessions
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shared Delete Class Modal -->
+<div class="modal fade" id="deleteClassModal" tabindex="-1" aria-labelledby="deleteClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content"
+      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text);">
+      <div class="modal-header border-bottom" style="border-color: var(--color-border) !important;">
+        <h5 class="modal-title fw-bold text-danger" id="deleteClassModalLabel">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Class
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          style="filter: invert(1);"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to permanently delete <strong id="modalClassName"></strong>?</p>
+        <div id="modalStudentWarning" class="alert alert-danger py-2" style="display:none;">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          This class has <strong id="modalStudentCount"></strong> student(s). All students and their marks/results will
+          be <strong>permanently deleted</strong>.
+        </div>
+        <p id="modalNoStudents" class="text-muted small" style="display:none;">This class has no students and can be
+          safely deleted.</p>
+      </div>
+      <div class="modal-footer" style="border-color: var(--color-border) !important;">
+        <form id="deleteClassForm" method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="class_id" id="modalClassId" value="">
+          <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash-fill me-1"></i>Yes, Delete Permanently
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Delete modal wiring
+    document.querySelectorAll('.btn-delete-class').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var classId = this.dataset.classId;
+        var className = this.dataset.className;
+        var count = parseInt(this.dataset.studentCount, 10);
+
+        document.getElementById('modalClassName').textContent = className;
+        document.getElementById('modalClassId').value = classId;
+
+        if (count > 0) {
+          document.getElementById('modalStudentCount').textContent = count;
+          document.getElementById('modalStudentWarning').style.display = 'block';
+          document.getElementById('modalNoStudents').style.display = 'none';
+        } else {
+          document.getElementById('modalStudentWarning').style.display = 'none';
+          document.getElementById('modalNoStudents').style.display = 'block';
+        }
+      });
+    });
+
+    // Edit modal wiring
+    document.querySelectorAll('.btn-edit-class').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.getElementById('editClassId').value = this.dataset.classId;
+        document.getElementById('editClassName').value = this.dataset.className;
+        document.getElementById('editClassSection').value = this.dataset.classSection;
+        document.getElementById('editNumericLevel').value = this.dataset.numericLevel;
+        document.getElementById('editTeacherId').value = this.dataset.teacherId || '';
+        document.getElementById('editTeacherName').value = this.dataset.teacherName;
+        document.getElementById('editTeacherPhone').value = this.dataset.teacherPhone;
+        document.getElementById('editTeacherEmail').value = this.dataset.teacherEmail;
+      });
+    });
+  });
+</script>
+
+<!-- Edit Class Modal -->
+<div class="modal fade" id="editClassModal" tabindex="-1" aria-labelledby="editClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content"
+      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text);">
+      <div class="modal-header border-bottom" style="border-color: var(--color-border) !important;">
+        <h5 class="modal-title fw-bold" id="editClassModalLabel">
+          <i class="bi bi-pencil-square me-2 text-primary"></i>Edit Class
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          style="filter: invert(1);"></button>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_class">
+        <input type="hidden" name="class_id" id="editClassId" value="">
+        <div class="modal-body">
+
+          <h6 class="fw-semibold mb-3 text-primary"><i class="bi bi-building me-2"></i>Class Information</h6>
+          <div class="row mb-4">
+            <div class="col-md-5">
+              <label for="editClassName" class="form-label fw-medium">Class Name <span
+                  class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="editClassName" name="name"
+                placeholder="e.g. Class 10, Grade 9" required>
+            </div>
+            <div class="col-md-4">
+              <label for="editClassSection" class="form-label fw-medium">Section</label>
+              <input type="text" class="form-control" id="editClassSection" name="section" placeholder="e.g. A, B, C"
+                maxlength="10">
+              <div class="form-text">Leave blank for no section.</div>
+            </div>
+            <div class="col-md-3">
+              <label for="editNumericLevel" class="form-label fw-medium">Sort Order</label>
+              <input type="number" class="form-control" id="editNumericLevel" name="numeric_level" placeholder="0">
+            </div>
+          </div>
+
+          <hr style="border-color: var(--color-border);">
+          <h6 class="fw-semibold mb-3 text-primary"><i class="bi bi-person-badge me-2"></i>Class Teacher</h6>
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label for="editTeacherId" class="form-label fw-medium">Select Teacher</label>
+              <select class="form-select" id="editTeacherId" name="teacher_id">
+                <option value="">-- Select from existing teachers --</option>
+                {% for t in teachers %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mb-2"><span class="text-muted small fw-medium">OR Enter Manually:</span></div>
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <label for="editTeacherName" class="form-label fw-medium">Teacher Name</label>
+              <input type="text" class="form-control" id="editTeacherName" name="teacher_name" placeholder="Full name">
+              <div class="form-text">Leave both blank to remove the assigned teacher.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <label for="editTeacherPhone" class="form-label fw-medium">Phone</label>
+              <input type="text" class="form-control" id="editTeacherPhone" name="teacher_phone"
+                placeholder="Phone number">
+            </div>
+            <div class="col-md-6">
+              <label for="editTeacherEmail" class="form-label fw-medium">Email</label>
+              <input type="email" class="form-control" id="editTeacherEmail" name="teacher_email"
+                placeholder="teacher@example.com">
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer" style="border-color: var(--color-border) !important;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-save me-2"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize SortableJS for class reordering
+    const classesBody = document.getElementById('classesTableBody');
+    if (classesBody && typeof Sortable !== 'undefined') {
+      new Sortable(classesBody, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'bg-light',
+        onEnd: function () {
+          const rows = classesBody.querySelectorAll('tr');
+          const classIds = Array.from(rows).map(row => row.dataset.id);
+          
+          const formData = new FormData();
+          formData.append('action', 'reorder_classes');
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+          classIds.forEach(id => formData.append('class_ids', id));
+
+          fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.status !== 'success') {
+              alert('Failed to save class order. Please try again.');
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Error while saving class order.');
+          });
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

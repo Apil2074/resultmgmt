@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block title %}Edit School — {{ school.name }}{% endblock %}
+{% block page_title %}✏️ Edit School Tenant{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white py-3 border-bottom d-flex align-items-center">
+        <a href="{% url 'super_schools' %}" class="btn btn-sm btn-outline-secondary me-3">
+          <i class="bi bi-arrow-left"></i> Back to Schools
+        </a>
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-building-gear text-primary me-2"></i>Edit School: <span class="text-primary">{{ school.name }}</span>
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="row g-4">
+            <!-- School Core Info -->
+            <div class="col-lg-6">
+              <h5 class="fw-bold mb-4 text-primary border-bottom pb-2">
+                <i class="bi bi-bank2 me-2"></i>School Details
+              </h5>
+
+              <div class="mb-3">
+                <label for="name" class="form-label fw-medium text-slate-700">School Name *</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ school.name }}" required>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-12">
+                  <label for="establishment_year" class="form-label fw-medium text-slate-700">Establishment Year</label>
+                  <input type="number" class="form-control" id="establishment_year" name="establishment_year" value="{{ school.establishment_year|default:'' }}" placeholder="e.g. 2055">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="address" class="form-label fw-medium text-slate-700">Address *</label>
+                <textarea class="form-control" id="address" name="address" rows="2" required>{{ school.address }}</textarea>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="phone" class="form-label fw-medium text-slate-700">Phone *</label>
+                  <input type="text" class="form-control" id="phone" name="phone" value="{{ school.phone }}" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label fw-medium text-slate-700">School Email *</label>
+                  <input type="email" class="form-control" id="email" name="email" value="{{ school.email }}" required>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="website" class="form-label fw-medium text-slate-700">Website</label>
+                <input type="url" class="form-control" id="website" name="website" value="{{ school.website }}" placeholder="https://...">
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="principal_name" class="form-label fw-medium text-slate-700">Principal Name *</label>
+                  <input type="text" class="form-control" id="principal_name" name="principal_name" value="{{ school.principal_name }}" required>
+                </div>
+                <div class="col-md-6">
+                  <label for="exam_head_name" class="form-label fw-medium text-slate-700">Exam Head Name</label>
+                  <input type="text" class="form-control" id="exam_head_name" name="exam_head_name" value="{{ school.exam_head_name }}">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="logo" class="form-label fw-medium text-slate-700">Update Logo</label>
+                <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                {% if school.logo %}
+                  <div class="mt-2 d-flex align-items-center gap-2">
+                    <img src="{{ school.logo.url }}" alt="Current Logo" class="rounded border" style="height: 48px; width: 48px; object-fit: cover;">
+                    <span class="text-muted small">Current logo</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Subscription Pane -->
+            <div class="col-lg-6">
+              <h5 class="fw-bold mb-4 text-danger border-bottom pb-2">
+                <i class="bi bi-calendar-check me-2"></i>Subscription & Access Control
+              </h5>
+
+              <div class="alert alert-warning mb-4">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Note:</strong> Subscription dates control whether school admins can log in. If <em>no dates are set</em>, access is unlimited. If dates are set, access is blocked outside the valid window.
+              </div>
+
+              <div class="mb-3">
+                <label for="subscription_start_date" class="form-label fw-medium text-slate-700">Subscription Start Date</label>
+                <input type="text" placeholder="YYYY-MM-DD" class="form-control" id="subscription_start_date" name="subscription_start_date" value="{{ school.subscription_start_date|date:'Y-m-d'|default:'' }}">
+                <div class="form-text">Leave blank for no start restriction.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="subscription_end_date" class="form-label fw-medium text-slate-700">Subscription End Date (Expiry)</label>
+                <input type="text" placeholder="YYYY-MM-DD" class="form-control" id="subscription_end_date" name="subscription_end_date" value="{{ school.subscription_end_date|date:'Y-m-d'|default:'' }}">
+                <div class="form-text">School Admins will be locked out after this date.</div>
+              </div>
+
+              <!-- Current Subscription Status -->
+              <div class="card border mt-4">
+                <div class="card-body py-3">
+                  <h6 class="fw-semibold text-slate-700 mb-3"><i class="bi bi-info-circle me-2"></i>Current Status</h6>
+                  <div class="d-flex flex-column gap-2 small">
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">Start Date:</span>
+                      <span class="fw-medium">{{ school.subscription_start_date|date:"Y-m-d"|default:"Not set (unlimited)" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">End Date:</span>
+                      <span class="fw-medium">{{ school.subscription_end_date|date:"Y-m-d"|default:"Not set (unlimited)" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <span class="text-muted">Access:</span>
+                      {% if school.has_active_subscription %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill">
+                          <i class="bi bi-check-circle-fill me-1"></i>Active
+                        </span>
+                      {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill">
+                          <i class="bi bi-x-circle-fill me-1"></i>Expired / Blocked
+                        </span>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end border-top pt-4 mt-4 gap-3">
+            <a href="{% url 'super_schools' %}" class="btn btn-outline-secondary px-4">
+              <i class="bi bi-x-lg me-2"></i>Cancel
+            </a>
+            <button type="submit" class="btn btn-primary px-5 py-2 fw-semibold">
+              <i class="bi bi-save me-2"></i>Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

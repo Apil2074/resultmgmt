@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Database Backups{% endblock %}
+{% block page_title %}💾 Database Backups{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-hdd-fill text-primary me-2"></i>Available Database Backups
+        </h5>
+        <span class="badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill border">
+          Max 20 backups
+        </span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Filename</th>
+              <th>File Size</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for backup in backups %}
+              <tr>
+                <td class="fw-semibold text-slate-700 font-monospace">{{ backup.name }}</td>
+                <td class="font-monospace">{{ backup.size|filesizeformat }}</td>
+                <td>
+                  <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded">
+                    Safe
+                  </span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-center py-5 text-muted">
+                  <i class="bi bi-folder2-open d-block fs-3 mb-2"></i>
+                  No backup files found. Click "Create Backup" on the right to start.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-cloud-arrow-down-fill text-primary me-2"></i>Actions
+        </h5>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-slate-700">Creates a full snapshot of the database using <code>pg_dump</code> and saves it to the media backup folder.</p>
+        
+        <form method="POST" action="{% url 'create_backup' %}" class="mb-4">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary w-100 py-2">
+            <i class="bi bi-download me-2"></i>Create New Backup
+          </button>
+        </form>
+
+        <div class="alert alert-warning small mb-0">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Notice:</strong> Database restoration can only be performed by the Super Admin through the system terminal to ensure data integrity and security.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,724 @@
+{% extends 'base.html' %}
+{% block title %}Class Details: {{ class_obj.full_name }}{% endblock %}
+{% block page_title %}🏫 {{ class_obj.full_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'class_list' %}" class="text-decoration-none">Classes</a></li>
+      <li class="breadcrumb-item active">{{ class_obj.full_name }}</li>
+    </ol>
+  </nav>
+  <!-- Trigger Modal -->
+  <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteClassModal">
+    <i class="bi bi-trash-fill me-1"></i>Delete Class
+  </button>
+  <!-- Hidden Delete Form -->
+  <form id="deleteClassForm" method="POST" action="{% url 'class_list' %}" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="class_id" value="{{ class_obj.id }}">
+  </form>
+</div>
+
+<!-- Delete Class Confirmation Modal -->
+<div class="modal fade" id="deleteClassModal" tabindex="-1" aria-labelledby="deleteClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content"
+      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text);">
+      <div class="modal-header border-bottom" style="border-color: var(--color-border) !important;">
+        <h5 class="modal-title fw-bold text-danger" id="deleteClassModalLabel">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Class
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          style="filter: invert(1);"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to permanently delete <strong>{{ class_obj.full_name }}</strong>?</p>
+        {% with count=class_obj.students.count %}
+        {% if count > 0 %}
+        <div class="alert alert-danger py-2">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          This class has <strong>{{ count }} student(s)</strong>. Deleting the class will <strong>permanently delete all
+            students</strong> and their marks, results, and enrollment data.
+        </div>
+        {% else %}
+        <p class="text-muted small">This class has no students and can be safely deleted.</p>
+        {% endif %}
+        {% endwith %}
+      </div>
+      <div class="modal-footer" style="border-color: var(--color-border) !important;">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteClassBtn">
+          <i class="bi bi-trash-fill me-1"></i>Yes, Delete Permanently
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row mb-4">
+  <!-- Class Header KPI Summary -->
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase">Class Name</h6>
+        <h5 class="fw-bold text-slate-800 mb-2">{{ class_obj.name }}</h5>
+        {% if class_obj.section %}
+        <span class="badge bg-secondary-subtle text-secondary px-3 py-1.5 rounded-pill">
+          Section: {{ class_obj.section }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase">Academic Session</h6>
+        <h5 class="fw-bold text-slate-800 mb-2">{{ class_obj.session.name }}</h5>
+        <span class="badge bg-light text-slate-600 px-3 py-1.5 rounded-pill border">
+          Created: {{ class_obj.created_at|date:"Y-m-d" }}
+        </span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase">Class Teacher</h6>
+        {% if class_obj.class_teacher %}
+        <h5 class="fw-bold text-slate-800 mb-2">{{ class_obj.class_teacher.name }}</h5>
+        <span class="text-muted small">
+          <i class="bi bi-telephone-fill me-1"></i>{{ class_obj.class_teacher.phone|default:"No phone" }}
+        </span>
+        {% else %}
+        <h5 class="text-muted italic mb-2">Not Assigned</h5>
+        <span class="text-muted small">Update in class list</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Student Tab / List -->
+  <div class="col-lg-7 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-people-fill text-primary me-2"></i>Students ({{ students.count }})
+        </h5>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+          <i class="bi bi-person-plus-fill me-1"></i>Add Student
+        </button>
+      </div>
+      <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th style="width: 80px;">Roll No.</th>
+              <th>Name</th>
+              <th>Symbol No.</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr>
+              <td class="fw-bold text-slate-700">{{ s.roll_number }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  {% if s.photo %}
+                  <img src="{{ s.photo.url }}" alt="{{ s.name }}" class="rounded-circle"
+                    style="width: 32px; height: 32px; object-fit: cover;">
+                  {% else %}
+                  <div class="rounded-circle bg-light text-secondary d-flex align-items-center justify-content-center"
+                    style="width: 32px; height: 32px; font-weight: bold; font-size: 0.85rem;">
+                    {{ s.name|first|upper }}
+                  </div>
+                  {% endif %}
+                  <a href="{% url 'student_detail' s.id %}"
+                    class="fw-semibold text-decoration-none text-slate-800 hover-primary">
+                    {{ s.name }}
+                  </a>
+                </div>
+              </td>
+              <td class="text-muted small">{{ s.symbol_number|default:"-" }}</td>
+              <td class="text-end">
+                <div class="d-flex justify-content-end gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
+                    data-bs-target="#mapSubjectsModal{{ s.id }}" title="Map Subjects">
+                    <i class="bi bi-book-fill"></i>
+                  </button>
+                  <a href="{% url 'student_edit' s.id %}?next={{ request.path }}" class="btn btn-sm btn-outline-warning"
+                    title="Edit Student">
+                    <i class="bi bi-pencil-fill"></i>
+                  </a>
+                  <a href="{% url 'student_delete' s.id %}?next={{ request.path }}"
+                    class="btn btn-sm btn-outline-danger" title="Remove Student">
+                    <i class="bi bi-trash-fill"></i>
+                  </a>
+                  <a href="{% url 'student_detail' s.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                    <i class="bi bi-eye-fill"></i>
+                  </a>
+                </div>
+
+                <!-- Map Subjects Modal for student {{ s.id }} -->
+                <div class="modal fade" id="mapSubjectsModal{{ s.id }}" tabindex="-1"
+                  aria-labelledby="mapSubjectsModalLabel{{ s.id }}" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content"
+                      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text); text-align: left;">
+                      <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
+                        <h5 class="modal-title fw-bold" id="mapSubjectsModalLabel{{ s.id }}">Map Optional Subjects for
+                          {{ s.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                          style="filter: invert(1);"></button>
+                      </div>
+                      <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="map_subjects">
+                        <input type="hidden" name="student_id" value="{{ s.id }}">
+                        <div class="modal-body">
+                          <p class="small text-muted mb-3">Check the optional subjects that this student is studying.
+                            Compulsory subjects are automatically assigned.</p>
+
+                          {% if optional_subjects %}
+                          <div class="d-flex flex-column gap-2">
+                            {% for opt_sub in optional_subjects %}
+                            <div class="form-check">
+                              <input
+                                class="form-check-input"
+                                type="checkbox"
+                                name="subject_ids"
+                                value="{{ opt_sub.id }}"
+                                id="optSub{{ s.id }}_{{ opt_sub.id }}"
+                                {% if opt_sub.id in s.enrolled_subject_ids %}checked{% endif %}
+                              >
+                              <label class="form-check-label fw-medium text-slate-700"
+                                for="optSub{{ s.id }}_{{ opt_sub.id }}">
+                                {{ opt_sub.name }} ({{ opt_sub.code }}) — {{ opt_sub.theory_credit_hour }}
+                                {% if opt_sub.has_practical %}
+                                  + {{ opt_sub.practical_credit_hour }}
+                                {% endif %}
+                                CH
+                              </label>
+                            </div>
+                            {% endfor %}
+                          </div>
+                          {% else %}
+                          <div class="text-center py-3 text-muted">
+                            <i class="bi bi-exclamation-triangle d-block fs-3 mb-2"></i>
+                            No optional subjects defined for this class.
+                          </div>
+                          {% endif %}
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid var(--color-border);">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                          <button type="submit" class="btn btn-success">Save Map</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-5 text-muted">
+                <i class="bi bi-people d-block fs-3 mb-2"></i>
+                No active students in this class.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subjects Tab / List -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-book-fill text-primary me-2"></i>Subjects ({{ subjects.count }})
+        </h5>
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+          <i class="bi bi-plus-lg me-1"></i>Add Subject
+        </button>
+      </div>
+      <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th style="width: 40px;"></th>
+              <th>Code / Name</th>
+              <th>Theory Credit</th>
+              <th>Practical Credit</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="subjectsTableBody">
+            {% for sub in subjects %}
+            <tr data-id="{{ sub.id }}">
+              <td class="drag-handle text-muted" style="cursor: move; width: 40px; text-align: center;">
+                <i class="bi bi-grip-vertical fs-5"></i>
+              </td>
+              <td>
+                <div class="fw-semibold text-slate-800">{{ sub.name }}</div>
+                <div class="small text-muted">
+                  {{ sub.code }}
+                  {% if sub.has_practical and sub.practical_code %}
+                  (Prac: {{ sub.practical_code }})
+                  {% endif %}
+                  &bull; {{ sub.get_subject_type_display }}
+                </div>
+              </td>
+              <td class="fw-medium text-slate-700">{{ sub.theory_credit_hour }} CH</td>
+              <td class="fw-medium text-slate-700">
+                {% if sub.has_practical %}
+                {{ sub.practical_credit_hour }} CH
+                {% else %}
+                -
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <div class="d-flex justify-content-end gap-1">
+                  <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                    data-bs-target="#editSubjectModal{{ sub.id }}" title="Edit Subject">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                    data-bs-target="#deleteSubjectModal{{ sub.id }}" title="Delete Subject">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+
+                <!-- Edit Subject Modal -->
+                <div class="modal fade" id="editSubjectModal{{ sub.id }}" tabindex="-1"
+                  aria-labelledby="editSubjectModalLabel{{ sub.id }}" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content"
+                      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text); text-align: left;">
+                      <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
+                        <h5 class="modal-title fw-bold" id="editSubjectModalLabel{{ sub.id }}">Edit Subject: {{ sub.name
+                          }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                          style="filter: invert(1);"></button>
+                      </div>
+                      <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="edit_subject">
+                        <input type="hidden" name="subject_id" value="{{ sub.id }}">
+                        <div class="modal-body">
+                          <div class="mb-3">
+                            <label class="form-label fw-medium text-slate-700">Subject Code *</label>
+                            <input type="text" class="form-control" name="code" value="{{ sub.code }}" required>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label fw-medium text-slate-700">Subject Name *</label>
+                            <input type="text" class="form-control" name="name" value="{{ sub.name }}" required>
+                          </div>
+                          <div class="row g-2 mb-3">
+                            <div class="col-6">
+                              <label class="form-label fw-medium text-slate-700">Theory Credit *</label>
+                              <input type="number" step="0.1" class="form-control" name="theory_credit_hour"
+                                value="{{ sub.theory_credit_hour }}" required>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-medium text-slate-700">Sort Order</label>
+                              <input type="number" class="form-control" name="order" value="{{ sub.order }}" required>
+                            </div>
+                          </div>
+                          <div class="row g-2 mb-3">
+                            <div class="col-6">
+                              <label class="form-label fw-medium text-slate-700">Subject Type</label>
+                               <select class="form-select" name="subject_type">
+                                <option value="COMPULSORY" {% if sub.subject_type == 'COMPULSORY' %}selected{% endif %}>
+                                  Compulsory</option>
+                                <option value="OPTIONAL" {% if sub.subject_type == 'OPTIONAL' %}selected{% endif %}>
+                                  Optional</option>
+                                <option value="NON_CREDIT" {% if sub.subject_type == 'NON_CREDIT' %}selected{% endif %}>
+                                  Non-Credit</option>
+                              </select>
+                            </div>
+                            <div class="col-6">
+                              <label class="form-label fw-medium text-slate-700">Has Practical?</label>
+                              <select class="form-select edit-row-has-practical" name="has_practical"
+                                data-id="{{ sub.id }}">
+                                <option value="no" {% if not sub.has_practical %}selected{% endif %}>No</option>
+                                <option value="yes" {% if sub.has_practical %}selected{% endif %}>Yes</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div class="edit-row-practical-details-{{ sub.id }}"
+                            style="display: {% if sub.has_practical %}block{% else %}none{% endif %};">
+                            <div class="row g-2">
+                              <div class="col-6">
+                                <label class="form-label fw-medium text-slate-700 text-danger">Practical Code *</label>
+                                <input
+                                  type="text"
+                                  class="form-control edit-row-practical-code-{{ sub.id }}"
+                                  name="practical_code"
+                                  value="{{ sub.practical_code|default:'' }}"
+                                  {% if sub.has_practical %}required{% endif %}
+                                >
+                              </div>
+                              <div class="col-6">
+                                <label class="form-label fw-medium text-slate-700">Practical Credit</label>
+                                <input type="number" step="0.1" class="form-control" name="practical_credit_hour"
+                                  value="{{ sub.practical_credit_hour|default:'0.0' }}">
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid var(--color-border);">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                          <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Delete Subject Modal -->
+                <div class="modal fade" id="deleteSubjectModal{{ sub.id }}" tabindex="-1"
+                  aria-labelledby="deleteSubjectModalLabel{{ sub.id }}" aria-hidden="true">
+                  <div class="modal-dialog">
+                    <div class="modal-content"
+                      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text); text-align: left;">
+                      <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
+                        <h5 class="modal-title fw-bold text-danger" id="deleteSubjectModalLabel{{ sub.id }}">Confirm
+                          Delete Subject</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                          style="filter: invert(1);"></button>
+                      </div>
+                      <form method="POST">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete_subject">
+                        <input type="hidden" name="subject_id" value="{{ sub.id }}">
+                        <div class="modal-body">
+                          <p class="text-slate-700">Are you sure you want to delete subject <strong>{{ sub.name
+                              }}</strong> ({{ sub.code }})?</p>
+                          <p class="text-danger small"><i class="bi bi-exclamation-triangle-fill me-1"></i>Warning: This
+                            will delete all mark entries associated with this subject for this class!</p>
+                        </div>
+                        <div class="modal-footer" style="border-top: 1px solid var(--color-border);">
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                          <button type="submit" class="btn btn-danger">Delete Subject</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-5 text-muted">
+                <i class="bi bi-book d-block fs-3 mb-2"></i>
+                No subjects assigned to this class.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content"
+      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text); text-align: left;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
+        <h5 class="modal-title fw-bold" id="addStudentModalLabel">Add Student to {{ class_obj.full_name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          style="filter: invert(1);"></button>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_student">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="studentName" class="form-label fw-medium text-slate-700">Full Name *</label>
+            <input type="text" class="form-control" id="studentName" name="name" required placeholder="e.g. John Doe">
+          </div>
+          <div class="mb-3">
+            <label for="studentRoll" class="form-label fw-medium text-slate-700">Roll Number *</label>
+            <input type="text" class="form-control" id="studentRoll" name="roll_number" required placeholder="e.g. 1">
+          </div>
+          <div class="mb-3">
+            <label for="studentGender" class="form-label fw-medium text-slate-700">Gender</label>
+            <select class="form-select" id="studentGender" name="gender">
+              <option value="M" selected>Male</option>
+              <option value="F">Female</option>
+              <option value="O">Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="studentSymbol" class="form-label fw-medium text-slate-700">Symbol Number (Optional)</label>
+            <input type="text" class="form-control" id="studentSymbol" name="symbol_number" placeholder="e.g. 10001A">
+          </div>
+          <div class="mb-3">
+            <label for="studentReg" class="form-label fw-medium text-slate-700">Registration Number (Optional)</label>
+            <input type="text" class="form-control" id="studentReg" name="registration_number"
+              placeholder="e.g. 987-654-321">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--color-border);">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Add Student</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1" aria-labelledby="addSubjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content"
+      style="background: var(--color-bg-light); border: 1px solid var(--color-border); color: var(--color-text); text-align: left;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
+        <h5 class="modal-title fw-bold" id="addSubjectModalLabel">Add Subjects to {{ class_obj.full_name }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+          style="filter: invert(1);"></button>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_subjects">
+        <div class="modal-body">
+          <p class="small text-muted mb-3">Add one or more subjects at once by clicking the "+" button below.</p>
+
+          <div id="subjectRowsContainer">
+            <!-- Row Template -->
+            <div class="subject-row border rounded p-3 mb-3 position-relative"
+              style="background: rgba(245,158,11,0.02); border-color: var(--color-border) !important;">
+              <button type="button"
+                class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-row-btn"
+                style="display: none;" title="Remove this subject">
+                <i class="bi bi-trash-fill"></i>
+              </button>
+
+              <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold text-slate-700">Subject Code *</label>
+                  <input type="text" class="form-control form-control-sm" name="code" required
+                    placeholder="e.g. ENG-101">
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label small fw-semibold text-slate-700">Subject Name *</label>
+                  <input type="text" class="form-control form-control-sm" name="name" required
+                    placeholder="e.g. English">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold text-slate-700">Theory Credit *</label>
+                  <input type="number" step="0.1" class="form-control form-control-sm" name="theory_credit_hour"
+                    value="3.0" required>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small fw-semibold text-slate-700">Sort Order</label>
+                  <input type="number" class="form-control form-control-sm" name="order" value="0" required>
+                </div>
+              </div>
+
+              <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold text-slate-700">Subject Type</label>
+                  <select class="form-select form-select-sm" name="subject_type">
+                    <option value="COMPULSORY" selected>Compulsory</option>
+                    <option value="OPTIONAL">Optional</option>
+                    <option value="NON_CREDIT">Non-Credit</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold text-slate-700">Has Practical?</label>
+                  <select class="form-select form-select-sm row-has-practical" name="has_practical">
+                    <option value="no" selected>No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+                <div class="col-md-6 row-practical-details" style="display: none;">
+                  <div class="row g-2">
+                    <div class="col-6">
+                      <label class="form-label small fw-semibold text-slate-700 text-danger">Practical Code *</label>
+                      <input type="text" class="form-control form-control-sm row-practical-code" name="practical_code"
+                        placeholder="e.g. ENG-101P">
+                    </div>
+                    <div class="col-6">
+                      <label class="form-label small fw-semibold text-slate-700">Practical Credit</label>
+                      <input type="number" step="0.1" class="form-control form-control-sm" name="practical_credit_hour"
+                        value="1.0">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-sm btn-outline-primary w-100 py-2 border-dashed" id="addSubjectRowBtn">
+            <i class="bi bi-plus-lg me-1"></i>Add Another Subject Row
+          </button>
+        </div>
+        <div class="modal-footer" style="border-top: 1px solid var(--color-border);">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save All Subjects</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Initialize SortableJS for subject reordering
+    const subjectsBody = document.getElementById('subjectsTableBody');
+    if (subjectsBody && typeof Sortable !== 'undefined') {
+      new Sortable(subjectsBody, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'bg-light',
+        onEnd: function () {
+          const rows = subjectsBody.querySelectorAll('tr');
+          const subjectIds = Array.from(rows).map(row => row.dataset.id);
+          
+          const formData = new FormData();
+          formData.append('action', 'reorder_subjects');
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+          subjectIds.forEach(id => formData.append('subject_ids', id));
+
+          fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.status !== 'success') {
+              alert('Failed to save subject order. Please try again.');
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Error while saving subject order.');
+          });
+        }
+      });
+    }
+
+    const container = document.getElementById('subjectRowsContainer');
+    const addBtn = document.getElementById('addSubjectRowBtn');
+
+    // Handle practical details toggle delegation
+    container?.addEventListener('change', function (e) {
+      if (e.target && e.target.classList.contains('row-has-practical')) {
+        const parentRow = e.target.closest('.subject-row');
+        const details = parentRow.querySelector('.row-practical-details');
+        const codeInput = parentRow.querySelector('.row-practical-code');
+        if (e.target.value === 'yes') {
+          details.style.display = 'block';
+          if (codeInput) codeInput.setAttribute('required', 'required');
+        } else {
+          details.style.display = 'none';
+          if (codeInput) codeInput.removeAttribute('required');
+        }
+      }
+    });
+
+    // Handle row removal delegation
+    container?.addEventListener('click', function (e) {
+      const removeBtn = e.target.closest('.remove-row-btn');
+      if (removeBtn) {
+        const row = removeBtn.closest('.subject-row');
+        const allRows = container.querySelectorAll('.subject-row');
+        if (allRows.length > 1) {
+          row.remove();
+          updateRemoveButtons();
+        }
+      }
+    });
+
+    // Handle adding another row
+    addBtn?.addEventListener('click', function () {
+      const allRows = container.querySelectorAll('.subject-row');
+      if (allRows.length === 0) return;
+      // Clone first row
+      const firstRow = allRows[0];
+      const newRow = firstRow.cloneNode(true);
+
+      // Clear inputs in new row
+      newRow.querySelectorAll('input').forEach(input => {
+        if (input.name === 'theory_credit_hour') {
+          input.value = '3.0';
+        } else if (input.name === 'practical_credit_hour') {
+          input.value = '1.0';
+        } else if (input.name === 'order') {
+          input.value = '0';
+        } else {
+          input.value = '';
+        }
+      });
+
+      // Reset selects in new row
+      newRow.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+      });
+
+      // Reset practical details hide
+      const details = newRow.querySelector('.row-practical-details');
+      if (details) details.style.display = 'none';
+      const codeInput = newRow.querySelector('.row-practical-code');
+      if (codeInput) codeInput.removeAttribute('required');
+
+      // Append new row
+      container.appendChild(newRow);
+      updateRemoveButtons();
+    });
+
+    function updateRemoveButtons() {
+      const allRows = container.querySelectorAll('.subject-row');
+      allRows.forEach(row => {
+        const btn = row.querySelector('.remove-row-btn');
+        if (btn) {
+          btn.style.display = allRows.length > 1 ? 'block' : 'none';
+        }
+      });
+    }
+
+    // Handle practical details toggle for edit modals
+    document.addEventListener('change', function (e) {
+      if (e.target && e.target.classList.contains('edit-row-has-practical')) {
+        const subjectId = e.target.dataset.id;
+        const details = document.querySelector(`.edit-row-practical-details-${subjectId}`);
+        const codeInput = document.querySelector(`.edit-row-practical-code-${subjectId}`);
+        if (e.target.value === 'yes') {
+          details.style.display = 'block';
+          if (codeInput) codeInput.setAttribute('required', 'required');
+        } else {
+          details.style.display = 'none';
+          if (codeInput) codeInput.removeAttribute('required');
+        }
+      }
+    });
+  });
+</script>
+
+<script>
+  // Hook confirm delete class button to the hidden form
+  document.addEventListener('DOMContentLoaded', function () {
+    const confirmBtn = document.getElementById('confirmDeleteClassBtn');
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', function () {
+        document.getElementById('deleteClassForm').submit();
+      });
+    }
+  });
+</script>
+{% endblock %}

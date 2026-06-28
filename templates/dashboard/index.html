@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Welcome, {{ user.first_name|default:user.username }}! 👋</h1>
+    <div class="page-subtitle">
+      {% if user.is_super_admin %}
+        System Administration Portal
+      {% elif active_session %}
+        Session: <strong>{{ active_session.name }}</strong>
+      {% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2">
+    {% if user.is_super_admin %}
+      <a href="{% url 'create_school_and_admin' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> Register New School
+      </a>
+    {% else %}
+      {% if active_session %}
+      <a href="{% url 'exam_list' %}" class="btn btn-secondary">
+        <i class="bi bi-clipboard2-check"></i> View Exams
+      </a>
+      {% endif %}
+      {% if user.can_manage_school %}
+      <a href="{% url 'school_profile' %}" class="btn btn-primary">
+        <i class="bi bi-gear-fill"></i> School Settings
+      </a>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if user.is_super_admin %}
+<!-- ── Super Admin Dashboard ───────────────────────────────── -->
+<div class="stats-grid mb-4">
+  <div class="stat-card blue">
+    <div class="stat-icon"><i class="bi bi-building-fill"></i></div>
+    <div class="stat-value">{{ total_schools|default:0 }}</div>
+    <div class="stat-label">Total Schools</div>
+  </div>
+  <div class="stat-card emerald">
+    <div class="stat-icon"><i class="bi bi-shield-lock-fill"></i></div>
+    <div class="stat-value">Active</div>
+    <div class="stat-label">Multi-Tenant System</div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-building text-primary me-2"></i>School Tenants
+        </h5>
+        <a href="{% url 'super_schools' %}" class="btn btn-sm btn-outline-primary">
+          Manage All Schools
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>School Name</th>
+              <th>Establishment</th>
+              <th>Address</th>
+              <th>Principal</th>
+              <th>Students</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for school in all_schools %}
+              <tr>
+                <td class="fw-semibold text-slate-700">
+                  <div class="d-flex align-items-center">
+                    {% if school.logo %}
+                      <img src="{{ school.logo.url }}" alt="{{ school.name }}" class="rounded border me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                    {% else %}
+                      <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.9rem; font-weight: bold;">
+                        {{ school.name|first|upper }}
+                      </div>
+                    {% endif %}
+                    {{ school.name }}
+                  </div>
+                </td>
+                <td>{{ school.establishment_year|default:"—" }}</td>
+                <td>{{ school.address }}</td>
+                <td>{{ school.principal_name }}</td>
+                <td><span class="badge bg-secondary">{{ school.student_count }}</span></td>
+                <td class="text-end">
+                  <a href="{% url 'super_schools' %}" class="btn btn-sm btn-outline-primary">
+                    Manage Details
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  No schools registered yet.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- ── KPI Stats ───────────────────────────────────────────── -->
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-icon"><i class="bi bi-building-fill"></i></div>
+    <div class="stat-value">{{ total_classes|default:0 }}</div>
+    <div class="stat-label">Total Classes</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-value">{{ total_students|default:0 }}</div>
+    <div class="stat-label">Active Students</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
+    <div class="stat-value">{{ total_subjects|default:0 }}</div>
+    <div class="stat-label">Subjects</div>
+  </div>
+  <div class="stat-card cyan">
+    <div class="stat-icon"><i class="bi bi-clipboard2-check-fill"></i></div>
+    <div class="stat-value">{{ total_exams|default:0 }}</div>
+    <div class="stat-label">Total Exams</div>
+  </div>
+  <div class="stat-card emerald">
+    <div class="stat-icon"><i class="bi bi-patch-check-fill"></i></div>
+    <div class="stat-value">{{ published_exams|default:0 }}</div>
+    <div class="stat-label">Published Results</div>
+  </div>
+  <div class="stat-card {% if pass_percentage >= 80 %}emerald{% elif pass_percentage >= 60 %}gold{% else %}red{% endif %}">
+    <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+    <div class="stat-value">{{ pass_percentage|default:0 }}%</div>
+    <div class="stat-label">Pass Percentage</div>
+  </div>
+</div>
+
+<!-- ── Charts Row ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <!-- GPA Distribution Chart -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-pie-chart-fill me-2" style="color:var(--color-gold);"></i>Grade Distribution</div>
+      </div>
+      <div class="chart-container" style="height:220px;">
+        <canvas id="gradeChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Exams -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-clipboard2-fill me-2" style="color:var(--color-blue);"></i>Recent Exams</div>
+        <a href="{% url 'exam_list' %}" class="btn btn-sm btn-secondary">View All</a>
+      </div>
+      {% if recent_exams %}
+        {% for exam in recent_exams %}
+        <div class="d-flex align-items-center justify-content-between p-2" style="border-bottom: 1px solid var(--color-border);">
+          <div>
+            <div style="font-size:0.82rem; font-weight:600; color:var(--color-text);">{{ exam.name }}</div>
+            <div style="font-size:0.7rem; color:var(--color-text-muted);">{{ exam.session.name }}</div>
+          </div>
+          <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% elif exam.status == 'APPROVED' %}badge-blue{% elif exam.status == 'VERIFICATION' %}badge-gold{% else %}badge-gray{% endif %}">
+            {{ exam.get_status_display }}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="padding: 30px;">
+          <div class="empty-icon">📋</div>
+          <p>No exams yet</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-lightning-fill me-2" style="color:var(--color-gold);"></i>Quick Actions</div>
+      </div>
+      <div class="d-flex flex-column gap-2 p-1">
+        <a href="{% url 'student_create' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-person-plus-fill me-2"></i>Add Student
+        </a>
+        <a href="{% url 'student_import' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-upload me-2"></i>Import Students
+        </a>
+        <a href="{% url 'exam_list' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-clipboard2-plus me-2"></i>Create Exam
+        </a>
+        <a href="{% url 'subject_list' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-book-plus me-2"></i>Manage Subjects
+        </a>
+        <a href="{% url 'reports_index' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
+        </a>
+        {% if user.can_manage_school %}
+        <a href="{% url 'backup_index' %}" class="btn btn-secondary w-100 text-start">
+          <i class="bi bi-hdd-fill me-2"></i>Backup Database
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Recent Activity ─────────────────────────────────────── -->
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="bi bi-activity me-2" style="color:var(--color-emerald);"></i>Recent Activity</div>
+        <a href="{% url 'audit_log' %}" class="btn btn-sm btn-secondary">Full Log</a>
+      </div>
+      {% if recent_activities %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Action</th>
+              <th>Object</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in recent_activities %}
+            <tr>
+              <td>
+                {% if log.user %}
+                  <div style="font-weight:600;">{{ log.user.get_full_name|default:log.user.username }}</div>
+                  <div style="font-size:0.7rem; color:var(--color-text-muted);">{{ log.user.get_role_display }}</div>
+                {% else %}
+                  <div style="font-weight:600;">System</div>
+                  <div style="font-size:0.7rem; color:var(--color-text-muted);"></div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {% if log.action == 'CREATE' %}badge-green{% elif log.action == 'UPDATE' %}badge-blue{% elif log.action == 'DELETE' %}badge-red{% elif log.action == 'PUBLISH' %}badge-gold{% else %}badge-gray{% endif %}">
+                  {{ log.get_action_display }}
+                </span>
+              </td>
+              <td style="color:var(--color-text-muted);">{{ log.model_name }} — {{ log.object_repr|truncatechars:40 }}</td>
+              <td style="font-size:0.75rem; color:var(--color-text-dim);">{{ log.timestamp|timesince }} ago</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <p>No activity yet</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Grade Distribution Chart
+const gradeData = {{ gpa_data|default:'{}'|safe }};
+const labels = Object.keys(gradeData);
+const values = Object.values(gradeData);
+const colors = ['#F59E0B','#10B981','#3B82F6','#8B5CF6','#EF4444','#06B6D4','#6B7280'];
+
+if (labels.length > 0) {
+  new Chart(document.getElementById('gradeChart'), {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors.slice(0, labels.length),
+        borderColor: '#1E293B',
+        borderWidth: 3,
+        hoverBorderWidth: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94A3B8', boxWidth: 12, padding: 8, font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

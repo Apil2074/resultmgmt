@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RMS{% endblock %} | {% if school %}{{ school.name }}{% else %}Multi-School RMS{% endif %}</title>
+  <meta name="description" content="{% block meta_description %}Multi-School Result Management System{% endblock %}">
+
+  <!-- Preconnect fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  
+  <!-- Select2 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+  
+  {% block extra_css %}{% endblock %}
+  <script src="{% static 'js/main.js' %}" defer></script>
+</head>
+<body>
+<div class="background-grid"></div>
+
+<div class="app-wrapper">
+  <script>
+    if (localStorage.getItem('sidebar-collapsed') === 'true') {
+      document.querySelector('.app-wrapper').classList.add('sidebar-collapsed');
+    }
+  </script>
+
+  <!-- ═══════════════════════════════════════════════ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Close button for mobile -->
+    <button class="btn-sidebar-close d-md-none" id="sidebarClose" aria-label="Close Sidebar">
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <!-- Logo -->
+    <a class="sidebar-logo" href="{% url 'dashboard' %}">
+      <div class="logo-icon">R</div>
+      <div class="logo-text">
+        <div class="brand-name">RMS</div>
+        <div class="brand-sub">Result Management</div>
+      </div>
+    </a>
+
+    <!-- School Info -->
+    {% if school %}
+    <div class="sidebar-school">
+      <div class="school-name">{{ school.name }}</div>
+      <div class="session-badge">
+        {% if active_session %}
+          📅 Session: {{ active_session.name }}
+        {% else %}
+          ⚠️ No active session
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+
+      <!-- Main -->
+      <div class="nav-section-title">Main</div>
+      <a href="{% if user.is_teacher %}{% url 'teacher_dashboard' %}{% else %}{% url 'dashboard' %}{% endif %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill nav-icon"></i> <span class="nav-text">Dashboard</span>
+      </a>
+
+      {% if user.is_school_admin or user.is_super_admin %}
+      <!-- Academic -->
+      <div class="nav-section-title">Academic</div>
+      <a href="{% url 'class_list' %}" class="nav-item {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-building nav-icon"></i> <span class="nav-text">Classes</span>
+      </a>
+      <a href="{% url 'student_list' %}" class="nav-item {% if 'student' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-people-fill nav-icon"></i> <span class="nav-text">Students</span>
+      </a>
+      <a href="{% url 'subject_list' %}" class="nav-item {% if 'subject' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-book-fill nav-icon"></i> <span class="nav-text">Subjects</span>
+      </a>
+      <a href="{% url 'teacher_list' %}" class="nav-item {% if 'teacher' in request.resolver_match.url_name and request.resolver_match.url_name != 'teacher_dashboard' %}active{% endif %}">
+        <i class="bi bi-person-video3 nav-icon"></i> <span class="nav-text">Teachers</span>
+      </a>
+
+      <!-- Examinations -->
+      <div class="nav-section-title">Examinations</div>
+      <a href="{% url 'exam_list' %}" class="nav-item {% if 'exam' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-clipboard2-check-fill nav-icon"></i> <span class="nav-text">Exams</span>
+      </a>
+
+      <!-- Results -->
+      <div class="nav-section-title">Results</div>
+      <a href="{% url 'reports_index' %}" class="nav-item {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bar-chart-fill nav-icon"></i> <span class="nav-text">Reports</span>
+      </a>
+      <a href="{% url 'grade_ledger_select' %}" class="nav-item {% if 'grade_ledger' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-table nav-icon"></i> <span class="nav-text">Grade Ledger</span>
+      </a>
+      <a href="{% url 'marksheet_select' %}" class="nav-item {% if 'marksheet' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-file-earmark-text-fill nav-icon"></i> <span class="nav-text">Marksheet</span>
+      </a>
+      {% endif %}
+
+      <!-- Administration -->
+      {% if user.can_manage_school %}
+      <div class="nav-section-title">Administration</div>
+      <a href="{% url 'school_profile' %}" class="nav-item {% if request.resolver_match.url_name == 'school_profile' %}active{% endif %}">
+        <i class="bi bi-bank2 nav-icon"></i> <span class="nav-text">School Profile</span>
+      </a>
+      <a href="{% url 'session_list' %}" class="nav-item {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}">
+        <i class="bi bi-calendar3 nav-icon"></i> <span class="nav-text">Sessions</span>
+      </a>
+      <a href="{% url 'audit_log' %}" class="nav-item {% if 'audit' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-shield-check nav-icon"></i> <span class="nav-text">Audit Log</span>
+      </a>
+      <a href="{% url 'backup_index' %}" class="nav-item {% if 'backup' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-hdd-fill nav-icon"></i> <span class="nav-text">Backup</span>
+      </a>
+      {% endif %}
+
+      <!-- Super Admin -->
+      {% if user.is_super_admin %}
+      <div class="nav-section-title">Super Admin</div>
+      <a href="{% url 'super_schools' %}" class="nav-item {% if 'super_schools' in request.resolver_match.url_name or 'create_school_and_admin' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-building-fill nav-icon"></i> <span class="nav-text">Manage Schools</span>
+      </a>
+      {% endif %}
+
+
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <a href="{% url 'change_password' %}" class="nav-item" style="border-radius: var(--radius-md);">
+        <i class="bi bi-key-fill nav-icon"></i> <span class="nav-text">Change Password</span>
+      </a>
+      <a href="{% url 'logout' %}" class="nav-item" style="border-radius: var(--radius-md); color: var(--color-red);">
+        <i class="bi bi-box-arrow-right nav-icon"></i> <span class="nav-text">Sign Out</span>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ═══════════════════════════════════════════ MAIN CONTENT ═══ -->
+  <div class="main-content">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="d-flex align-items-center gap-3">
+        <button class="topbar-btn d-md-none" id="sidebarToggle">
+          <i class="bi bi-list"></i>
+        </button>
+        <button class="topbar-btn d-none d-md-flex" id="desktopSidebarToggle" title="Collapse Sidebar">
+          <i class="bi bi-chevron-left" id="desktopToggleIcon"></i>
+        </button>
+        <div>
+          <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <!-- School Selector for Super Admin -->
+        {% if user.is_super_admin %}
+        <span class="badge badge-purple">
+          <i class="bi bi-star-fill"></i> Super Admin
+        </span>
+        {% endif %}
+
+        <!-- User Menu -->
+        <div class="dropdown">
+          <div class="user-menu dropdown-toggle" data-bs-toggle="dropdown" id="userMenuToggle">
+            <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+            <div>
+              <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+              <div class="user-role">{{ user.get_role_display }}</div>
+            </div>
+          </div>
+          <ul class="dropdown-menu dropdown-menu-end" style="background: var(--color-bg-light); border-color: var(--color-border);">
+            <li><a class="dropdown-item" href="{% url 'profile' %}" style="color: var(--color-text);">
+              <i class="bi bi-person-fill me-2"></i>Profile
+            </a></li>
+            <li><a class="dropdown-item" href="{% url 'change_password' %}" style="color: var(--color-text);">
+              <i class="bi bi-key-fill me-2"></i>Change Password
+            </a></li>
+            <li><hr class="dropdown-divider" style="border-color: var(--color-border);"></li>
+            <li><a class="dropdown-item" href="{% url 'logout' %}" style="color: var(--color-red);">
+              <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+            </a></li>
+          </ul>
+        </div>
+      </div>
+    </header>
+
+    <!-- Flash Messages -->
+    {% if messages %}
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        {% for message in messages %}
+          showToast("{{ message|escapejs }}", "{{ message.tags|default:'info' }}");
+        {% endfor %}
+      });
+    </script>
+    {% endif %}
+
+    <!-- Page Content -->
+    <main class="page-content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div><!-- /main-content -->
+
+</div><!-- /app-wrapper -->
+
+<!-- ═══════════════════════════════════════════════ SCRIPTS ═══ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  // Desktop sidebar toggle state handling
+  (function() {
+    const desktopToggle = document.getElementById('desktopSidebarToggle');
+    const desktopIcon = document.getElementById('desktopToggleIcon');
+    const appWrapper = document.querySelector('.app-wrapper');
+
+    // Sync icon to match initial state
+    if (localStorage.getItem('sidebar-collapsed') === 'true' && desktopIcon) {
+      desktopIcon.classList.replace('bi-chevron-left', 'bi-chevron-right');
+    }
+
+    desktopToggle?.addEventListener('click', () => {
+      const collapsed = appWrapper.classList.toggle('sidebar-collapsed');
+      localStorage.setItem('sidebar-collapsed', collapsed);
+      if (desktopIcon) {
+        if (collapsed) {
+          desktopIcon.classList.replace('bi-chevron-left', 'bi-chevron-right');
+        } else {
+          desktopIcon.classList.replace('bi-chevron-right', 'bi-chevron-left');
+        }
+      }
+    });
+  })();
+
+  // Sidebar toggle for mobile
+  document.getElementById('sidebarToggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('sidebar').classList.add('open');
+  });
+
+  // Sidebar close for mobile
+  document.getElementById('sidebarClose')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.remove('open');
+  });
+
+  // Close sidebar when clicking outside of it on mobile
+  document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (sidebar && sidebar.classList.contains('open')) {
+      if (!sidebar.contains(e.target) && !toggleBtn?.contains(e.target)) {
+        sidebar.classList.remove('open');
+      }
+    }
+  });
+
+  // Flash messages are now elegant toasts handled dynamically in showToast
+
+  // CSRF token helper for AJAX
+  function getCsrfToken() {
+    return document.cookie.split(';')
+      .find(c => c.trim().startsWith('csrftoken='))
+      ?.split('=')[1] || '';
+  }
+
+  // Highlight active nav based on path
+  document.querySelectorAll('.nav-item').forEach(item => {
+    if (item.href && window.location.pathname.startsWith(new URL(item.href).pathname) && item.href !== window.location.origin + '/dashboard/') {
+      item.classList.add('active');
+    }
+  });
+</script>
+  <!-- jQuery (required for Select2) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- Select2 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

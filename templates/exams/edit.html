@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block title %}Edit Exam: {{ exam.name }}{% endblock %}
+{% block page_title %}Edit Exam: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-pencil-square text-primary me-2"></i>Edit Exam Details
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Exam Name</label>
+            <input type="text" name="name" class="form-control" required value="{{ exam.name }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Academic Session</label>
+            <select name="session_id" class="form-select" required>
+              <option value="">Select Session</option>
+              {% for session in sessions %}
+              <option value="{{ session.id }}" {% if session.id == exam.session_id %}selected{% endif %}>
+                {{ session.name }}{% if session.is_active %} (Active){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Start Date</label>
+              <input type="text" placeholder="YYYY-MM-DD" name="start_date" class="form-control" value="{{ exam.start_date|date:'Y-m-d'|default:'' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">End Date</label>
+              <input type="text" placeholder="YYYY-MM-DD" name="end_date" class="form-control" value="{{ exam.end_date|date:'Y-m-d'|default:'' }}">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Result Date (Date of Issue)</label>
+            <input type="text" placeholder="YYYY-MM-DD" name="result_date" class="form-control" value="{{ exam.result_date|date:'Y-m-d'|default:'' }}">
+          </div>
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" role="switch" id="is_locked" name="is_locked" {% if exam.is_locked %}checked{% endif %}>
+            <label class="form-check-label fw-medium" for="is_locked">Lock Results</label>
+            <div class="form-text mt-0">When locked, marks cannot be edited.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Include Classes</label>
+            <div class="d-flex flex-wrap gap-3">
+              {% for cls in classes %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="class_ids" value="{{ cls.id }}" id="class_{{ cls.id }}" {% if cls.id in current_class_ids %}checked{% endif %}>
+                <label class="form-check-label" for="class_{{ cls.id }}">
+                  {{ cls.full_name }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-save-fill me-1"></i> Save Changes
+            </button>
+            <a href="{% url 'exam_detail' exam.id %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

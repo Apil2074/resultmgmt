@@ -1,0 +1,590 @@
+"""
+Marks App — Web views for mark entry and bulk import/export
+"""
+import io
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpResponse, JsonResponse
+from django.views.decorators.http import require_POST
+import json
+from .models import MarkEntry
+
+
+@login_required
+def mark_entry(request, exam_id, class_id):
+    """Mark entry page — inline table for entering marks."""
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.classes.models import Class
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    cls = get_object_or_404(Class, pk=class_id, school=school)
+    from apps.exams.models import ExamClass
+    exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=cls)
+
+    if exam_class.is_locked:
+        messages.warning(request, 'Results for this class are locked and published. Unlock to edit marks.')
+
+    students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
+    subjects = Subject.objects.filter(class_obj=cls, school=school).select_related('marking_structure').order_by('order')
+
+    if request.user.is_teacher:
+        subjects = subjects.filter(assigned_teachers__teacher__user=request.user)
+
+    # Load optional enrollments
+    from apps.subjects.models import StudentSubjectEnrollment, Subject
+    enrolled_pairs = set(
+        StudentSubjectEnrollment.objects.filter(
+            student__in=students,
+            subject__in=subjects
+        ).values_list('student_id', 'subject_id')
+    )
+
+    # Load existing mark entries
+    existing_marks = {}
+    for me in MarkEntry.objects.filter(exam=exam, school=school,
+                                        student__in=students, subject__in=subjects):
+        existing_marks[(me.student_id, me.subject_id)] = me
+
+    # Enrich student objects for the template
+    for student in students:
+        student.subject_marks = []
+        for subject in subjects:
+            me = existing_marks.get((student.id, subject.id))
+            
+            is_unmapped_optional = (
+                subject.subject_type == Subject.SubjectType.OPTIONAL and
+                (student.id, subject.id) not in enrolled_pairs
+            )
+            
+            student.subject_marks.append({
+                'subject': subject,
+                'me': me,
+                'is_restricted': is_unmapped_optional,
+            })
+        
+        # Load attendance from any existing mark entry of this student
+        present_days = ''
+        total_days = ''
+        for me in existing_marks.values():
+            if me.student_id == student.id:
+                if me.present_days is not None:
+                    present_days = me.present_days
+                if me.total_days:
+                    total_days = me.total_days
+                break
+        student.present_days_val = present_days
+        student.total_days_val = total_days
+
+    return render(request, 'marks/entry.html', {
+        'exam': exam,
+        'class_obj': cls,
+        'exam_class': exam_class,
+        'students': students,
+        'subjects': subjects,
+    })
+
+
+@login_required
+def save_mark(request):
+    """AJAX endpoint to save a single mark entry."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+
+    exam = get_object_or_404(Exam, pk=data.get('exam_id'), school=school)
+    student = get_object_or_404(Student, pk=data.get('student_id'), school=school)
+    subject = get_object_or_404(Subject, pk=data.get('subject_id'), school=school)
+
+    from apps.exams.models import ExamClass
+    exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=student.class_obj)
+    if exam_class.is_locked:
+        return JsonResponse({'error': 'Exam is locked for this class'}, status=403)
+
+    if request.user.is_teacher:
+        if not subject.assigned_teachers.filter(teacher__user=request.user).exists():
+            return JsonResponse({'error': 'You are not assigned to this subject.'}, status=403)
+
+    if subject.subject_type == Subject.SubjectType.OPTIONAL:
+        from apps.subjects.models import StudentSubjectEnrollment
+        if not StudentSubjectEnrollment.objects.filter(student=student, subject=subject).exists():
+            return JsonResponse({'error': 'Cannot enter marks for an unmapped optional subject.'}, status=400)
+
+    special_value = data.get('special_value') or None
+    from decimal import Decimal
+
+    try:
+        theory_val = data.get('theory_obtained')
+        theory_obtained = Decimal(theory_val) if theory_val not in (None, '') else None
+    except Exception:
+        return JsonResponse({'error': 'Invalid theory marks value'}, status=400)
+
+    try:
+        internal_val = data.get('internal_obtained')
+        internal_obtained = Decimal(internal_val) if internal_val not in (None, '') else None
+    except Exception:
+        return JsonResponse({'error': 'Invalid internal marks value'}, status=400)
+
+    try:
+        pres_days = data.get('present_days')
+        present_days = int(pres_days) if pres_days not in (None, '') else None
+    except Exception:
+        return JsonResponse({'error': 'Invalid present days'}, status=400)
+
+    try:
+        tot_days = data.get('total_days')
+        total_days = int(tot_days) if tot_days not in (None, '') else None
+    except Exception:
+        return JsonResponse({'error': 'Invalid total days'}, status=400)
+
+    defaults = {
+        'school': school,
+        'special_value': special_value,
+        'theory_obtained': theory_obtained,
+        'internal_obtained': internal_obtained,
+        'entered_by': request.user,
+    }
+    if not getattr(request.user, 'is_teacher', False):
+        defaults['present_days'] = present_days
+        defaults['total_days'] = total_days
+
+    try:
+        me, created = MarkEntry.objects.update_or_create(
+            exam=exam, student=student, subject=subject,
+            defaults=defaults
+        )
+        return JsonResponse({
+            'status': 'saved',
+            'id': me.pk,
+            'total_obtained': str(me.total_obtained) if me.total_obtained is not None else None,
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+def save_marks_bulk(request):
+    """AJAX endpoint to save multiple mark entries at once."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data_list = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    if not isinstance(data_list, list):
+        return JsonResponse({'error': 'Payload must be an array of marks'}, status=400)
+
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+    from decimal import Decimal
+    from apps.marks.models import MarkEntry
+
+    if not data_list:
+        return JsonResponse({'status': 'saved', 'count': 0})
+        
+    exam_id = data_list[0].get('exam_id')
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    
+    student_ids = [d.get('student_id') for d in data_list]
+    students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
+    
+    if students:
+        first_student = list(students.values())[0]
+        from apps.exams.models import ExamClass
+        exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=first_student.class_obj)
+        if exam_class.is_locked:
+            return JsonResponse({'error': 'Exam is locked for this class'}, status=403)
+
+    is_teacher = getattr(request.user, 'is_teacher', False)
+
+    student_ids = [d.get('student_id') for d in data_list]
+    subject_ids = [d.get('subject_id') for d in data_list]
+    
+    students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
+    subjects = {s.id: s for s in Subject.objects.filter(id__in=subject_ids, school=school)}
+    
+    if is_teacher:
+        assigned_subjects = set(Subject.objects.filter(id__in=subject_ids, assigned_teachers__teacher__user=request.user).values_list('id', flat=True))
+
+    from apps.subjects.models import StudentSubjectEnrollment
+    optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+        student_id__in=student_ids, subject_id__in=subject_ids
+    ).values_list('student_id', 'subject_id'))
+
+    updates = []
+    creates = []
+    
+    existing_marks = {(m.student_id, m.subject_id): m for m in MarkEntry.objects.filter(exam=exam, student_id__in=student_ids, subject_id__in=subject_ids)}
+
+    for data in data_list:
+        student_id = data.get('student_id')
+        subject_id = data.get('subject_id')
+        student = students.get(student_id)
+        subject = subjects.get(subject_id)
+        
+        if not student or not subject:
+            return JsonResponse({'error': f'Invalid student or subject ID: {student_id}, {subject_id}'}, status=400)
+
+        if is_teacher and subject.id not in assigned_subjects:
+            return JsonResponse({'error': f'You are not assigned to subject: {subject.name}.'}, status=403)
+
+        if subject.subject_type == Subject.SubjectType.OPTIONAL:
+            if (student.id, subject.id) not in optional_enrollments:
+                return JsonResponse({'error': f'Cannot enter marks for unmapped optional subject: {subject.name} for {student.name}.'}, status=400)
+
+        special_value = data.get('special_value') or None
+        
+        try:
+            theory_val = data.get('theory_obtained')
+            theory_obtained = Decimal(str(theory_val)) if theory_val not in (None, '') else None
+        except Exception:
+            return JsonResponse({'error': f'Invalid theory marks value for {student.name}'}, status=400)
+
+        try:
+            internal_val = data.get('internal_obtained')
+            internal_obtained = Decimal(str(internal_val)) if internal_val not in (None, '') else None
+        except Exception:
+            return JsonResponse({'error': f'Invalid internal marks value for {student.name}'}, status=400)
+
+        try:
+            pres_days = data.get('present_days')
+            present_days = int(pres_days) if pres_days not in (None, '') else None
+        except Exception:
+            return JsonResponse({'error': f'Invalid present days for {student.name}'}, status=400)
+
+        try:
+            tot_days = data.get('total_days')
+            total_days = int(tot_days) if tot_days not in (None, '') else None
+        except Exception:
+            return JsonResponse({'error': f'Invalid total days for {student.name}'}, status=400)
+            
+        me = existing_marks.get((student.id, subject.id))
+        if me:
+            me.special_value = special_value
+            me.theory_obtained = theory_obtained
+            me.internal_obtained = internal_obtained
+            me.entered_by = request.user
+            if not is_teacher:
+                me.present_days = present_days
+                me.total_days = total_days
+            updates.append(me)
+        else:
+            me = MarkEntry(
+                school=school,
+                exam=exam,
+                session=exam.session,
+                student=student,
+                subject=subject,
+                special_value=special_value,
+                theory_obtained=theory_obtained,
+                internal_obtained=internal_obtained,
+                entered_by=request.user,
+            )
+            if not is_teacher:
+                me.present_days = present_days
+                me.total_days = total_days
+            creates.append(me)
+
+    try:
+        if creates:
+            for c in creates:
+                c.clean()
+            MarkEntry.objects.bulk_create(creates)
+        if updates:
+            for u in updates:
+                u.clean()
+            MarkEntry.objects.bulk_update(updates, ['special_value', 'theory_obtained', 'internal_obtained', 'entered_by', 'present_days', 'total_days'])
+            
+        return JsonResponse({'status': 'saved', 'count': len(creates) + len(updates)})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+def bulk_mark_import(request, exam_id, class_id):
+    """Bulk Excel mark import."""
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.classes.models import Class
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    cls = get_object_or_404(Class, pk=class_id, school=school)
+
+    if request.method == 'POST' and request.FILES.get('excel_file'):
+        import openpyxl
+        from apps.students.models import Student
+        from apps.subjects.models import Subject
+
+        try:
+            wb = openpyxl.load_workbook(request.FILES['excel_file'])
+            ws = wb.active
+            # Read header row to get subject IDs
+            subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
+            students = {s.roll_number: s for s in Student.objects.filter(class_obj=cls, school=school)}
+
+            saved = 0
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                if not row[0]:
+                    continue
+                roll = str(row[0]).strip()
+                student = students.get(roll)
+                if not student:
+                    continue
+
+                col_idx = 2
+                for subject in subjects:
+                    try:
+                        ms = subject.marking_structure
+                    except Exception:
+                        col_idx += 2
+                        continue
+                    theory_raw = row[col_idx] if col_idx < len(row) else None
+                    internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                    col_idx += 2
+
+                    # Parse theory marks / special value
+                    theory_obtained = None
+                    special_value = None
+                    if theory_raw is not None:
+                        val_str = str(theory_raw).strip().upper()
+                        if val_str in ('AB', 'ABSENT'):
+                            special_value = 'AB'
+                        elif val_str in ('WH', 'WITHHELD'):
+                            special_value = 'WH'
+                        elif val_str in ('EX', 'EXEMPTED'):
+                            special_value = 'EX'
+                        elif val_str in ('', 'NONE', 'NULL'):
+                            theory_obtained = None
+                        else:
+                            try:
+                                from decimal import Decimal
+                                theory_obtained = Decimal(str(theory_raw))
+                            except Exception:
+                                raise ValueError(f"Invalid theory marks format '{theory_raw}' for student roll {roll}.")
+
+                    # Parse internal marks / special value
+                    internal_obtained = None
+                    if internal_raw is not None and ms.has_internal:
+                        val_str = str(internal_raw).strip().upper()
+                        if val_str in ('AB', 'ABSENT'):
+                            special_value = 'AB'
+                        elif val_str in ('WH', 'WITHHELD'):
+                            special_value = 'WH'
+                        elif val_str in ('EX', 'EXEMPTED'):
+                            special_value = 'EX'
+                        elif val_str in ('', 'NONE', 'NULL'):
+                            internal_obtained = None
+                        else:
+                            try:
+                                from decimal import Decimal
+                                internal_obtained = Decimal(str(internal_raw))
+                            except Exception:
+                                raise ValueError(f"Invalid internal marks format '{internal_raw}' for student roll {roll}.")
+
+                    MarkEntry.objects.update_or_create(
+                        exam=exam, student=student, subject=subject,
+                        defaults={
+                            'school': school,
+                            'special_value': special_value,
+                            'theory_obtained': theory_obtained,
+                            'internal_obtained': internal_obtained,
+                            'entered_by': request.user,
+                        }
+                    )
+                    saved += 1
+
+            messages.success(request, f'{saved} mark entries imported.')
+        except Exception as e:
+            messages.error(request, f'Import failed: {str(e)}')
+
+        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
+    return render(request, 'marks/bulk_import.html', {
+        'exam': exam, 'class_obj': cls
+    })
+
+
+@login_required
+def mark_entry_template(request, exam_id, class_id):
+    """Download Excel template for mark entry."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.classes.models import Class
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    cls = get_object_or_404(Class, pk=class_id, school=school)
+    students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
+    subjects = Subject.objects.filter(class_obj=cls, school=school).select_related(
+        'marking_structure').order_by('order')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f'{exam.name[:20]} Marks'
+
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
+    sub_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+
+    # Build headers
+    headers = ['Roll No', 'Student Name']
+    for subj in subjects:
+        try:
+            ms = subj.marking_structure
+            headers.append(f'{subj.name}\nTheory ({ms.theory_full_marks})')
+            if ms.has_internal:
+                headers.append(f'{subj.name}\nInternal ({ms.internal_full_marks})')
+            else:
+                headers.append(f'{subj.name}\n(No Internal)')
+        except Exception:
+            headers.append(subj.name)
+            headers.append('')
+
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill if col <= 2 else sub_fill
+        cell.alignment = Alignment(horizontal='center', wrap_text=True)
+
+    ws.row_dimensions[1].height = 40
+
+    for row_num, student in enumerate(students, 2):
+        ws.cell(row=row_num, column=1, value=student.roll_number)
+        ws.cell(row=row_num, column=2, value=student.name)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = (
+        f'attachment; filename="{exam.name}_marks_template.xlsx"'
+    )
+    wb.save(response)
+    return response
+
+
+@login_required
+def save_full_marks(request):
+    """AJAX endpoint to update subject full marks."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    school = request.user.school
+    from apps.subjects.models import Subject
+
+    subject = get_object_or_404(Subject, pk=data.get('subject_id'), school=school)
+    field = data.get('field')  # 'theory' or 'internal'
+    value = int(data.get('value') or 100)
+
+    try:
+        sms = subject.marking_structure
+        if field == 'theory':
+            sms.theory_full_marks = value
+        elif field == 'internal':
+            sms.internal_full_marks = value
+        sms.save()
+        return JsonResponse({'status': 'saved'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+def mark_entry_select(request):
+    """Mark Entry selection page - choose an exam and class to proceed."""
+    import json
+    school = request.user.school
+    from apps.exams.models import Exam, ExamClass
+    from apps.classes.models import Class
+    
+    active_session = school.get_active_session() if school else None
+
+    # Fetch all exams
+    exams = Exam.objects.filter(school=school)
+    if active_session:
+        exams = exams.filter(session=active_session)
+    exams = exams.select_related('session').order_by('-created_at')
+    # Fetch classes with consistent ordering
+    classes = Class.objects.filter(school=school).order_by('numeric_level', 'name', 'section')
+
+    # Build mapping of exam ID to its associated classes
+    exam_classes_map = {}
+    exam_classes = ExamClass.objects.filter(exam__school=school)
+    if active_session:
+        exam_classes = exam_classes.filter(exam__session=active_session)
+    exam_classes = exam_classes.select_related('class_obj')
+    for ec in exam_classes:
+        exam_classes_map.setdefault(ec.exam_id, []).append({
+            'id': ec.class_obj.id,
+            'name': ec.class_obj.full_name
+        })
+
+    exam_classes_json = json.dumps(exam_classes_map)
+
+    # Check for selected parameters
+    exam_id = request.GET.get('exam')
+    class_id = request.GET.get('class_obj')
+    
+    if exam_id and class_id:
+        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
+    context = {
+        'exams': exams,
+        'exam_classes_json': exam_classes_json,
+        'selected_exam_id': int(exam_id) if exam_id and exam_id.isdigit() else None,
+        'school': school,
+    }
+
+    return render(request, 'marks/entry_select.html', context)
+
+
+@login_required
+@require_POST
+def toggle_class_lock(request, exam_id, class_id):
+    """Admin toggles the lock state of a class for an exam, processing results if locked."""
+    if not request.user.can_manage_school():
+        messages.error(request, 'Only administrators can lock/unlock results.')
+        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+        
+    school = request.user.school
+    from apps.exams.models import ExamClass
+    from apps.results.services import ResultProcessingService
+    
+    exam_class = get_object_or_404(ExamClass, exam_id=exam_id, class_obj_id=class_id, exam__school=school)
+    
+    action = request.POST.get('action')
+    if action == 'lock':
+        exam_class.is_locked = True
+        exam_class.save()
+        # Auto process results
+        service = ResultProcessingService(exam_class.exam)
+        service.process(class_obj=exam_class.class_obj)
+        messages.success(request, f'Results for {exam_class.class_obj.name} have been processed and locked.')
+    elif action == 'unlock':
+        exam_class.is_locked = False
+        exam_class.save()
+        messages.success(request, f'Results for {exam_class.class_obj.name} are unlocked and editable.')
+        
+    return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+

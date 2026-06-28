@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Merit List: {{ exam.name }}{% endblock %}
+{% block page_title %}📋 Merit List: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div class="mb-4 d-flex justify-content-between align-items-center">
+  <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Reports Hub
+  </a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0 fw-semibold text-slate-800">
+      <i class="bi bi-list-ol text-primary me-2"></i>Merit List
+    </h5>
+    <input type="text" class="form-control form-control-sm" id="meritSearch" placeholder="🔍 Search student name..." style="width: 220px;">
+  </div>
+  
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 text-center" id="meritTable">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 80px;">Rank</th>
+          <th class="text-start">Student Name</th>
+          <th>Roll No</th>
+          <th>Class Name</th>
+          <th>GPA</th>
+          <th>Grade</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+          <tr class="merit-row" data-name="{{ r.student.name|lower }}">
+            <td>
+              <span class="fw-bold text-slate-700">{{ r.class_rank|default:"—" }}</span>
+            </td>
+            <td class="text-start fw-semibold text-slate-800">
+              {{ r.student.name }}
+            </td>
+            <td>{{ r.student.roll_number }}</td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
+                {{ r.student.class_obj.full_name }}
+              </span>
+            </td>
+            <td class="fw-bold text-primary font-monospace">{{ r.overall_gpa|default:"0.00" }}</td>
+            <td>
+              <span class="badge bg-light text-dark border font-monospace">{{ r.final_grade|default:"NG" }}</span>
+            </td>
+            <td>
+              {% if r.is_pass %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">Pass</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1">Fail</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a href="{% url 'marksheet' exam.id r.student.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-file-earmark-text-fill"></i> View Marksheet
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5 text-muted">
+              <i class="bi bi-journal-x d-block fs-3 mb-2"></i>
+              No records found.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter search
+document.getElementById('meritSearch').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.merit-row').forEach(row => {
+    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

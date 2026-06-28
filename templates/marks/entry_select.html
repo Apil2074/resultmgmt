@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Mark Entry Selector{% endblock %}
+{% block page_title %}📝 Mark Entry Selector{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-0">
+  
+  <div class="card shadow-sm mb-3 border-0 d-print-none sticky-top" style="top: 70px; z-index: 999; background: var(--color-bg-light); border: 1px solid var(--color-border) !important; border-radius: var(--radius-md);">
+    <div class="card-body p-2 px-3">
+      <form method="GET" action="" class="row g-2 align-items-center">
+        <div class="col-auto d-flex align-items-center">
+          <i class="bi bi-funnel text-primary me-2"></i>
+          <span class="fw-bold" style="color: var(--color-text); font-size: 0.9rem;">Select Exam & Class:</span>
+        </div>
+        <div class="col-md-4">
+          <select name="exam" id="examSelect" class="form-select select2" required>
+            <option value="">-- Select Exam --</option>
+            {% for ex in exams %}
+              <option value="{{ ex.id }}" {% if ex.id == selected_exam_id %}selected{% endif %}>
+                {{ ex.name }} ({{ ex.session.name }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-4">
+          <select name="class_obj" id="classSelect" class="form-select select2" required>
+            <option value="">-- Select Class --</option>
+          </select>
+        </div>
+        <div class="col-md-auto">
+          <button type="submit" class="btn btn-primary fw-semibold" style="border-radius: var(--radius-md);">
+            <i class="bi bi-pencil-square me-1"></i> Enter Marks
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if not exam or not class_obj %}
+    <!-- Placeholder / Prompt State -->
+    <div class="text-center p-5 bg-white border border-dashed rounded-3 shadow-sm mt-4 d-print-none" style="border-color: var(--color-border) !important; border-radius: var(--radius-lg) !important;">
+      <div class="mb-3 text-primary" style="font-size: 3rem;">
+        <i class="bi bi-pencil-square"></i>
+      </div>
+      <h4 class="text-slate-800 fw-bold">Select Class for Mark Entry</h4>
+      <p class="text-muted max-width-500 mx-auto">Select an examination and a class from the options above and click <strong>Enter Marks</strong> to proceed.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+  if (jQuery().select2) {
+    $('.select2').select2({ theme: 'bootstrap-5', width: '100%' });
+  }
+
+  const examClasses = {{ exam_classes_json|safe }};
+  const examSelect = document.getElementById('examSelect');
+  const classSelect = document.getElementById('classSelect');
+  const selectedExamId = {{ selected_exam_id|default:"null" }};
+  const selectedClassId = {{ selected_class_id|default:"null" }};
+
+  function updateClasses() {
+    const examId = examSelect.value;
+    classSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    if (examId && examClasses[examId]) {
+      examClasses[examId].forEach(cls => {
+        const opt = document.createElement('option');
+        opt.value = cls.id;
+        opt.textContent = cls.name;
+        if (selectedClassId && cls.id === selectedClassId) {
+          opt.selected = true;
+        }
+        classSelect.appendChild(opt);
+      });
+    }
+    if (window.jQuery && $(classSelect).data('select2')) {
+      $(classSelect).trigger('change.select2');
+    }
+  }
+
+  $('#examSelect').on('change', function() { updateClasses(); });
+
+  if (selectedExamId) {
+    examSelect.value = selectedExamId;
+    if (window.jQuery && $(examSelect).data('select2')) {
+      $(examSelect).trigger('change.select2');
+    }
+  }
+  updateClasses();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Pass/Fail Report: {{ exam.name }}{% endblock %}
+{% block page_title %}📊 Pass/Fail Report: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<!-- Back button -->
+<div class="mb-4">
+  <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Reports Hub
+  </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm border-start border-primary border-4 h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1">Total Examined</h6>
+        <h3 class="fw-bold text-slate-800 mb-0">{{ total }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-start border-success border-4 h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1">Total Passed</h6>
+        <h3 class="fw-bold text-success mb-0">{{ passed }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-start border-danger border-4 h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1">Total Failed</h6>
+        <h3 class="fw-bold text-danger mb-0">{{ failed }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-start border-info border-4 h-100">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1">Pass Percentage</h6>
+        <h3 class="fw-bold text-info mb-0">{{ pass_pct }}%</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Passed Progression Bar -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="fw-semibold text-slate-800">Pass Rate</span>
+      <span class="text-slate-600 font-monospace">{{ pass_pct }}%</span>
+    </div>
+    <div class="progress" style="height: 12px;">
+      <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ pass_pct }}%;" aria-valuenow="{{ pass_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Failed Students list -->
+<div class="card shadow-sm">
+  <div class="card-header bg-white border-bottom py-3">
+    <h5 class="card-title mb-0 fw-semibold text-danger">
+      <i class="bi bi-x-circle-fill me-2"></i>Students Needing Support ({{ failed_list.count }})
+    </h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 text-center">
+      <thead class="table-light">
+        <tr>
+          <th>Roll No</th>
+          <th class="text-start">Student Name</th>
+          <th>Class Name</th>
+          <th>GPA</th>
+          <th>Final Grade</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in failed_list %}
+          <tr>
+            <td>{{ r.student.roll_number }}</td>
+            <td class="text-start fw-semibold text-slate-800">
+              {{ r.student.name }}
+            </td>
+            <td>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
+                {{ r.student.class_obj.full_name }}
+              </span>
+            </td>
+            <td class="fw-bold font-monospace text-slate-700">{{ r.overall_gpa|default:"0.00" }}</td>
+            <td>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 font-monospace">
+                {{ r.final_grade|default:"NG" }}
+              </span>
+            </td>
+            <td class="text-end">
+              <a href="{% url 'marksheet' exam.id r.student.id %}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-file-earmark-text-fill"></i> View Marksheet
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-5 text-success fw-semibold">
+              <i class="bi bi-check-circle-fill d-block fs-3 mb-2"></i>
+              Outstanding! 100% Pass Rate. No students failed this exam.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

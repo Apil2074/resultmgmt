@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Public Portal - RMS{% endblock %}</title>
+
+  <!-- Preconnect fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  
+  <style>
+    body {
+        background-color: #f8fafc;
+        font-family: var(--font-primary);
+        color: var(--color-text);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+    }
+    body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            radial-gradient(circle at 50% -20%, rgba(37, 99, 235, 0.08) 0%, transparent 60%),
+            radial-gradient(circle at 10% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 40%);
+        pointer-events: none;
+        z-index: 0;
+    }
+    .background-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(15, 23, 42, 0.015) 1px, transparent 1px);
+        background-size: 45px 45px;
+        pointer-events: none;
+        z-index: 0;
+    }
+    .public-navbar {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 1rem 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        position: relative;
+        z-index: 10;
+    }
+    .public-navbar .brand-name {
+        color: var(--color-text);
+        font-weight: 800;
+        font-size: 1.2rem;
+        letter-spacing: -0.02em;
+    }
+    .public-main {
+        flex-grow: 1;
+        padding: 2rem;
+        position: relative;
+        z-index: 10;
+    }
+    .public-footer {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.85rem;
+        color: var(--color-text-muted);
+        border-top: 1px solid rgba(148, 163, 184, 0.08);
+        position: relative;
+        z-index: 10;
+    }
+    .public-card {
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.15) !important;
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.05);
+    }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="background-grid"></div>
+
+<!-- Navbar -->
+<nav class="public-navbar d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center gap-2">
+        <div style="background: linear-gradient(135deg, var(--color-gold), var(--color-gold-dark)); color: white; width: 36px; height: 36px; font-weight: bold;" class="rounded-circle d-flex align-items-center justify-content-center">R</div>
+        <div class="brand-name">RMS Parent Portal</div>
+    </div>
+    {% if student and student.school %}
+    <div class="d-none d-md-block text-end">
+        <div class="fw-bold" style="font-size: 0.9rem;">{{ student.school.name }}</div>
+        {% if student.school.phone %}<div class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-telephone"></i> {{ student.school.phone }}</div>{% endif %}
+    </div>
+    {% endif %}
+</nav>
+
+<!-- Main Content -->
+<main class="public-main">
+    <div class="container" style="max-width: 900px;">
+        <!-- Alerts -->
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}warning{% endif %} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="public-footer">
+    &copy; {% now "Y" %} RMS Result Management System. All rights reserved.
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

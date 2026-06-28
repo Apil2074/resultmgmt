@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% block title %}Subjects{% endblock %}
+{% block page_title %}📚 Subjects{% endblock %}
+
+{% block content %}
+<div class="row">
+  <!-- Subject List Table -->
+  <div class="col-lg-8 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-book-fill text-primary me-2"></i>Subject Directory
+        </h5>
+        
+        <!-- Filter Form -->
+        <form method="GET" class="d-flex align-items-center gap-2">
+          <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 150px;">
+            <option value="">All Classes</option>
+            {% for cls in classes %}
+              <option value="{{ cls.id }}" {% if class_id == cls.id|stringformat:"i" %}selected{% endif %}>{{ cls.full_name }}</option>
+            {% endfor %}
+          </select>
+          {% if class_id %}
+            <a href="{% url 'subject_list' %}" class="btn btn-sm btn-outline-secondary" title="Clear Filter">
+              <i class="bi bi-x-lg"></i>
+            </a>
+          {% endif %}
+        </form>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Code / Name</th>
+              <th>Class</th>
+              <th>Type</th>
+              <th>Theory Credit</th>
+              <th>Practical Credit</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sub in subjects %}
+              <tr>
+                <td>
+                  <div class="fw-semibold text-slate-800">{{ sub.name }}</div>
+                  <div class="small text-muted">
+                    {{ sub.code }}
+                    {% if sub.has_practical and sub.practical_code %}
+                      (Prac: {{ sub.practical_code }})
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded">
+                    {{ sub.class_obj.full_name }}
+                  </span>
+                </td>
+                <td>
+                  {% if sub.subject_type == 'COMPULSORY' %}
+                    <span class="text-slate-800 fw-medium small">Compulsory</span>
+                  {% elif sub.subject_type == 'OPTIONAL' %}
+                    <span class="text-warning fw-medium small">Optional</span>
+                  {% else %}
+                    <span class="text-muted italic small">Non-Credit</span>
+                  {% endif %}
+                </td>
+                <td class="fw-medium text-slate-700">{{ sub.theory_credit_hour }} CH</td>
+                <td class="fw-medium text-slate-700">
+                  {% if sub.has_practical %}
+                    {{ sub.practical_credit_hour }} CH
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <form method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this subject?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="subject_id" value="{{ sub.id }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Subject">
+                      <i class="bi bi-trash-fill"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-5 text-muted">
+                  <i class="bi bi-book d-block fs-2 mb-2"></i>
+                  No subjects found. Create one using the form on the right.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Subject Form Sidebar -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-plus-circle text-primary me-2"></i>Add Subject
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if classes %}
+          <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create">
+            
+            <div class="mb-3">
+              <label for="class_ids" class="form-label fw-medium text-slate-700">Classes *</label>
+              <select class="form-select" id="class_ids" name="class_ids" multiple required style="width: 100%;">
+                {% for cls in classes %}
+                  <option value="{{ cls.id }}">{{ cls.full_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div id="subject-rows-container">
+              <!-- First Row (Template) -->
+              <div class="subject-row border rounded p-3 mb-3 bg-light position-relative">
+                <div class="mb-2">
+                  <label class="form-label fw-medium text-slate-700 small mb-1">Subject Code *</label>
+                  <input type="text" class="form-control form-control-sm" name="code[]" placeholder="e.g. ENG-101" required>
+                </div>
+                
+                <div class="mb-2">
+                  <label class="form-label fw-medium text-slate-700 small mb-1">Subject Name *</label>
+                  <input type="text" class="form-control form-control-sm" name="name[]" placeholder="e.g. English" required>
+                </div>
+
+                <div class="row mb-2">
+                  <div class="col-6">
+                    <label class="form-label fw-medium text-slate-700 small mb-1">Theory Credit *</label>
+                    <input type="number" step="0.1" min="0" class="form-control form-control-sm" name="theory_credit_hour[]" value="3.0" required>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-medium text-slate-700 small mb-1">Type</label>
+                    <select class="form-select form-select-sm" name="subject_type[]">
+                      <option value="COMPULSORY" selected>Comp</option>
+                      <option value="OPTIONAL">Opt</option>
+                      <option value="NON_CREDIT">Non-Cr</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <div class="col-6">
+                    <label class="form-label fw-medium text-slate-700 small mb-1">Has Prac?</label>
+                    <select class="form-select form-select-sm has-prac-select" name="has_practical[]">
+                      <option value="no" selected>No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label fw-medium text-slate-700 small mb-1">Sort Order</label>
+                    <input type="number" min="0" step="1" class="form-control form-control-sm" name="order[]" value="0" required>
+                  </div>
+                </div>
+
+                <div class="practical-details-wrapper" style="display: none;">
+                  <div class="row mb-2">
+                    <div class="col-7">
+                      <label class="form-label fw-medium text-slate-700 small mb-1">Prac. Code *</label>
+                      <input type="text" class="form-control form-control-sm prac-code-input" name="practical_code[]" placeholder="e.g. ENG-101P">
+                    </div>
+                    <div class="col-5">
+                      <label class="form-label fw-medium text-slate-700 small mb-1">Prac. Credit</label>
+                      <input type="number" step="0.1" min="0" class="form-control form-control-sm prac-credit-input" name="practical_credit_hour[]" value="1.0">
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Remove Button (hidden on first row by CSS) -->
+                <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 btn-remove-row" style="display: none;" title="Remove Subject">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+            
+            <button type="button" id="btn-add-row" class="btn btn-sm btn-outline-secondary w-100 mb-3">
+              <i class="bi bi-plus-circle me-1"></i>Add Another Subject
+            </button>
+            
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-save me-2"></i>Save Subjects
+            </button>
+          </form>
+        {% else %}
+          <div class="text-center py-4">
+            <i class="bi bi-exclamation-triangle text-warning fs-1 mb-2"></i>
+            <p class="text-muted">You must create a class before adding subjects.</p>
+            <a href="{% url 'class_list' %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-building me-2"></i>Manage Classes
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    // Initialize Select2 for multiple classes
+    $('#class_ids').select2({
+      theme: 'bootstrap-5',
+      placeholder: 'Select Target Classes',
+      allowClear: true,
+      closeOnSelect: false,
+    });
+
+    // Handle dynamic row addition
+    const container = document.getElementById('subject-rows-container');
+    const btnAdd = document.getElementById('btn-add-row');
+
+    btnAdd.addEventListener('click', function() {
+      // Clone the first row
+      const firstRow = container.querySelector('.subject-row');
+      const newRow = firstRow.cloneNode(true);
+      
+      // Clear inputs in cloned row
+      newRow.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+      // Reset selects to first option
+      newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+      
+      // Hide practical details initially
+      const pracWrapper = newRow.querySelector('.practical-details-wrapper');
+      pracWrapper.style.display = 'none';
+      newRow.querySelector('.prac-code-input').removeAttribute('required');
+
+      // Show remove button for cloned row
+      const removeBtn = newRow.querySelector('.btn-remove-row');
+      removeBtn.style.display = 'block';
+      removeBtn.addEventListener('click', function() {
+        newRow.remove();
+      });
+
+      // Re-bind practical select event for cloned row
+      bindPracticalToggle(newRow);
+
+      container.appendChild(newRow);
+    });
+
+    // Bind practical toggle logic
+    function bindPracticalToggle(row) {
+      const pracSelect = row.querySelector('.has-prac-select');
+      const pracWrapper = row.querySelector('.practical-details-wrapper');
+      const pracCodeInput = row.querySelector('.prac-code-input');
+
+      pracSelect.addEventListener('change', function() {
+        if (this.value === 'yes') {
+          pracWrapper.style.display = 'block';
+          pracCodeInput.setAttribute('required', 'required');
+        } else {
+          pracWrapper.style.display = 'none';
+          pracCodeInput.removeAttribute('required');
+        }
+      });
+    }
+
+    // Bind first row initially
+    bindPracticalToggle(container.querySelector('.subject-row'));
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base_public.html' %}
+{% block title %}Student Result Portal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        
+        {% if searched %}
+            <!-- Results View -->
+            <div class="card public-card border-0 mb-4">
+                <div class="card-body text-center p-4">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                        <i class="bi bi-person"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">{{ student.name }}</h4>
+                    <p class="text-muted mb-0">Class: {{ student.class_obj.full_name }} | Roll No: {{ student.roll_number }}</p>
+                    <p class="text-muted small">Registration: {{ student.registration_number }}</p>
+                    
+                    <a href="?logout=1" class="btn btn-sm btn-outline-danger mt-3">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mb-3 mt-4 text-slate-800">Available Report Cards</h5>
+            
+            {% if results %}
+                <div class="list-group shadow-sm">
+                    {% for res in results %}
+                        <a href="{% url 'public_report_card' res.exam.id student.id %}" class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1 fw-semibold text-primary">{{ res.exam.name }}</h6>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> Session: {{ res.exam.session.name }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if res.is_pass %}
+                                    <span class="badge bg-success mb-1">Passed</span>
+                                {% else %}
+                                    <span class="badge bg-danger mb-1">Failed</span>
+                                {% endif %}
+                                <div class="small fw-bold text-dark">GPA: {{ res.gpa|default:"-" }}</div>
+                            </div>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5 text-muted">
+                        <i class="bi bi-file-earmark-x display-4 mb-3"></i>
+                        <p>No published report cards found for this student.</p>
+                    </div>
+                </div>
+            {% endif %}
+
+        {% else %}
+            <!-- Login Form -->
+            <div class="card public-card border-0 mt-4">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold text-slate-800">Check Student Result</h4>
+                        <p class="text-muted">Enter the student's credentials to view their report card securely.</p>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="registration_number" class="form-label fw-medium text-slate-700">Registration Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-hash text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="registration_number" name="registration_number" placeholder="Enter Registration No." required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="date_of_birth" class="form-label fw-medium text-slate-700">Date of Birth (BS or AD)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-calendar-date text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0 ps-0" id="date_of_birth" name="date_of_birth" placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" required>
+                            </div>
+                            <div class="form-text">Format: YYYY-MM-DD (e.g. 2080-04-15)</div>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-search me-2"></i> Find Results
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}
