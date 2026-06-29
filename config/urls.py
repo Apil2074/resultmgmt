@@ -56,3 +56,8 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 # Trivial change to force reload
 urlpatterns += []
+
+# Custom error handlers
+from django.views.generic.base import TemplateView
+handler404 = TemplateView.as_view(template_name='404.html')
+handler500 = TemplateView.as_view(template_name='500.html')

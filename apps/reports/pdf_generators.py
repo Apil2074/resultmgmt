@@ -487,7 +487,9 @@ class MarksheetPDFGenerator:
             table_data.append(row_rank)
             
             span_rules.append(('SPAN', (0, row_idx), (3, row_idx)))
+            span_rules.append(('SPAN', (4, row_idx), (5, row_idx)))
             span_rules.append(('SPAN', (0, row_idx + 1), (3, row_idx + 1)))
+            span_rules.append(('SPAN', (4, row_idx + 1), (5, row_idx + 1)))
             row_idx += 2
 
         if non_credit_mark_entries:
@@ -598,17 +600,18 @@ class MarksheetPDFGenerator:
                     table_data.append(row)
                     row_idx += 1
             
-        col_widths = [3.0*cm, 5.5*cm, 2.2*cm, 2.2*cm, 2.0*cm, 2.4*cm]
+        col_widths = [2.8*cm, 6.4*cm, 2.5*cm, 2.5*cm, 2.4*cm, 2.8*cm]
         marks_table = Table(table_data, colWidths=col_widths)
         
         table_style_commands = [
-            ('GRID', (0, 0), (-1, -1), 1.2, colors.black),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#475569')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('BACKGROUND', (5, 1), (5, -1), colors.HexColor('#f8fafc')),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('BACKGROUND', (5, 1), (5, -1), colors.HexColor('#F8FAFC')),
         ]
         for rule in span_rules:
             table_style_commands.append(rule)
@@ -661,22 +664,21 @@ class MarksheetPDFGenerator:
             Paragraph('Grade Point', legend_th_style),
             Paragraph('Grade', legend_th_style),
             Paragraph('Interval', legend_th_style),
-            Paragraph('Description', legend_th_style),
         ]
         
         legend_rows = [
-            [Paragraph('4.0', legend_td_style), Paragraph('A+', legend_td_bold_style), Paragraph('90 To 100', legend_td_style), Paragraph('Outstanding', legend_td_style)],
-            [Paragraph('3.6', legend_td_style), Paragraph('A', legend_td_bold_style), Paragraph('80 To Below 90', legend_td_style), Paragraph('Excellent', legend_td_style)],
-            [Paragraph('3.2', legend_td_style), Paragraph('B+', legend_td_bold_style), Paragraph('70 To Below 80', legend_td_style), Paragraph('Very Good', legend_td_style)],
-            [Paragraph('2.8', legend_td_style), Paragraph('B', legend_td_bold_style), Paragraph('60 To Below 70', legend_td_style), Paragraph('Good', legend_td_style)],
-            [Paragraph('2.4', legend_td_style), Paragraph('C+', legend_td_bold_style), Paragraph('50 To Below 60', legend_td_style), Paragraph('Satisfactory', legend_td_style)],
-            [Paragraph('2.0', legend_td_style), Paragraph('C', legend_td_bold_style), Paragraph('40 To Below 50', legend_td_style), Paragraph('Acceptable', legend_td_style)],
-            [Paragraph('1.6', legend_td_style), Paragraph('D', legend_td_bold_style), Paragraph('35 To Below 40', legend_td_style), Paragraph('Basic', legend_td_style)],
-            [Paragraph('0.0', legend_td_style), Paragraph('NG', legend_td_bold_style), Paragraph('0 To Below 35', legend_td_style), Paragraph('Not Graded', legend_td_style)],
+            [Paragraph('4.0', legend_td_style), Paragraph('A+', legend_td_bold_style), Paragraph('90 To 100', legend_td_style)],
+            [Paragraph('3.6', legend_td_style), Paragraph('A', legend_td_bold_style), Paragraph('80 To Below 90', legend_td_style)],
+            [Paragraph('3.2', legend_td_style), Paragraph('B+', legend_td_bold_style), Paragraph('70 To Below 80', legend_td_style)],
+            [Paragraph('2.8', legend_td_style), Paragraph('B', legend_td_bold_style), Paragraph('60 To Below 70', legend_td_style)],
+            [Paragraph('2.4', legend_td_style), Paragraph('C+', legend_td_bold_style), Paragraph('50 To Below 60', legend_td_style)],
+            [Paragraph('2.0', legend_td_style), Paragraph('C', legend_td_bold_style), Paragraph('40 To Below 50', legend_td_style)],
+            [Paragraph('1.6', legend_td_style), Paragraph('D', legend_td_bold_style), Paragraph('35 To Below 40', legend_td_style)],
+            [Paragraph('0.0', legend_td_style), Paragraph('NG', legend_td_bold_style), Paragraph('0 To Below 35', legend_td_style)],
         ]
         
         legend_table_data = [legend_headers] + legend_rows
-        legend_table = Table(legend_table_data, colWidths=[1.6*cm, 1.3*cm, 2.7*cm, 2.6*cm])
+        legend_table = Table(legend_table_data, colWidths=[2.2*cm, 2.0*cm, 4.0*cm])
         legend_table.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8fafc')),
@@ -1507,11 +1509,12 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         main_table = Table(table_data, colWidths=col_widths, repeatRows=1)
         
         ts = [
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#475569')),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
         ] + span_rules
         main_table.setStyle(TableStyle(ts))
         
