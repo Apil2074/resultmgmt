@@ -8,10 +8,7 @@ from django.db.models.functions import Length
 class Student(models.Model):
     """Student belonging to a class within a school."""
 
-    class Gender(models.TextChoices):
-        MALE = 'M', 'Male'
-        FEMALE = 'F', 'Female'
-        OTHER = 'O', 'Other'
+
 
     school = models.ForeignKey(
         'schools.School', on_delete=models.CASCADE, related_name='students'
@@ -28,7 +25,6 @@ class Student(models.Model):
     symbol_number = models.CharField(max_length=50, blank=True, db_index=True)
     date_of_birth = models.DateField(null=True, blank=True)
     date_of_birth_bs = models.CharField(max_length=20, blank=True, null=True)
-    gender = models.CharField(max_length=1, choices=Gender.choices, default=Gender.MALE)
     parent_name = models.CharField(max_length=200, blank=True)
     contact_number = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)

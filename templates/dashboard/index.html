@@ -210,11 +210,7 @@
         <a href="{% url 'reports_index' %}" class="btn btn-secondary w-100 text-start">
           <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
         </a>
-        {% if user.can_manage_school %}
-        <a href="{% url 'backup_index' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-hdd-fill me-2"></i>Backup Database
-        </a>
-        {% endif %}
+        
       </div>
     </div>
   </div>

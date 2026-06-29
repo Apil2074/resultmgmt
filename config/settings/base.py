@@ -39,7 +39,7 @@ LOCAL_APPS = [
     'apps.results',
     'apps.reports',
     'apps.audit',
-    'apps.backup',
+
     'apps.teachers',
 ]
 

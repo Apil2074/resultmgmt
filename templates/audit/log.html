@@ -30,10 +30,14 @@
             <td class="small font-monospace text-slate-500">
               {{ log.timestamp|date:"Y-m-d H:i:s" }}
             </td>
-            <td>
-              <div class="fw-semibold text-slate-800">{{ log.user.get_full_name|default:log.user.username|default:"System" }}</div>
-              <div class="text-muted small" style="font-size: 0.72rem;">{{ log.user.get_role_display|default:"-" }}</div>
-            </td>
+<td>
+    <div class="fw-semibold text-slate-800">
+        {% if log.user %}{{ log.user.get_full_name|default:log.user.username }}{% else %}System{% endif %}
+    </div>
+    <div class="text-muted small" style="font-size: 0.72rem;">
+        {% if log.user %}{{ log.user.get_role_display|default:"-" }}{% else %}-{% endif %}
+    </div>
+</td>
             <td>
               {% if log.action == 'CREATE' %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1">Created</span>

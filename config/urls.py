@@ -35,7 +35,7 @@ urlpatterns = [
     path('results/', include('apps.results.urls_web')),
     path('reports/', include('apps.reports.urls_web')),
     path('audit/', include('apps.audit.urls_web')),
-    path('backup/', include('apps.backup.urls_web')),
+
 
     # REST API
     path('api/v1/', include([

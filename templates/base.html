@@ -121,9 +121,6 @@
       <a href="{% url 'audit_log' %}" class="nav-item {% if 'audit' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-shield-check nav-icon"></i> <span class="nav-text">Audit Log</span>
       </a>
-      <a href="{% url 'backup_index' %}" class="nav-item {% if 'backup' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-hdd-fill nav-icon"></i> <span class="nav-text">Backup</span>
-      </a>
       {% endif %}
 
       <!-- Super Admin -->
