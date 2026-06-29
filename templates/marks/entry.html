@@ -60,6 +60,19 @@ th.sticky-roll, th.sticky-name {
   z-index: 7 !important;
 }
 
+/* Sticky header for table */
+#marksTable thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg-card);
+  z-index: 8;
+}
+
+/* Bold theory and internal inputs */
+input[data-field="theory"], input[data-field="internal"] {
+  font-weight: 600;
+}
+
 .restricted-input {
   background-color: var(--color-bg-card, #f1f5f9) !important;
   color: var(--color-text-muted, #94a3b8) !important;
@@ -139,24 +152,7 @@ input[type=number] {
 {% endif %}
 
 <!-- Workflow status -->
-<div class="workflow-steps mb-4">
-  <div class="workflow-step {% if exam.status in 'DRAFT,VERIFICATION,APPROVED,PUBLISHED' %}done{% endif %}">
-    <div class="workflow-dot done">1</div>
-    <div class="workflow-label">Draft</div>
-  </div>
-  <div class="workflow-step {% if exam.status in 'VERIFICATION,APPROVED,PUBLISHED' %}done{% endif %}">
-    <div class="workflow-dot {% if exam.status == 'VERIFICATION' %}active{% elif exam.status in 'APPROVED,PUBLISHED' %}done{% endif %}">2</div>
-    <div class="workflow-label">Verification</div>
-  </div>
-  <div class="workflow-step {% if exam.status in 'APPROVED,PUBLISHED' %}done{% endif %}">
-    <div class="workflow-dot {% if exam.status == 'APPROVED' %}active{% elif exam.status == 'PUBLISHED' %}done{% endif %}">3</div>
-    <div class="workflow-label">Approved</div>
-  </div>
-  <div class="workflow-step {% if exam.status == 'PUBLISHED' %}done{% endif %}">
-    <div class="workflow-dot {% if exam.status == 'PUBLISHED' %}done{% endif %}">4</div>
-    <div class="workflow-label">Published</div>
-  </div>
-</div>
+
 
 <!-- Mark Entry Table -->
 <div class="card">

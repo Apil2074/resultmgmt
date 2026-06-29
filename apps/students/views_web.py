@@ -67,7 +67,6 @@ def student_create(request):
             registration_number=request.POST.get('registration_number', ''),
             symbol_number=request.POST.get('symbol_number', ''),
             date_of_birth=request.POST.get('date_of_birth') or None,
-            gender=request.POST.get('gender', 'M'),
             parent_name=request.POST.get('parent_name', ''),
             contact_number=request.POST.get('contact_number', ''),
             address=request.POST.get('address', ''),
@@ -108,7 +107,6 @@ def student_edit(request, pk):
         student.roll_number = request.POST.get('roll_number', student.roll_number)
         student.registration_number = request.POST.get('registration_number', '')
         student.symbol_number = request.POST.get('symbol_number', '')
-        student.gender = request.POST.get('gender', student.gender)
         student.parent_name = request.POST.get('parent_name', '')
         student.contact_number = request.POST.get('contact_number', '')
         student.address = request.POST.get('address', '')
@@ -366,7 +364,6 @@ def student_export_excel(request):
         ws.cell(row=row_num, column=2, value=student.name)
         ws.cell(row=row_num, column=3, value=student.registration_number)
         ws.cell(row=row_num, column=4, value=student.symbol_number)
-        ws.cell(row=row_num, column=5, value=student.get_gender_display())
         ws.cell(row=row_num, column=6, value=student.parent_name)
         ws.cell(row=row_num, column=7, value=student.contact_number)
         ws.cell(row=row_num, column=8, value=student.address)

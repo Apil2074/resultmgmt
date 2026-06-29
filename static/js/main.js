@@ -113,6 +113,7 @@ function makeTableSortable(tableId) {
   if (!table) return;
   const headers = table.querySelectorAll('thead th');
   headers.forEach((th, col) => {
+    if (col === 0) return; // Disable sorting on serial number column
     th.style.cursor = 'pointer';
     th.title = 'Click to sort';
     let asc = true;
@@ -137,6 +138,5 @@ function makeTableSortable(tableId) {
 
 // ── Initialize on DOM ready ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // Make all data tables sortable
-  document.querySelectorAll('.data-table[id]').forEach(t => makeTableSortable(t.id));
+  // Sorting disabled
 });

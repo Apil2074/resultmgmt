@@ -42,6 +42,10 @@
             <div class="col-7 fw-medium">{{ exam.end_date|date:"Y-m-d"|default:"-" }}</div>
           </div>
           <div class="row mb-2">
+            <div class="col-5 text-muted small">Result Date:</div>
+            <div class="col-7 fw-medium">{{ exam.result_date|date:"Y-m-d"|default:"-" }}</div>
+          </div>
+          <div class="row mb-2">
             <div class="col-5 text-muted small">Lock Status:</div>
             <div class="col-7 fw-medium">
               {% if exam.is_locked %}
