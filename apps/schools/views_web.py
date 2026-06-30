@@ -315,5 +315,74 @@ def edit_school(request, school_id):
 
 
 @login_required
+def reset_school_admin_password(request, school_id):
+    """Super Admin — force-reset the password of a school admin account."""
+    if not request.user.is_super_admin:
+        messages.error(request, "Access denied. Only Super Admins can reset passwords.")
+        return redirect('dashboard')
+
+    school = get_object_or_404(School, pk=school_id)
+
+    # Get the selected admin_id from GET/POST, or fall back to first admin
+    admin_id = request.POST.get('admin_id') or request.GET.get('admin_id')
+    all_admins = list(
+        school.users.filter(role=User.Role.SCHOOL_ADMIN).order_by('date_joined')
+    )
+
+    if not all_admins:
+        messages.error(request, f"No School Admin account found for '{school.name}'.")
+        return redirect('super_schools')
+
+    # Select the right admin
+    admin_user = None
+    if admin_id:
+        for a in all_admins:
+            if str(a.pk) == str(admin_id):
+                admin_user = a
+                break
+    if admin_user is None:
+        admin_user = all_admins[0]
+
+    if request.method == 'POST':
+        new_password     = request.POST.get('new_password', '').strip()
+        confirm_password = request.POST.get('confirm_password', '').strip()
+
+        if not new_password:
+            messages.error(request, 'Password cannot be empty.')
+        elif len(new_password) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+        elif new_password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+        else:
+            # Use update_fields so the custom save() only touches the password column
+            admin_user.set_password(new_password)
+            admin_user.save(update_fields=['password', 'updated_at'])
+
+            AuditLog.objects.create(
+                school=school,
+                user=request.user,
+                action=AuditLog.Action.UPDATE,
+                model_name='User',
+                object_id=str(admin_user.pk),
+                object_repr=(
+                    f"Password reset for admin '{admin_user.username}' "
+                    f"of school '{school.name}' by Super Admin"
+                ),
+            )
+
+            messages.success(
+                request,
+                f"Password for '{admin_user.username}' ({school.name}) reset successfully.",
+            )
+            return redirect('super_schools')
+
+    return render(request, 'schools/reset_admin_password.html', {
+        'school': school,
+        'admin_user': admin_user,
+        'all_admins': all_admins,
+    })
+
+
+@login_required
 def subscription_expired(request):
     return render(request, 'schools/subscription_expired.html')

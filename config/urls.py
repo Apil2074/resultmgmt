@@ -1,3 +1,4 @@
+from apps.accounts.views_web import LandingPageView
 """
 URL configuration for RMS project
 """
@@ -22,7 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # Frontend views (HTML pages)
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False)),
+    path('', LandingPageView.as_view(), name='landing'),
     path('auth/', include('apps.accounts.urls_web')),
     path('dashboard/', include('apps.schools.urls_web')),
     path('schools/', include('apps.schools.urls_web_schools')),

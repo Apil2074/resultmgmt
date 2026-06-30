@@ -23,7 +23,7 @@
       <div class="card-body">
         <div class="mb-4">
           <div class="small text-muted mb-1">Status</div>
-          <span class="fs-6 badge {% if exam.status == 'PUBLISHED' %}bg-success text-white{% elif exam.status == 'APPROVED' %}bg-primary text-white{% elif exam.status == 'VERIFICATION' %}bg-warning text-dark{% else %}bg-secondary text-white{% endif %} py-2 px-3 rounded-pill w-100 text-center">
+          <span class="fs-6 badge {% if exam.status == 'PUBLISHED' %}bg-success text-white{% else %}bg-secondary text-white{% endif %} py-2 px-3 rounded-pill w-100 text-center">
             {{ exam.get_status_display }}
           </span>
         </div>
@@ -66,16 +66,8 @@
               {% csrf_token %}
               
               {% if exam.status == 'DRAFT' %}
-                <button type="submit" name="action" value="submit" class="btn btn-warning w-100">
-                  <i class="bi bi-send-fill me-2"></i>Submit for Verification
-                </button>
-              {% elif exam.status == 'VERIFICATION' %}
-                <button type="submit" name="action" value="approve" class="btn btn-primary w-100">
-                  <i class="bi bi-check-circle-fill me-2"></i>Approve Exam
-                </button>
-              {% elif exam.status == 'APPROVED' %}
-                <button type="submit" name="action" value="publish" class="btn btn-success w-100">
-                  <i class="bi bi-patch-check-fill me-2"></i>Publish Results
+                <button type=\"submit\" name=\"action\" value=\"publish\" class=\"btn btn-success w-100\">
+                  <i class=\"bi bi-patch-check-fill me-2\"></i>Publish Results
                 </button>
               {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
                 <button type="submit" name="action" value="unlock" class="btn btn-outline-danger w-100">

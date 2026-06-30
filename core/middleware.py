@@ -31,7 +31,8 @@ class SchoolRequiredMiddleware:
             exempt_url_names = [
                 'login', 'logout', 'change_password', 'profile', 'dashboard',
                 'api_login', 'api_logout', 'api_change_password', 'api_me',
-                'super_schools', 'create_school_and_admin', 'subscription_expired', 'edit_school'
+                'super_schools', 'create_school_and_admin', 'subscription_expired', 
+                'edit_school', 'reset_school_admin_password', 'forgot_password'
             ]
             exempt_prefixes = ['/admin/', '/static/', '/media/', '/api/']
 

@@ -122,3 +122,92 @@ def profile_view(request):
         return redirect('profile')
         
     return render(request, 'auth/profile.html', {'user': user})
+
+import secrets
+import string
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
+from apps.schools.models import School
+
+from apps.accounts.models import User
+
+class ForgotPasswordView(View):
+    template_name = "auth/forgot_password.html"
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect("dashboard")
+        return render(request, self.template_name)
+
+    def post(self, request):
+        email = request.POST.get("email", "").strip().lower()
+
+        if not email:
+            messages.error(request, "Please enter your email address.")
+            return render(request, self.template_name)
+
+        user_to_reset = None
+        email_to_send_to = email
+        
+        # 1. Try to find a School with this email
+        school = School.objects.filter(email__iexact=email, is_active=True).first()
+        if school:
+            # Get the primary school admin
+            user_to_reset = school.users.filter(role=User.Role.SCHOOL_ADMIN, is_active=True).first()
+            if not user_to_reset:
+                messages.error(request, f"No School Admin account is set up for '{school.name}'.")
+                return render(request, self.template_name)
+        else:
+            # 2. If not a school email, check if it's the Super Admin's personal email
+            user_to_reset = User.objects.filter(email__iexact=email, role=User.Role.SUPER_ADMIN, is_active=True).first()
+            if not user_to_reset:
+                messages.error(request, "No school or system admin found with this email address.")
+                return render(request, self.template_name)
+
+        # Generate a secure 12-character temporary password
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+
+        # Set the new password
+        user_to_reset.set_password(temp_password)
+        user_to_reset.save(update_fields=['password'])
+
+        # Send the email
+        subject = "Your Temporary Password — Multi-School RMS"
+        body = (
+            f"Hello {user_to_reset.get_full_name() or user_to_reset.username},\n\n"
+            f"A temporary password has been generated for your admin account "
+            f"on Multi-School Result Management System.\n\n"
+            f"  Username      : {user_to_reset.username}\n"
+            f"  New Password  : {temp_password}\n\n"
+            f"Please log in and change your password immediately from your profile.\n\n"
+            f"If you did not request this, please contact support.\n\n"
+            f"— Multi-School RMS"
+        )
+        try:
+            send_mail(
+                subject,
+                body,
+                django_settings.EMAIL_HOST_USER or "noreply@rms.local",
+                [email_to_send_to],
+                fail_silently=False,
+            )
+            messages.success(
+                request,
+                "A new password has been sent to the registered email address.",
+            )
+        except Exception as exc:
+            import sys
+            print(f"[ForgotPassword] Email send failed: {exc}", file=sys.stderr)
+            messages.error(
+                request,
+                "Could not send the email. Please contact your administrator or check your SMTP settings."
+            )
+
+        return render(request, self.template_name)
+
+class LandingPageView(View):
+    template_name = "landing.html"
+
+    def get(self, request):
+        return render(request, self.template_name)

@@ -122,9 +122,7 @@ def exam_workflow(request, pk):
     user = request.user
 
     workflow_map = {
-        'submit': (Exam.Status.DRAFT, Exam.Status.VERIFICATION, 'Exam submitted for verification.'),
-        'approve': (Exam.Status.VERIFICATION, Exam.Status.APPROVED, 'Exam approved.'),
-        'publish': (Exam.Status.APPROVED, Exam.Status.PUBLISHED, 'Results published successfully!'),
+        'publish': (Exam.Status.DRAFT, Exam.Status.PUBLISHED, 'Results published successfully!'),
         'unlock': (None, None, 'Exam unlocked for editing.'),
     }
 

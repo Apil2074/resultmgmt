@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 {% block title %}Manage Schools{% endblock %}
-{% block page_title %}🏫 Registered Schools{% endblock %}
+{% block page_title %}Registered Schools{% endblock %}
 
 {% block content %}
 <div class="card shadow-sm mb-4">
   <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
-    <h5 class="card-title mb-0 fw-semibold text-slate-800">
+    <h5 class="card-title mb-0 fw-semibold">
       <i class="bi bi-building text-primary me-2"></i>Registered Tenants
     </h5>
     <a href="{% url 'create_school_and_admin' %}" class="btn btn-primary">
-      <i class="bi bi-plus-lg me-2"></i>Register School & Admin
+      <i class="bi bi-plus-lg me-2"></i>Register School &amp; Admin
     </a>
   </div>
   <div class="table-responsive">
@@ -31,66 +31,67 @@
             <td>
               <div class="d-flex align-items-center">
                 {% if s.logo %}
-                  <img src="{{ s.logo.url }}" alt="{{ s.name }}" class="rounded border me-3" style="width: 42px; height: 42px; object-fit: cover;">
+                  <img src="{{ s.logo.url }}" alt="{{ s.name }}" class="rounded border me-3" style="width:42px;height:42px;object-fit:cover;">
                 {% else %}
-                  <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 42px; height: 42px; font-size: 1.2rem; font-weight: bold;">
+                  <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width:42px;height:42px;font-size:1.2rem;font-weight:bold;">
                     {{ s.name|first|upper }}
                   </div>
                 {% endif %}
                 <div>
-                  <div class="fw-semibold text-slate-700">{{ s.name }}</div>
+                  <div class="fw-semibold">{{ s.name }}</div>
                   <div class="text-muted small"><i class="bi bi-geo-alt-fill me-1"></i>{{ s.address }}</div>
                 </div>
               </div>
             </td>
-            <td class="text-slate-600">{{ s.establishment_year|default:"—" }}</td>
+            <td>{{ s.establishment_year|default:"—" }}</td>
             <td>
               <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 rounded">
                 {{ s.get_grading_system_display }}
               </span>
             </td>
             <td>
-              <div class="small text-slate-700">
+              <div class="small">
                 {% if s.subscription_start_date or s.subscription_end_date %}
                   <div><span class="text-muted">From:</span> {{ s.subscription_start_date|date:"Y-m-d"|default:"TBD" }}</div>
                   <div><span class="text-muted">To:</span> {{ s.subscription_end_date|date:"Y-m-d"|default:"TBD" }}</div>
                 {% else %}
-                  <span class="text-muted italic">Lifetime / Free</span>
+                  <span class="text-muted fst-italic">Lifetime / Free</span>
                 {% endif %}
               </div>
             </td>
             <td>
               {% if s.has_active_subscription %}
-                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1.5 rounded-pill">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill">
                   <i class="bi bi-check-circle-fill me-1"></i>Active
                 </span>
               {% else %}
-                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1.5 rounded-pill">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 rounded-pill">
                   <i class="bi bi-exclamation-triangle-fill me-1"></i>Expired
                 </span>
               {% endif %}
             </td>
             <td>
-              <div class="d-flex gap-2">
-                <span class="badge bg-blue-subtle text-primary border px-2.5 py-1.5 rounded">
-                  Admins: {{ s.admin_count }}
-                </span>
-                <span class="badge bg-purple-subtle text-purple border px-2.5 py-1.5 rounded">
-                  Students: {{ s.student_count }}
-                </span>
+              <div class="d-flex flex-column gap-1">
+                <small><i class="bi bi-person-fill me-1 text-primary"></i>Admins: {{ s.admin_count }}</small>
+                <small><i class="bi bi-people-fill me-1 text-success"></i>Students: {{ s.student_count }}</small>
               </div>
             </td>
             <td class="text-end">
-              <a href="{% url 'edit_school' s.id %}" class="btn btn-sm btn-outline-primary" title="Edit School Details">
-                <i class="bi bi-pencil-fill me-1"></i>Edit
-              </a>
+              <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'edit_school' s.id %}" class="btn btn-sm btn-outline-primary" title="Edit School Details">
+                  <i class="bi bi-pencil-fill me-1"></i>Edit
+                </a>
+                <a href="{% url 'reset_school_admin_password' s.id %}" class="btn btn-sm btn-outline-danger" title="Reset Admin Password">
+                  <i class="bi bi-shield-lock-fill me-1"></i>Reset Password
+                </a>
+              </div>
             </td>
           </tr>
         {% empty %}
           <tr>
             <td colspan="7" class="text-center py-5 text-muted">
               <i class="bi bi-building d-block fs-1 mb-3 text-secondary"></i>
-              No schools have been registered yet. Click "Register School & Admin" above to start.
+              No schools registered yet. Click "Register School &amp; Admin" to start.
             </td>
           </tr>
         {% endfor %}

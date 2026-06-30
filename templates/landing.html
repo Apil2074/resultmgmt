@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-School Result Management System</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap CSS for layout/utilities -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    {% load static %}
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #0f172a;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.5);
+            --bg-dark: #020617;
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --gradient-1: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            --gradient-2: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Abstract glowing background */
+        .bg-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.1) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        /* Navbar */
+        .navbar-glass {
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .brand-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+
+        /* Buttons */
+        .btn-modern {
+            font-family: var(--font-body);
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary-glow {
+            background: var(--gradient-1);
+            color: white;
+            border: none;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.6);
+            color: white;
+        }
+
+        .btn-outline-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-glass:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 8rem 0 6rem;
+            min-height: 90vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .text-gradient {
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+
+        .hero-img-wrapper {
+            position: relative;
+            z-index: 1;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .hero-img-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .hero-image {
+            width: 100%;
+            max-width: 600px;
+            filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 5rem 0;
+            position: relative;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .feature-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            height: 100%;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.05);
+        }
+
+        .feature-title {
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 4rem 0;
+            border-top: 1px solid var(--glass-border);
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(2, 6, 23, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 3rem 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--glass-border);
+            background: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar-glass">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="#" class="text-decoration-none">
+                <div class="brand-logo">RMS</div>
+            </a>
+            <div>
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow">
+                        Dashboard <i class="bi bi-arrow-right"></i>
+                    </a>
+                {% else %}
+                    <a href="{% url 'public_result_search' %}" class="btn-modern btn-outline-glass me-2">
+                        Student Portal
+                    </a>
+                    <a href="{% url 'login' %}" class="btn-modern btn-primary-glow">
+                        Admin Login <i class="bi bi-box-arrow-in-right"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-5 mb-lg-0">
+                    <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mb-4 d-inline-block">
+                        <i class="bi bi-stars me-1"></i> Next-Gen Education Platform
+                    </div>
+                    <h1 class="hero-title">
+                        Elevate Your School's <br>
+                        <span class="text-gradient">Result Management</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        A centralized, multi-tenant platform to effortlessly manage grades, automate report cards, and provide transparent academic insights for teachers, students, and parents.
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        {% if request.user.is_authenticated %}
+                            <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow">
+                                Enter Dashboard <i class="bi bi-rocket-fill"></i>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'login' %}" class="btn-modern btn-primary-glow">
+                                Get Started <i class="bi bi-arrow-right"></i>
+                            </a>
+                            <a href="#features" class="btn-modern btn-outline-glass">
+                                Explore Features
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="hero-img-wrapper">
+                        <img src="{% static 'img/hero.png' %}" alt="RMS Dashboard Illustration" class="hero-image img-fluid">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-6 col-md-3 stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Cloud Native</div>
+                </div>
+                <div class="col-6 col-md-3 stat-item">
+                    <div class="stat-number">Auto</div>
+                    <div class="stat-label">Ledger Generation</div>
+                </div>
+                <div class="col-6 col-md-3 stat-item">
+                    <div class="stat-number">Zero</div>
+                    <div class="stat-label">Maintenance</div>
+                </div>
+                <div class="col-6 col-md-3 stat-item">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Parent Portal Access</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <h2 class="section-title">Powerful Features <br><span class="text-gradient">Built for Modern Schools</span></h2>
+            
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-buildings"></i>
+                        </div>
+                        <h3 class="feature-title">Multi-Tenant Architecture</h3>
+                        <p class="feature-text">Manage multiple schools from a single super-admin dashboard. Each school gets its own isolated environment, admins, and custom settings.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-calculator"></i>
+                        </div>
+                        <h3 class="feature-title">Automated Grading</h3>
+                        <p class="feature-text">Input raw marks and let the system automatically calculate grades, GPAs, and aggregate scores based on your school's unique grading rules.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-file-earmark-bar-graph"></i>
+                        </div>
+                        <h3 class="feature-title">Dynamic Reports & Ledgers</h3>
+                        <p class="feature-text">Generate comprehensive mark ledgers and individual student grade sheets instantly. Export to print-ready formats with a single click.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-person-lines-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Public Student Portal</h3>
+                        <p class="feature-text">Students and parents can securely check their academic results online using their Date of Birth and Roll Number without requiring accounts.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-shield-lock"></i>
+                        </div>
+                        <h3 class="feature-title">Role-Based Access Control</h3>
+                        <p class="feature-text">Granular permissions for Super Admins, School Admins, and Teachers. Ensure staff only have access to the classes and subjects they manage.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-diagram-3"></i>
+                        </div>
+                        <h3 class="feature-title">Subject & Exam Management</h3>
+                        <p class="feature-text">Easily configure subjects (theory/practical splits), link them to specific classes, and schedule term-wise examinations effortlessly.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to action -->
+    <section class="py-5 mb-5 text-center">
+        <div class="container">
+            <div class="feature-card" style="background: rgba(14, 165, 233, 0.05); max-width: 800px; margin: 0 auto;">
+                <h2 class="hero-title mb-4" style="font-size: 2.5rem;">Ready to digitize your school?</h2>
+                <p class="text-muted mb-4 fs-5">Join our platform today and experience seamless result management.</p>
+                <a href="{% url 'login' %}" class="btn-modern btn-primary-glow px-5 py-3 fs-5">
+                    Login to Dashboard <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-0">&copy; {% now "Y" %} Multi-School RMS. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

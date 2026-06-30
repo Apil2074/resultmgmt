@@ -4,11 +4,14 @@
 
 {% block extra_css %}
 <style>
+/* ─────────────────────────────────────────────
+   SCREEN STYLES  (unchanged from original)
+───────────────────────────────────────────── */
 .ledger-controls { display: flex; gap: 8px; flex-wrap: wrap; }
-.grade-A { color: #10B981; font-weight: 700; }
-.grade-B { color: #3B82F6; font-weight: 600; }
-.grade-C { color: #F59E0B; font-weight: 600; }
-.grade-D { color: #F97316; font-weight: 600; }
+.grade-A  { color: #10B981; font-weight: 700; }
+.grade-B  { color: #3B82F6; font-weight: 600; }
+.grade-C  { color: #F59E0B; font-weight: 600; }
+.grade-D  { color: #F97316; font-weight: 600; }
 .grade-E, .grade-NG { color: #EF4444; font-weight: 600; }
 
 .ledger-wrap {
@@ -51,58 +54,68 @@
   background-color: transparent !important;
   font-weight: bold;
 }
-.pass-status {
-  color: #10b981;
-  font-weight: bold;
-}
-.fail-status {
-  color: #ef4444;
-  font-weight: bold;
-}
+.pass-status { color: #10b981; font-weight: bold; }
+.fail-status { color: #ef4444; font-weight: bold; }
 
+/* ─────────────────────────────────────────────
+   PRINT STYLES — fallback if popup is blocked.
+   Primary path is the JS popup (printLedger()).
+───────────────────────────────────────────── */
 @media print {
-  @page {
-    size: landscape;
-    margin: 5mm;
-  }
-  html, body {
-    overflow: visible !important;
-    overflow-x: visible !important;
-  }
-  body, .app-wrapper, .main-content, .page-content {
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    width: auto !important;
-    max-width: none !important;
-  }
-  .sidebar, .topbar, .page-header, .d-print-none {
+  @page { size: A3 landscape; margin: 8mm 5mm; }
+
+  /* Hide non-print elements */
+  .sidebar, .topbar, .page-header, .d-print-none,
+  #ledgerSearch, .ledger-controls, nav, header {
     display: none !important;
   }
+
+  /* Expand layout */
+  html, body { overflow: visible !important; }
+  body, .app-wrapper, .main-content, .page-content {
+    margin: 0 !important; padding: 0 !important;
+    overflow: visible !important;
+    width: auto !important; max-width: none !important;
+  }
+
+  /* Remove scroll container */
   .ledger-wrap {
     overflow: visible !important;
-    max-height: none !important;
-    width: auto !important;
-    max-width: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    margin: 0 !important;
+    max-height: none !important; height: auto !important;
+    width: auto !important; max-width: none !important;
+    border: none !important; box-shadow: none !important;
+    border-radius: 0 !important; margin: 0 !important;
   }
+
+  /* Full-width table */
   .ledger-table {
     min-width: 0 !important;
     width: 100% !important;
-    font-size: 0.6rem !important;
+    font-size: 0.58rem !important;
+    table-layout: auto !important;
   }
   .ledger-table th, .ledger-table td {
     padding: 2px 3px !important;
     white-space: normal !important;
     word-break: break-word !important;
+    border: 1px solid #94a3b8 !important;
   }
+
+  /* Repeat header on every page */
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+
+  /* Prevent row splits */
+  tbody tr { page-break-inside: avoid; break-inside: avoid; }
+
+  /* Release sticky positioning */
   .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-4 {
     position: static !important;
-    min-width: 0 !important;
-    max-width: none !important;
+    min-width: 0 !important; max-width: none !important;
   }
+
+  /* Show print-only school header */
+  .d-none.d-print-block { display: block !important; }
 }
 </style>
 {% endblock %}
@@ -117,9 +130,11 @@
       {{ student_results|length }} students
     </div>
   </div>
-  <div class="ledger-controls">
-    <input type="text" class="form-control" id="ledgerSearch" placeholder="🔍 Search student..." style="width:180px;">
-    <button class="btn btn-secondary" onclick="window.print()">
+
+  <div class="ledger-controls d-print-none">
+    <input type="text" class="form-control" id="ledgerSearch"
+           placeholder="🔍 Search student..." style="width:180px;">
+    <button class="btn btn-secondary" id="printBtn" onclick="printLedger()">
       <i class="bi bi-printer-fill"></i> Print
     </button>
     <a href="{% url 'ledger_excel' exam.id class_obj.id %}" class="btn btn-success">
@@ -128,19 +143,23 @@
   </div>
 </div>
 
-<!-- School Header for Print -->
-<div class="d-none d-print-block text-center mb-3">
+<!-- School Header: hidden on screen, visible in print (both popup and @media print) -->
+<div class="d-none d-print-block text-center mb-3" id="printSchoolHeader">
   {% if school.logo %}<img src="{{ school.logo.url }}" height="60" class="mb-2"><br>{% endif %}
   <h4>{{ school.name }}</h4>
   <p style="font-size:0.82rem;">{{ school.address }}</p>
   <h5>Grade Ledger — {{ exam.name }} | {{ class_obj.full_name }} | {{ exam.session.name }}</h5>
 </div>
 
-<!-- Ledger Table -->
+<!-- Scroll hint (screen only) -->
 <div class="d-flex justify-content-end mb-2 d-print-none">
-  <small class="text-muted fw-medium"><i class="bi bi-arrows-expand me-1"></i> Scroll horizontally to view all columns</small>
+  <small class="text-muted fw-medium">
+    <i class="bi bi-arrows-expand me-1"></i> Scroll horizontally to view all columns
+  </small>
 </div>
-<div class="ledger-wrap">
+
+<!-- Ledger Table -->
+<div class="ledger-wrap" id="ledgerWrap">
   <table class="ledger-table" id="ledgerTable">
     <thead>
       <!-- Row 1: Subject names and main spans -->
@@ -164,7 +183,7 @@
         <th rowspan="4" style="min-width:50px;">Attendance</th>
         <th rowspan="4" style="min-width:50px;">Result</th>
       </tr>
-      
+
       <!-- Row 2: Credit Hour values -->
       <tr>
         <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Credit Hour</th>
@@ -179,7 +198,7 @@
           {% endif %}
         {% endfor %}
       </tr>
-      
+
       <!-- Row 3: Full Marks values -->
       <tr>
         <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Full Marks</th>
@@ -194,7 +213,7 @@
           {% endif %}
         {% endfor %}
       </tr>
-      
+
       <!-- Row 4: Component headers -->
       <tr>
         <th style="background-color:#f8fafc; font-weight:bold; color:#475569;">DOB</th>
@@ -253,7 +272,6 @@
       <tr>
         <td colspan="99" class="text-center" style="padding:40px; color:var(--color-text-muted);">
           No results processed yet.
-
         </td>
       </tr>
       {% endfor %}
@@ -262,7 +280,8 @@
 </div>
 
 <!-- Legend -->
-<div class="d-flex gap-3 flex-wrap mt-3" style="font-size:0.72rem; color:var(--color-text-muted);">
+<div class="d-flex gap-3 flex-wrap mt-3" id="ledgerLegend"
+     style="font-size:0.72rem; color:var(--color-text-muted);">
   <span><strong>Th</strong> = Theory Obtained</span>
   <span><strong>In</strong> = Internal/Practical Obtained</span>
   <span><strong>Th GP</strong> = Theory Grade Point</span>
@@ -275,12 +294,155 @@
 
 {% block extra_js %}
 <script>
-// Live search
-document.getElementById('ledgerSearch').addEventListener('input', function() {
+/* ─────────────────────────────────────────────
+   LIVE SEARCH
+───────────────────────────────────────────── */
+document.getElementById('ledgerSearch').addEventListener('input', function () {
   const q = this.value.toLowerCase();
-  document.querySelectorAll('.ledger-row').forEach(row => {
+  document.querySelectorAll('.ledger-row').forEach(function (row) {
     row.style.display = row.dataset.name.includes(q) ? '' : 'none';
   });
 });
+
+/* ─────────────────────────────────────────────
+   PRINT LEDGER  — popup-window approach
+   ─────────────────────────────────────────────
+   Problem: Browsers clip overflow-x:auto
+   containers when printing from window.print(),
+   cutting off columns that are scrolled out of
+   view.
+
+   Solution: Open a temporary popup window that
+   contains the full table HTML with no scroll
+   containers, inject print-optimised CSS, then
+   trigger print() inside the popup.  The popup
+   auto-closes once the print dialog is dismissed.
+
+   Works in: Chrome 90+, Edge 90+, Firefox 85+
+───────────────────────────────────────────── */
+function printLedger() {
+
+  /* ── 1. Collect school header HTML ── */
+  var headerEl  = document.getElementById('printSchoolHeader');
+  var headerHtml = headerEl ? headerEl.innerHTML : '';
+
+  /* ── 2. Collect full table HTML ── */
+  var tableHtml = document.getElementById('ledgerTable').outerHTML;
+
+  /* ── 3. Collect legend HTML ── */
+  var legendHtml = document.getElementById('ledgerLegend').outerHTML;
+
+  /* ── 4. Choose page size based on actual table pixel width ── */
+  var tableWidth = document.getElementById('ledgerTable').scrollWidth;
+  var pageSize   = tableWidth > 1800 ? 'A3 landscape' : 'A4 landscape';
+
+  /* ── 5. Build self-contained HTML document for popup ── */
+  var html = [
+    '<!DOCTYPE html>',
+    '<html lang="en">',
+    '<head>',
+    '  <meta charset="UTF-8">',
+    '  <title>Grade Ledger — Print</title>',
+    '  <style>',
+
+    /* --- Reset & base --- */
+    '  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }',
+    '  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 0.65rem;',
+    '         color: #0f172a; background: #fff; padding: 4mm; }',
+
+    /* --- School header --- */
+    '  .school-header { text-align: center; margin-bottom: 10px; }',
+    '  .school-header h4  { font-size: 1rem;    margin: 3px 0; }',
+    '  .school-header h5  { font-size: 0.82rem; margin: 2px 0; font-weight: 600; }',
+    '  .school-header p   { font-size: 0.72rem; margin: 2px 0; color: #475569; }',
+    '  .school-header img { height: 55px; margin-bottom: 6px; display: block; margin: 0 auto 6px; }',
+
+    /* --- Table --- */
+    '  table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 0.58rem; }',
+    '  th, td { border: 1px solid #94a3b8; padding: 2px 4px; vertical-align: middle; text-align: center; }',
+    '  th { background-color: #f1f5f9; color: #1e3a8a; font-weight: 700; }',
+    '  .subject-header { background-color: #e2e8f0 !important; color: #0f172a !important;',
+    '                    font-weight: 800; font-size: 0.62rem; }',
+    '  .avg-gpa-col, .grade-col { font-weight: bold; }',
+    '  .pass-status { color: #10b981; font-weight: bold; }',
+    '  .fail-status { color: #ef4444; font-weight: bold; }',
+    '  .grade-A  { color: #10B981; font-weight: 700; }',
+    '  .grade-B  { color: #3B82F6; font-weight: 600; }',
+    '  .grade-C  { color: #F59E0B; font-weight: 600; }',
+    '  .grade-D  { color: #F97316; font-weight: 600; }',
+    '  .grade-E, .grade-NG { color: #EF4444; font-weight: 600; }',
+
+    /* --- Header repeats on every page --- */
+    '  thead { display: table-header-group; }',
+    '  tfoot { display: table-footer-group; }',
+
+    /* --- Prevent row split across pages --- */
+    '  tbody tr { page-break-inside: avoid; break-inside: avoid; }',
+
+    /* --- Legend --- */
+    '  #ledgerLegend { margin-top: 8px; font-size: 0.58rem; color: #475569;',
+    '                  display: flex; flex-wrap: wrap; gap: 8px; }',
+
+    /* --- Hide elements not needed in print copy --- */
+    '  .d-print-none { display: none !important; }',
+    '  .sticky-col-1, .sticky-col-2, .sticky-col-3, .sticky-col-4 { position: static !important; }',
+
+    /* --- Page layout --- */
+    '  @page { size: ' + pageSize + '; margin: 8mm 5mm; }',
+
+    '  </style>',
+    '</head>',
+    '<body>',
+
+    /* School header */
+    '  <div class="school-header">' + headerHtml + '</div>',
+
+    /* Full ledger table */
+    tableHtml,
+
+    /* Legend */
+    legendHtml,
+
+    /* Auto-print and auto-close script */
+    '  <script>',
+    '    window.onload = function () {',
+    '      window.focus();',
+    '      window.print();',
+    '      /* Close popup when print dialog is dismissed (Chrome, Edge) */',
+    '      window.onafterprint = function () { window.close(); };',
+    '      /* Firefox fallback: close after 30 s if onafterprint is slow */',
+    '      setTimeout(function () { window.close(); }, 30000);',
+    '    };',
+    '  <\/script>',
+    '</body>',
+    '</html>'
+  ].join('\n');
+
+  /* ── 6. Open popup ── */
+  var popup = window.open(
+    '',
+    '_blank',
+    'width=1400,height=900,scrollbars=yes,resizable=yes,toolbar=no,menubar=no'
+  );
+
+  if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+    /* Popup was blocked — inform user and offer fallback */
+    if (confirm(
+      'Pop-up was blocked by your browser.\n\n' +
+      'Click OK to allow pop-ups for this site and try again, or Cancel to\n' +
+      'use the basic print (some columns may be cut off).'
+    )) {
+      alert('Please allow pop-ups in the address bar and click Print again.');
+    } else {
+      window.print(); /* fallback to native print */
+    }
+    return;
+  }
+
+  /* ── 7. Write content into popup ── */
+  popup.document.open();
+  popup.document.write(html);
+  popup.document.close();
+}
 </script>
 {% endblock %}

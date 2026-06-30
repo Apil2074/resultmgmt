@@ -174,7 +174,7 @@
             <div style="font-size:0.82rem; font-weight:600; color:var(--color-text);">{{ exam.name }}</div>
             <div style="font-size:0.7rem; color:var(--color-text-muted);">{{ exam.session.name }}</div>
           </div>
-          <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% elif exam.status == 'APPROVED' %}badge-blue{% elif exam.status == 'VERIFICATION' %}badge-gold{% else %}badge-gray{% endif %}">
+          <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% else %}badge-gray{% endif %}">
             {{ exam.get_status_display }}
           </span>
         </div>

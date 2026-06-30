@@ -10,8 +10,6 @@ class Exam(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
-        VERIFICATION = 'VERIFICATION', 'Under Verification'
-        APPROVED = 'APPROVED', 'Approved'
         PUBLISHED = 'PUBLISHED', 'Published'
 
     school = models.ForeignKey(
