@@ -2,13 +2,18 @@
 Marks App — Web views for mark entry and bulk import/export
 """
 import io
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
+from django.db import transaction, IntegrityError
 import json
 from .models import MarkEntry
+from core.security import validate_excel_upload
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -161,17 +166,26 @@ def save_mark(request):
         defaults['total_days'] = total_days
 
     try:
-        me, created = MarkEntry.objects.update_or_create(
-            exam=exam, student=student, subject=subject,
-            defaults=defaults
-        )
+        with transaction.atomic():
+            me, created = MarkEntry.objects.select_for_update().get_or_create(
+                exam=exam, student=student, subject=subject,
+                defaults=defaults
+            )
+            if not created:
+                for k, v in defaults.items():
+                    setattr(me, k, v)
+                me.save()
         return JsonResponse({
             'status': 'saved',
             'id': me.pk,
             'total_obtained': str(me.total_obtained) if me.total_obtained is not None else None,
         })
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    except IntegrityError:
+        return JsonResponse({'error': 'Mark entry conflict. Please refresh and try again.'}, status=409)
+    except Exception:
+        logger.exception('Unexpected error in save_mark for exam=%s student=%s subject=%s',
+                         data.get('exam_id'), data.get('student_id'), data.get('subject_id'))
+        return JsonResponse({'error': 'An unexpected error occurred. Please try again.'}, status=500)
 
 
 @login_required
@@ -205,11 +219,25 @@ def save_marks_bulk(request):
     students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
     
     if students:
-        first_student = list(students.values())[0]
         from apps.exams.models import ExamClass
-        exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=first_student.class_obj)
-        if exam_class.is_locked:
-            return JsonResponse({'error': 'Exam is locked for this class'}, status=403)
+        # SECURITY: Check lock for EVERY student's class, not just the first.
+        # A single locked class check can be bypassed by putting an unlocked student first.
+        checked_classes = set()
+        for data_item in data_list:
+            sid = data_item.get('student_id')
+            s = students.get(sid)
+            if not s:
+                continue
+            class_id = s.class_obj_id
+            if class_id in checked_classes:
+                continue
+            checked_classes.add(class_id)
+            exam_class = ExamClass.objects.filter(exam=exam, class_obj=s.class_obj).first()
+            if exam_class and exam_class.is_locked:
+                return JsonResponse(
+                    {'error': f'Exam is locked for class: {s.class_obj.name}. Unlock before entering marks.'},
+                    status=403
+                )
 
     is_teacher = getattr(request.user, 'is_teacher', False)
 
@@ -310,10 +338,11 @@ def save_marks_bulk(request):
             for u in updates:
                 u.clean()
             MarkEntry.objects.bulk_update(updates, ['special_value', 'theory_obtained', 'internal_obtained', 'entered_by', 'present_days', 'total_days'])
-            
+
         return JsonResponse({'status': 'saved', 'count': len(creates) + len(updates)})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    except Exception:
+        logger.exception('Unexpected error in save_marks_bulk for exam=%s', exam_id)
+        return JsonResponse({'error': 'An unexpected error occurred while saving marks.'}, status=500)
 
 
 @login_required
@@ -326,6 +355,14 @@ def bulk_mark_import(request, exam_id, class_id):
     cls = get_object_or_404(Class, pk=class_id, school=school)
 
     if request.method == 'POST' and request.FILES.get('excel_file'):
+        # SECURITY: Validate file type and size before processing
+        from django.core.exceptions import ValidationError
+        try:
+            validate_excel_upload(request.FILES['excel_file'])
+        except ValidationError as ve:
+            messages.error(request, str(ve.message))
+            return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
         import openpyxl
         from apps.students.models import Student
         from apps.subjects.models import Subject
@@ -481,8 +518,9 @@ def bulk_mark_import(request, exam_id, class_id):
                     saved += 1
 
             messages.success(request, f'{saved} mark entries imported.')
-        except Exception as e:
-            messages.error(request, f'Import failed: {str(e)}')
+        except Exception:
+            logger.exception('Bulk mark import failed for exam=%s class=%s', exam_id, class_id)
+            messages.error(request, 'Import failed. Please check the file format and try again.')
 
         return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
 
@@ -635,7 +673,20 @@ def save_full_marks(request):
 
     subject = get_object_or_404(Subject, pk=data.get('subject_id'), school=school)
     field = data.get('field')  # 'theory' or 'internal'
-    value = int(data.get('value') or 100)
+
+    # SECURITY: Validate bounds to prevent mark manipulation via fraudulent full marks
+    try:
+        value = int(data.get('value') or 100)
+    except (ValueError, TypeError):
+        return JsonResponse({'error': 'Invalid value. Must be an integer.'}, status=400)
+
+    MIN_FULL_MARKS = 1
+    MAX_FULL_MARKS = 1000
+    if not (MIN_FULL_MARKS <= value <= MAX_FULL_MARKS):
+        return JsonResponse(
+            {'error': f'Full marks must be between {MIN_FULL_MARKS} and {MAX_FULL_MARKS}.'},
+            status=400
+        )
 
     try:
         sms = subject.marking_structure
@@ -645,8 +696,9 @@ def save_full_marks(request):
             sms.internal_full_marks = value
         sms.save()
         return JsonResponse({'status': 'saved'})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+    except Exception:
+        logger.exception('Error in save_full_marks for subject=%s field=%s', data.get('subject_id'), field)
+        return JsonResponse({'error': 'An unexpected error occurred.'}, status=500)
 
 
 @login_required
@@ -917,34 +969,39 @@ def bulk_mark_all_import(request, exam_id):
                 has_config_row = True
                 
             if has_config_row:
-                # 1. Parse and update subject full marks
+                # SECURITY: Only allow School Admins to update the marking structure from Excel.
+                # Teachers uploading Excel should NOT be able to manipulate full marks.
+                is_admin_upload = request.user.is_school_admin or request.user.is_super_admin
+
+                # 1. Parse and update subject full marks (admin only)
                 col_idx = 2
                 for subject in subjects:
                     try:
                         ms = subject.marking_structure
                         changed = False
-                        
+
                         theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
-                        if theory_fm is not None:
+                        if theory_fm is not None and is_admin_upload:
                             try:
                                 val = int(float(theory_fm))
-                                if ms.theory_full_marks != val:
+                                # SECURITY: Bounds check — prevent fraudulent marking structures
+                                if 1 <= val <= 1000 and ms.theory_full_marks != val:
                                     ms.theory_full_marks = val
                                     changed = True
                             except Exception:
                                 pass
-                                
+
                         if ms.has_internal:
                             internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
-                            if internal_fm is not None:
+                            if internal_fm is not None and is_admin_upload:
                                 try:
                                     val = int(float(internal_fm))
-                                    if ms.internal_full_marks != val:
+                                    if 1 <= val <= 1000 and ms.internal_full_marks != val:
                                         ms.internal_full_marks = val
                                         changed = True
                                 except Exception:
                                     pass
-                                    
+
                         if changed:
                             ms.save()
                     except Exception:
@@ -1055,8 +1112,8 @@ def bulk_mark_all_import(request, exam_id):
             msg += f" Skipped unknown sheets: {', '.join(skipped_sheets)}."
         messages.success(request, msg)
 
-    except Exception as e:
-        messages.error(request, f'Bulk import failed: {str(e)}')
+    except Exception:
+        logger.exception('Bulk all-class import failed for exam=%s', exam_id)
+        messages.error(request, 'Bulk import failed. Please check the file format and try again.')
 
     return redirect('mark_entry_select')
-

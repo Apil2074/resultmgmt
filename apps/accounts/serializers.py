@@ -17,7 +17,11 @@ class UserSerializer(serializers.ModelSerializer):
             'full_name', 'role', 'role_display', 'school', 'school_name',
             'phone', 'profile_picture', 'is_active', 'date_joined',
         ]
-        read_only_fields = ['id', 'date_joined']
+        # SECURITY: role, school, is_active must never be writable by the user themselves.
+        # These can only be changed by a Super Admin through dedicated admin endpoints.
+        read_only_fields = [
+            'id', 'date_joined', 'role', 'school', 'is_active', 'is_staff',
+        ]
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -27,6 +31,17 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
             user.save()
         return user
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """
+    Safe serializer for PATCH /api/v1/auth/me/.
+    Only allows updating non-sensitive personal fields.
+    role, school, is_active, is_staff, username are all read-only here.
+    """
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone']
 
 
 class ChangePasswordSerializer(serializers.Serializer):

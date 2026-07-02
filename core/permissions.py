@@ -24,7 +24,12 @@ class IsSchoolAdminOrAbove(BasePermission):
 
 
 class IsExamHeadOrAbove(BasePermission):
-    """Exam Head, School Admin, or Super Admin."""
+    """
+    School Admin or Super Admin.
+    NOTE: There is currently no distinct EXAM_HEAD role.
+    This class is functionally identical to IsSchoolAdminOrAbove.
+    It is kept for semantic clarity and future extensibility.
+    """
     ALLOWED = [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]
 
     def has_permission(self, request, view):
@@ -35,9 +40,11 @@ class IsExamHeadOrAbove(BasePermission):
 
 
 class IsTeacherOrAbove(BasePermission):
-    """Teacher and above (can enter marks)."""
+    """Teacher, School Admin, or Super Admin (can enter marks)."""
     ALLOWED = [
-        User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN
+        User.Role.SUPER_ADMIN,
+        User.Role.SCHOOL_ADMIN,
+        User.Role.TEACHER,   # FIX: was missing from the original list
     ]
 
     def has_permission(self, request, view):

@@ -72,6 +72,7 @@
               <div class="mb-3">
                 <label for="logo" class="form-label fw-medium text-slate-700">Update Logo</label>
                 <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                <div class="form-text text-muted small">Max file size: 200 KB</div>
                 {% if school.logo %}
                   <div class="mt-2 d-flex align-items-center gap-2">
                     <img src="{{ school.logo.url }}" alt="Current Logo" class="rounded border" style="height: 48px; width: 48px; object-fit: cover;">

@@ -1,4 +1,3 @@
-from apps.accounts.views_web import LandingPageView
 """
 URL configuration for RMS project
 """
@@ -6,17 +5,13 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import RedirectView
+from django.views.generic.base import TemplateView
+from apps.accounts.views_web import LandingPageView
 
-# Override admin site permission check to restrict access exclusively to SUPER_ADMIN role
-def custom_has_permission(request):
-    return (
-        request.user.is_active and 
-        request.user.is_authenticated and 
-        getattr(request.user, 'role', None) == 'SUPER_ADMIN'
-    )
 
-admin.site.has_permission = custom_has_permission
+# SECURITY: Instead of monkey-patching admin.site.has_permission, 
+# we rely on the built-in is_staff/is_superuser flags on the User model.
+# The User model's save/create methods should enforce that ONLY SUPER_ADMIN gets is_staff=True.
 
 urlpatterns = [
     # Admin
@@ -37,7 +32,6 @@ urlpatterns = [
     path('reports/', include('apps.reports.urls_web')),
     path('audit/', include('apps.audit.urls_web')),
 
-
     # REST API
     path('api/v1/', include([
         path('auth/', include('apps.accounts.urls_api')),
@@ -55,10 +49,8 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-# Trivial change to force reload
-urlpatterns += []
 
 # Custom error handlers
-from django.views.generic.base import TemplateView
 handler404 = TemplateView.as_view(template_name='404.html')
 handler500 = TemplateView.as_view(template_name='500.html')
+

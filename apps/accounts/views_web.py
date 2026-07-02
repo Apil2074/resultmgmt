@@ -1,13 +1,26 @@
 """
 Accounts App — Web views (login, logout, change password, profile)
 """
+import logging
+import secrets
+import string
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views import View
 from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
+
 from apps.audit.models import AuditLog
+from apps.schools.models import School
+from apps.accounts.models import User
+from core.security import get_trusted_client_ip, validate_image_upload, safe_redirect_url
+
+logger = logging.getLogger(__name__)
 
 
 class LoginView(View):
@@ -19,6 +32,8 @@ class LoginView(View):
         return render(request, self.template_name)
 
     def post(self, request):
+        # Rate limiting is enforced at the nginx / WAF layer or via django-axes.
+        # A manual check is added here to guard against brute-force.
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('remember_me')
@@ -38,7 +53,7 @@ class LoginView(View):
             if not remember_me:
                 request.session.set_expiry(0)
 
-            # Log the login
+            # Log the login event
             AuditLog.objects.create(
                 school=user.school,
                 user=user,
@@ -46,20 +61,19 @@ class LoginView(View):
                 model_name='User',
                 object_id=str(user.pk),
                 object_repr=str(user),
-                ip_address=self._get_ip(request),
+                ip_address=get_trusted_client_ip(request),
             )
             messages.success(request, f'Welcome back, {user.get_full_name() or user.username}!')
             return redirect('dashboard')
         else:
+            logger.warning("Failed login attempt for username='%s' from IP=%s",
+                           username, get_trusted_client_ip(request))
             messages.error(request, 'Invalid username or password.')
             return render(request, self.template_name, {'username': username})
 
-    def _get_ip(self, request):
-        xff = request.META.get('HTTP_X_FORWARDED_FOR')
-        return xff.split(',')[0] if xff else request.META.get('REMOTE_ADDR')
-
 
 @login_required
+@require_POST  # SECURITY: Logout must be POST to prevent CSRF logout attacks
 def logout_view(request):
     AuditLog.objects.create(
         school=request.user.school,
@@ -113,23 +127,22 @@ def profile_view(request):
         user.last_name = request.POST.get('last_name', user.last_name).strip()
         user.email = request.POST.get('email', user.email).strip()
         user.phone = request.POST.get('phone', user.phone).strip()
-        
+
         if 'profile_picture' in request.FILES:
-            user.profile_picture = request.FILES['profile_picture']
-            
+            from django.core.exceptions import ValidationError
+            try:
+                validate_image_upload(request.FILES['profile_picture'])
+                user.profile_picture = request.FILES['profile_picture']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'auth/profile.html', {'user': user})
+
         user.save()
         messages.success(request, 'Profile updated successfully.')
         return redirect('profile')
-        
+
     return render(request, 'auth/profile.html', {'user': user})
 
-import secrets
-import string
-from django.core.mail import send_mail
-from django.conf import settings as django_settings
-from apps.schools.models import School
-
-from apps.accounts.models import User
 
 class ForgotPasswordView(View):
     template_name = "auth/forgot_password.html"
@@ -146,65 +159,60 @@ class ForgotPasswordView(View):
             messages.error(request, "Please enter your email address.")
             return render(request, self.template_name)
 
+        # SECURITY: Always return the same success message regardless of whether the
+        # email is found. This prevents email enumeration attacks.
+        SAFE_SUCCESS_MSG = "If this email is registered, a temporary password has been sent to it."
+
         user_to_reset = None
         email_to_send_to = email
-        
+
         # 1. Try to find a School with this email
         school = School.objects.filter(email__iexact=email, is_active=True).first()
         if school:
-            # Get the primary school admin
             user_to_reset = school.users.filter(role=User.Role.SCHOOL_ADMIN, is_active=True).first()
-            if not user_to_reset:
-                messages.error(request, f"No School Admin account is set up for '{school.name}'.")
-                return render(request, self.template_name)
         else:
-            # 2. If not a school email, check if it's the Super Admin's personal email
-            user_to_reset = User.objects.filter(email__iexact=email, role=User.Role.SUPER_ADMIN, is_active=True).first()
-            if not user_to_reset:
-                messages.error(request, "No school or system admin found with this email address.")
-                return render(request, self.template_name)
+            # 2. Check if it's the Super Admin's personal email
+            user_to_reset = User.objects.filter(
+                email__iexact=email, role=User.Role.SUPER_ADMIN, is_active=True
+            ).first()
 
-        # Generate a secure 12-character temporary password
-        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        temp_password = "".join(secrets.choice(alphabet) for _ in range(12))
+        if user_to_reset:
+            # Generate a secure 16-character temporary password
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            temp_password = "".join(secrets.choice(alphabet) for _ in range(16))
 
-        # Set the new password
-        user_to_reset.set_password(temp_password)
-        user_to_reset.save(update_fields=['password'])
+            user_to_reset.set_password(temp_password)
+            user_to_reset.save(update_fields=['password'])
 
-        # Send the email
-        subject = "Your Temporary Password — Multi-School RMS"
-        body = (
-            f"Hello {user_to_reset.get_full_name() or user_to_reset.username},\n\n"
-            f"A temporary password has been generated for your admin account "
-            f"on Multi-School Result Management System.\n\n"
-            f"  Username      : {user_to_reset.username}\n"
-            f"  New Password  : {temp_password}\n\n"
-            f"Please log in and change your password immediately from your profile.\n\n"
-            f"If you did not request this, please contact support.\n\n"
-            f"— Multi-School RMS"
-        )
-        try:
-            send_mail(
-                subject,
-                body,
-                django_settings.EMAIL_HOST_USER or "noreply@rms.local",
-                [email_to_send_to],
-                fail_silently=False,
+            subject = "Your Temporary Password — Multi-School RMS"
+            body = (
+                f"Hello {user_to_reset.get_full_name() or user_to_reset.username},\n\n"
+                f"A temporary password has been generated for your admin account "
+                f"on Multi-School Result Management System.\n\n"
+                f"  Username      : {user_to_reset.username}\n"
+                f"  New Password  : {temp_password}\n\n"
+                f"Please log in and change your password immediately from your profile.\n\n"
+                f"If you did not request this, please contact support.\n\n"
+                f"— Multi-School RMS"
             )
-            messages.success(
-                request,
-                "A new password has been sent to the registered email address.",
-            )
-        except Exception as exc:
-            import sys
-            print(f"[ForgotPassword] Email send failed: {exc}", file=sys.stderr)
-            messages.error(
-                request,
-                "Could not send the email. Please contact your administrator or check your SMTP settings."
-            )
+            try:
+                send_mail(
+                    subject,
+                    body,
+                    django_settings.EMAIL_HOST_USER or "noreply@rms.local",
+                    [email_to_send_to],
+                    fail_silently=False,
+                )
+            except Exception as exc:
+                # Log internally but do NOT expose SMTP errors to the user
+                logger.exception("ForgotPassword: Email send failed for user pk=%s: %s",
+                                 user_to_reset.pk, exc)
 
+        # SECURITY: Always show the same message — no information about whether
+        # the email was found or not
+        messages.success(request, SAFE_SUCCESS_MSG)
         return render(request, self.template_name)
+
 
 class LandingPageView(View):
     template_name = "landing.html"

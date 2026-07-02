@@ -79,6 +79,7 @@
         <div class="col-md-6 form-group">
           <label for="photo" class="form-label fw-medium text-slate-700">Student Photo</label>
           <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+          <div class="form-text text-muted small">Max file size: 200 KB</div>
           {% if student.photo %}
             <div class="form-text">Current photo: <a href="{{ student.photo.url }}" target="_blank">{{ student.photo.name }}</a></div>
             <div class="form-check mt-2">

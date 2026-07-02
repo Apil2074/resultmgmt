@@ -15,5 +15,13 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 X_FRAME_OPTIONS = 'DENY'
 
+# CORS — set your real production frontend origin here
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='',
+    cast=Csv(),
+)
+
 # Production email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

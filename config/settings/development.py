@@ -22,4 +22,10 @@ if config('EMAIL_HOST_USER', default=''):
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-CORS_ALLOW_ALL_ORIGINS = True
+# SECURITY: CORS is explicitly restricted even in dev.
+# Add localhost origins to CORS_ALLOWED_ORIGINS in base.py; do NOT use CORS_ALLOW_ALL_ORIGINS.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:3000',   # React/Vite dev server if applicable
+]

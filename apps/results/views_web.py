@@ -1,10 +1,23 @@
 """
 Results App — Web views (ledger, marksheet, processing)
 """
+import datetime
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.db import transaction
+from django_ratelimit.decorators import ratelimit
+
+from apps.exams.models import ExamClass
+from apps.subjects.models import Subject
+from apps.students.models import Student
+from apps.marks.models import MarkEntry
+from .models import StudentResult, SubjectResult
+from .services import ResultProcessingService
+
+logger = logging.getLogger(__name__)
 
 def format_mark(val):
     if val is None:
@@ -816,12 +829,14 @@ def marksheet_select(request):
                 'prev_student_id': prev_student_id,
                 'next_student_id': next_student_id,
             })
-        except Exception as e:
-            messages.error(request, f"Error retrieving marksheet: {str(e)}")
+        except Exception:
+            logger.exception('Error retrieving marksheet for exam=%s class=%s student=%s', exam_id, class_id, student_id)
+            messages.error(request, 'An unexpected error occurred while generating the marksheet.')
 
     return render(request, 'results/marksheet_select.html', context)
 
 
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def public_result_search(request):
     """Public facing page for parents to search for a student's results."""
     from apps.students.models import Student
@@ -858,8 +873,10 @@ def public_result_search(request):
 
         student = matched_student
 
-        # Store auth in session
+        # SECURITY: Store auth in session with strict expiry (15 mins)
         request.session['auth_student_id'] = student.id
+        request.session.set_expiry(900)
+
         
         # Get published results
         results = StudentResult.objects.filter(

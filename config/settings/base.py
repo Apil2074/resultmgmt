@@ -110,7 +110,8 @@ AUTH_USER_MODEL = 'accounts.User'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+     'OPTIONS': {'min_length': 8}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -136,6 +137,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# File upload size limits (5 MB images, 20 MB Excel)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024   # 20 MB
+
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -154,21 +159,22 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
 
-# JWT Settings
+# JWT Settings — short-lived access tokens to limit stolen-token exposure
 from datetime import timedelta
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),   # was 8 hours
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),       # was 7 days
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# CORS
+# CORS — explicitly list allowed origins; never allow all origins with credentials
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # SECURITY: never set True in production
 
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -184,10 +190,50 @@ LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/auth/login/'
 
-# Session
-SESSION_COOKIE_AGE = 86400 * 7  # 7 days
-SESSION_SAVE_EVERY_REQUEST = True
+# Session — 8 hour lifetime; slide on activity; HttpOnly cookie
+SESSION_COOKIE_AGE = 8 * 3600       # 8 hours (was 7 days)
+SESSION_SAVE_EVERY_REQUEST = True    # sliding window
+SESSION_COOKIE_HTTPONLY = True       # no JS access to session cookie
+SESSION_COOKIE_SAMESITE = 'Lax'     # CSRF protection at browser level
 
-# Security (overridden in production)
-CSRF_COOKIE_HTTPONLY = False  # Allow JS to read for AJAX
+# Security headers (overridden with stricter values in production.py)
+CSRF_COOKIE_HTTPONLY = True          # JS must use X-CSRFToken header from DOM meta tag
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+# Trusted reverse proxy IPs (add your load balancer / nginx IP here in production)
+# When set, X-Forwarded-For is only trusted if REMOTE_ADDR matches one of these IPs.
+TRUSTED_PROXY_IPS = config('TRUSTED_PROXY_IPS', default='', cast=Csv())
+
+# Logging — always log security-relevant events server-side
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{asctime}] {levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'core.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}

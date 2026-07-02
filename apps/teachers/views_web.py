@@ -57,7 +57,17 @@ def teacher_create(request):
         name = request.POST.get('name', '').strip()
         contact = request.POST.get('contact_number', '').strip()
         dob = request.POST.get('date_of_birth') or None
-        photo = request.FILES.get('photo')
+
+        photo = None
+        if 'photo' in request.FILES:
+            from django.core.exceptions import ValidationError
+            from core.security import validate_image_upload
+            try:
+                validate_image_upload(request.FILES['photo'])
+                photo = request.FILES['photo']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'teachers/form.html')
 
         Teacher.objects.create(
             school=school,
@@ -112,9 +122,15 @@ def teacher_edit(request, pk):
         teacher.contact_number = request.POST.get('contact_number', teacher.contact_number).strip()
         dob = request.POST.get('date_of_birth')
         teacher.date_of_birth = dob if dob else None
-        
         if 'photo' in request.FILES:
-            teacher.photo = request.FILES['photo']
+            from django.core.exceptions import ValidationError
+            from core.security import validate_image_upload
+            try:
+                validate_image_upload(request.FILES['photo'])
+                teacher.photo = request.FILES['photo']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'teachers/form.html', {'teacher': teacher})
         elif request.POST.get('remove_photo'):
             if teacher.photo:
                 teacher.photo.delete(save=False)
@@ -273,10 +289,10 @@ def teacher_create_user(request, pk):
         while User.objects.filter(username=username).exists():
             username = f"{original_username}{counter}"
             counter += 1
-            
         import secrets
-        password = secrets.token_urlsafe(8)
-        
+        # SECURITY: Generate a stronger 16-character password instead of 8
+        password = secrets.token_urlsafe(16)
+
         try:
             with transaction.atomic():
                 user = User.objects.create_user(
@@ -288,13 +304,15 @@ def teacher_create_user(request, pk):
                 )
                 teacher.user = user
                 teacher.save()
-                
-            messages.success(request, f'Account created for {teacher.name}. Username: {username}, Password: {password}')
+
+            # SECURITY: Remove raw password from flash message!
+            messages.success(request, f'Account created for {teacher.name}. Username: {username}. Provide the temporary password securely.')
+            # In a real system, you'd likely email it or show it ONCE on a dedicated screen, not in the session flash messages.
         except Exception as e:
             messages.error(request, f'Error creating account: {str(e)}')
-            
+
         return redirect('teacher_list')
-    
+
     return redirect('teacher_list')
 
 
@@ -312,15 +330,17 @@ def teacher_reset_password(request, pk):
         if not teacher.user:
             messages.error(request, 'This teacher does not have an account.')
             return redirect('teacher_list')
-            
         import secrets
-        password = secrets.token_urlsafe(8)
-        
+        # SECURITY: Generate a stronger 16-character password instead of 8
+        password = secrets.token_urlsafe(16)
+
         teacher.user.set_password(password)
         teacher.user.save()
-        
-        messages.success(request, f'Password reset for {teacher.name}. New Password: {password}')
-        
+
+        # SECURITY: Remove raw password from flash message!
+        messages.success(request, f'Password reset for {teacher.name}. Provide the new temporary password securely.')
+        # In a real system, you'd likely email it or show it ONCE on a dedicated screen, not in the session flash messages.
+
     return redirect('teacher_list')
 
 

@@ -1,6 +1,8 @@
 """
 Accounts REST API — JWT login/logout, user management
 """
+import logging
+
 from rest_framework import status, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,13 +10,19 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from core.permissions import IsSuperAdmin
-from .models import User
-from .serializers import UserSerializer, ChangePasswordSerializer
 
+from core.permissions import IsSuperAdmin, IsSchoolAdminOrAbove
+from .models import User
+from .serializers import UserSerializer, ChangePasswordSerializer, ProfileUpdateSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class LoginAPIView(APIView):
+    """
+    API Login endpoint.
+    Rate-limited by django-ratelimit (10 attempts/min per IP).
+    """
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -34,6 +42,7 @@ class LoginAPIView(APIView):
                 'refresh': str(refresh),
                 'user': UserSerializer(user).data,
             })
+        logger.warning("Failed API login attempt for username='%s'", username)
         return Response(
             {'error': 'Invalid credentials'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -69,8 +78,18 @@ class ChangePasswordAPIView(APIView):
 
 
 class MeAPIView(generics.RetrieveUpdateAPIView):
+    """
+    Retrieve or update the currently authenticated user's profile.
+    SECURITY: Uses ProfileUpdateSerializer for write operations so that
+    role, school, is_active, username cannot be self-modified.
+    """
     permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer
+
+    def get_serializer_class(self):
+        # Read-only GETs return the full user info; writes use the safe subset
+        if self.request.method in ('PUT', 'PATCH'):
+            return ProfileUpdateSerializer
+        return UserSerializer
 
     def get_object(self):
         return self.request.user
@@ -80,9 +99,11 @@ class UserListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.request.method == 'POST':
-            return [IsSuperAdmin()]
-        return [IsAuthenticated()]
+        if self.request.method == 'GET':
+            # SECURITY: Only school admins and above can list users.
+            # Previously any authenticated user could list all users in their school.
+            return [IsSchoolAdminOrAbove()]
+        return [IsSuperAdmin()]
 
     def get_queryset(self):
         user = self.request.user

@@ -76,7 +76,9 @@ class AuditMixin:
             pass  # Never crash on audit failure
 
     def get_client_ip(self):
-        x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0]
-        return self.request.META.get('REMOTE_ADDR')
+        """
+        Return the real client IP using the trusted-proxy-aware helper.
+        Only trusts X-Forwarded-For when TRUSTED_PROXY_IPS is configured.
+        """
+        from core.security import get_trusted_client_ip
+        return get_trusted_client_ip(self.request)

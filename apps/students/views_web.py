@@ -2,11 +2,16 @@
 Students App — Web views with Excel import/export
 """
 import io
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from .models import Student
+from core.security import safe_redirect_url, validate_image_upload
+
+logger = logging.getLogger(__name__)
+
 
 
 @login_required
@@ -113,7 +118,13 @@ def student_edit(request, pk):
         dob = request.POST.get('date_of_birth')
         student.date_of_birth = dob if dob else None
         if 'photo' in request.FILES:
-            student.photo = request.FILES['photo']
+            from django.core.exceptions import ValidationError
+            try:
+                validate_image_upload(request.FILES['photo'])
+                student.photo = request.FILES['photo']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'students/form.html', {'student': student, 'classes': classes})
         elif request.POST.get('remove_photo'):
             if student.photo:
                 student.photo.delete(save=False)
@@ -121,11 +132,12 @@ def student_edit(request, pk):
 
         student.save()
         messages.success(request, 'Student updated.')
-        
-        next_url = request.POST.get('next') or request.GET.get('next')
-        if next_url:
-            return redirect(next_url)
-        return redirect('student_detail', pk=student.pk)
+
+        # SECURITY: Validate next= to prevent open redirect attacks
+        next_url = safe_redirect_url(
+            request.POST.get('next') or request.GET.get('next'), request
+        )
+        return redirect(next_url or ('student_detail', [student.pk]))
 
     return render(request, 'students/form.html', {
         'student': student,
@@ -141,11 +153,12 @@ def student_delete(request, pk):
         student_name = student.name
         student.delete()
         messages.success(request, f'Student {student_name} permanently deleted.')
-        
-        next_url = request.POST.get('next') or request.GET.get('next')
-        if next_url:
-            return redirect(next_url)
-        return redirect('student_list')
+
+        # SECURITY: Validate next= to prevent open redirect attacks
+        next_url = safe_redirect_url(
+            request.POST.get('next') or request.GET.get('next'), request
+        )
+        return redirect(next_url or 'student_list')
     return render(request, 'students/confirm_delete.html', {'student': student})
 
 
