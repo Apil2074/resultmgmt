@@ -337,8 +337,62 @@ def bulk_mark_import(request, exam_id, class_id):
             subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
             students = {s.roll_number: s for s in Student.objects.filter(class_obj=cls, school=school)}
 
+            # Check if Row 2 is the Full Marks / Total config row
+            row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
+            has_config_row = False
+            class_total_days = None
+            
+            if len(row_2) > 1 and row_2[1] and any(x in str(row_2[1]).lower() for x in ('full marks', 'total')):
+                has_config_row = True
+                
+            if has_config_row:
+                # 1. Parse and update subject full marks
+                col_idx = 2
+                for subject in subjects:
+                    try:
+                        ms = subject.marking_structure
+                        changed = False
+                        
+                        theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
+                        if theory_fm is not None:
+                            try:
+                                val = int(float(theory_fm))
+                                if ms.theory_full_marks != val:
+                                    ms.theory_full_marks = val
+                                    changed = True
+                            except Exception:
+                                pass
+                                
+                        if ms.has_internal:
+                            internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
+                            if internal_fm is not None:
+                                try:
+                                    val = int(float(internal_fm))
+                                    if ms.internal_full_marks != val:
+                                        ms.internal_full_marks = val
+                                        changed = True
+                                except Exception:
+                                    pass
+                                    
+                        if changed:
+                            ms.save()
+                    except Exception:
+                        pass
+                    col_idx += 2
+                
+                # 2. Parse class-wide total attendance days from the Present Days column in Row 2
+                if col_idx < len(row_2) and row_2[col_idx] is not None:
+                    try:
+                        class_total_days = int(float(row_2[col_idx]))
+                    except Exception:
+                        pass
+                        
+                student_start_row = 3
+            else:
+                student_start_row = 2
+
             saved = 0
-            for row in ws.iter_rows(min_row=2, values_only=True):
+            for row in ws.iter_rows(min_row=student_start_row, values_only=True):
                 if not row[0]:
                     continue
                 roll = str(row[0]).strip()
@@ -347,6 +401,7 @@ def bulk_mark_import(request, exam_id, class_id):
                     continue
 
                 col_idx = 2
+                subject_marks_list = []
                 for subject in subjects:
                     try:
                         ms = subject.marking_structure
@@ -396,15 +451,32 @@ def bulk_mark_import(request, exam_id, class_id):
                             except Exception:
                                 raise ValueError(f"Invalid internal marks format '{internal_raw}' for student roll {roll}.")
 
+                    subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
+
+                # Parse attendance columns (Present Days)
+                present_days = None
+                total_days = class_total_days
+                if col_idx < len(row) and row[col_idx] is not None:
+                    try:
+                        present_days = int(float(row[col_idx]))
+                    except Exception:
+                        pass
+
+                for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
+                    defaults = {
+                        'school': school,
+                        'special_value': special_value,
+                        'theory_obtained': theory_obtained,
+                        'internal_obtained': internal_obtained,
+                        'entered_by': request.user,
+                    }
+                    if not getattr(request.user, 'is_teacher', False):
+                        defaults['present_days'] = present_days
+                        defaults['total_days'] = total_days
+
                     MarkEntry.objects.update_or_create(
                         exam=exam, student=student, subject=subject,
-                        defaults={
-                            'school': school,
-                            'special_value': special_value,
-                            'theory_obtained': theory_obtained,
-                            'internal_obtained': internal_obtained,
-                            'entered_by': request.user,
-                        }
+                        defaults=defaults
                     )
                     saved += 1
 
@@ -458,6 +530,8 @@ def mark_entry_template(request, exam_id, class_id):
             headers.append(subj.name)
             headers.append('')
 
+    headers.append('Present Days')
+
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = header_font
@@ -466,15 +540,80 @@ def mark_entry_template(request, exam_id, class_id):
 
     ws.row_dimensions[1].height = 40
 
-    for row_num, student in enumerate(students, 2):
+    # Load existing mark entries to pre-populate
+    from apps.marks.models import MarkEntry
+    existing_marks = {}
+    for me in MarkEntry.objects.filter(exam=exam, school=school,
+                                        student__in=students, subject__in=subjects):
+        existing_marks[(me.student_id, me.subject_id)] = me
+
+    # Row 2: Full Marks / Total Attendance Row
+    ws.cell(row=2, column=1, value="")
+    cell_fm = ws.cell(row=2, column=2, value="Full Marks / Total")
+    cell_fm.font = Font(bold=True)
+    cell_fm.alignment = Alignment(horizontal='right')
+
+    col_idx = 3
+    for subj in subjects:
+        try:
+            ms = subj.marking_structure
+            ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
+            if ms.has_internal:
+                ws.cell(row=2, column=col_idx + 1, value=ms.internal_full_marks)
+        except Exception:
+            pass
+        col_idx += 2
+
+    # Populate class-wide total attendance days (if any student has one saved)
+    class_total_days = None
+    for student in students:
+        for subj in subjects:
+            me = existing_marks.get((student.id, subj.id))
+            if me and me.total_days is not None:
+                class_total_days = me.total_days
+                break
+        if class_total_days is not None:
+            break
+
+    if class_total_days is not None:
+        ws.cell(row=2, column=col_idx, value=class_total_days)
+
+    # Populate Student Rows (Row 3 onwards)
+    for row_num, student in enumerate(students, 3):
         ws.cell(row=row_num, column=1, value=student.roll_number)
         ws.cell(row=row_num, column=2, value=student.name)
+        
+        col_idx = 3
+        present_days = None
+        for subj in subjects:
+            me = existing_marks.get((student.id, subj.id))
+            if me:
+                if me.present_days is not None:
+                    present_days = me.present_days
+                
+                # Pre-populate marks
+                if me.special_value:
+                    ws.cell(row=row_num, column=col_idx, value=me.special_value)
+                    if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                        ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
+                else:
+                    if me.theory_obtained is not None:
+                        ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
+                    if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
+                        ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
+            col_idx += 2
+            
+        # Write present days column at the end
+        if present_days is not None:
+            ws.cell(row=row_num, column=col_idx, value=present_days)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+    clean_class = cls.full_name.replace(' ', '_')
+    clean_exam = exam.name.replace('Examination', '').replace('exam', '').strip().replace(' ', '_')
     response['Content-Disposition'] = (
-        f'attachment; filename="{exam.name}_marks_template.xlsx"'
+        f'attachment; filename="ME_{clean_class}_{clean_exam}.xlsx"'
     )
     wb.save(response)
     return response
@@ -587,4 +726,337 @@ def toggle_class_lock(request, exam_id, class_id):
         messages.success(request, f'Results for {exam_class.class_obj.name} are unlocked and editable.')
         
     return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
+
+@login_required
+def mark_entry_all_template(request, exam_id):
+    """Download a single Excel file containing templates for all classes as sheets."""
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    school = request.user.school
+    from apps.exams.models import Exam, ExamClass
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+    from apps.marks.models import MarkEntry
+
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    exam_classes = ExamClass.objects.filter(exam=exam, exam__school=school).select_related('class_obj')
+
+    wb = openpyxl.Workbook()
+    # Remove default sheet
+    default_sheet = wb.active
+    wb.remove(default_sheet)
+
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
+    sub_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+
+    for ec in exam_classes:
+        cls = ec.class_obj
+        students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
+        if not students.exists():
+            continue
+
+        subjects = Subject.objects.filter(class_obj=cls, school=school).select_related(
+            'marking_structure').order_by('order')
+
+        # Sheet names must be <= 31 chars
+        sheet_title = f"{cls.full_name}"[:31].replace(':', '-').replace('/', '-')
+        ws = wb.create_sheet(title=sheet_title)
+
+        # Build headers
+        headers = ['Roll No', 'Student Name']
+        for subj in subjects:
+            try:
+                ms = subj.marking_structure
+                headers.append(f'{subj.name}\nTheory ({ms.theory_full_marks})')
+                if ms.has_internal:
+                    headers.append(f'{subj.name}\nInternal ({ms.internal_full_marks})')
+                else:
+                    headers.append(f'{subj.name}\n(No Internal)')
+            except Exception:
+                headers.append(subj.name)
+                headers.append('')
+
+        headers.append('Present Days')
+
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill if col <= 2 else sub_fill
+            cell.alignment = Alignment(horizontal='center', wrap_text=True)
+
+        ws.row_dimensions[1].height = 40
+
+        # Load existing mark entries to pre-populate
+        existing_marks = {}
+        for me in MarkEntry.objects.filter(exam=exam, school=school,
+                                            student__in=students, subject__in=subjects):
+            existing_marks[(me.student_id, me.subject_id)] = me
+
+        # Row 2: Full Marks / Total Attendance Row
+        ws.cell(row=2, column=1, value="")
+        cell_fm = ws.cell(row=2, column=2, value="Full Marks / Total")
+        cell_fm.font = Font(bold=True)
+        cell_fm.alignment = Alignment(horizontal='right')
+
+        col_idx = 3
+        for subj in subjects:
+            try:
+                ms = subj.marking_structure
+                ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
+                if ms.has_internal:
+                    ws.cell(row=2, column=col_idx + 1, value=ms.internal_full_marks)
+            except Exception:
+                pass
+            col_idx += 2
+
+        # Populate class-wide total attendance days
+        class_total_days = None
+        for student in students:
+            for subj in subjects:
+                me = existing_marks.get((student.id, subj.id))
+                if me and me.total_days is not None:
+                    class_total_days = me.total_days
+                    break
+            if class_total_days is not None:
+                break
+
+        if class_total_days is not None:
+            ws.cell(row=2, column=col_idx, value=class_total_days)
+
+        # Populate Student Rows (Row 3 onwards)
+        for row_num, student in enumerate(students, 3):
+            ws.cell(row=row_num, column=1, value=student.roll_number)
+            ws.cell(row=row_num, column=2, value=student.name)
+            
+            col_idx = 3
+            present_days = None
+            for subj in subjects:
+                me = existing_marks.get((student.id, subj.id))
+                if me:
+                    if me.present_days is not None:
+                        present_days = me.present_days
+                    
+                    # Pre-populate marks
+                    if me.special_value:
+                        ws.cell(row=row_num, column=col_idx, value=me.special_value)
+                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                            ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
+                    else:
+                        if me.theory_obtained is not None:
+                            ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
+                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
+                            ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
+                col_idx += 2
+                
+            # Write present days column at the end
+            if present_days is not None:
+                ws.cell(row=row_num, column=col_idx, value=present_days)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    clean_exam = exam.name.replace('Examination', '').replace('exam', '').strip().replace(' ', '_')
+    response['Content-Disposition'] = (
+        f'attachment; filename="ME_All_Classes_{clean_exam}.xlsx"'
+    )
+    wb.save(response)
+    return response
+
+
+@login_required
+@require_POST
+def bulk_mark_all_import(request, exam_id):
+    """Import marks/attendance for all classes from a multi-sheet Excel file."""
+    school = request.user.school
+    from apps.exams.models import Exam, ExamClass
+    from apps.classes.models import Class
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+    from apps.marks.models import MarkEntry
+
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    if not request.FILES.get('excel_file'):
+        messages.error(request, 'Please upload an Excel file.')
+        return redirect('mark_entry_select')
+
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(request.FILES['excel_file'])
+        
+        saved_total = 0
+        skipped_sheets = []
+        
+        # Get all class names mapping to class objects
+        classes_map = {}
+        for c in Class.objects.filter(school=school):
+            classes_map[c.full_name.lower().strip()] = c
+            classes_map[c.name.lower().strip()] = c
+
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            cls = classes_map.get(sheet_name.lower().strip())
+            if not cls:
+                skipped_sheets.append(sheet_name)
+                continue
+
+            exam_class = ExamClass.objects.filter(exam=exam, class_obj=cls).first()
+            if not exam_class or exam_class.is_locked:
+                continue
+
+            subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
+            students = {s.roll_number: s for s in Student.objects.filter(class_obj=cls, school=school)}
+
+            # Check if Row 2 is the Full Marks / Total config row
+            row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
+            has_config_row = False
+            class_total_days = None
+            
+            if len(row_2) > 1 and row_2[1] and any(x in str(row_2[1]).lower() for x in ('full marks', 'total')):
+                has_config_row = True
+                
+            if has_config_row:
+                # 1. Parse and update subject full marks
+                col_idx = 2
+                for subject in subjects:
+                    try:
+                        ms = subject.marking_structure
+                        changed = False
+                        
+                        theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
+                        if theory_fm is not None:
+                            try:
+                                val = int(float(theory_fm))
+                                if ms.theory_full_marks != val:
+                                    ms.theory_full_marks = val
+                                    changed = True
+                            except Exception:
+                                pass
+                                
+                        if ms.has_internal:
+                            internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
+                            if internal_fm is not None:
+                                try:
+                                    val = int(float(internal_fm))
+                                    if ms.internal_full_marks != val:
+                                        ms.internal_full_marks = val
+                                        changed = True
+                                except Exception:
+                                    pass
+                                    
+                        if changed:
+                            ms.save()
+                    except Exception:
+                        pass
+                    col_idx += 2
+                
+                # 2. Parse class-wide total attendance days from the Present Days column in Row 2
+                if col_idx < len(row_2) and row_2[col_idx] is not None:
+                    try:
+                        class_total_days = int(float(row_2[col_idx]))
+                    except Exception:
+                        pass
+                        
+                student_start_row = 3
+            else:
+                student_start_row = 2
+
+            for row in ws.iter_rows(min_row=student_start_row, values_only=True):
+                if not row[0]:
+                    continue
+                roll = str(row[0]).strip()
+                student = students.get(roll)
+                if not student:
+                    continue
+
+                col_idx = 2
+                subject_marks_list = []
+                for subject in subjects:
+                    try:
+                        ms = subject.marking_structure
+                    except Exception:
+                        col_idx += 2
+                        continue
+                    theory_raw = row[col_idx] if col_idx < len(row) else None
+                    internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                    col_idx += 2
+
+                    # Parse theory marks / special value
+                    theory_obtained = None
+                    special_value = None
+                    if theory_raw is not None:
+                        val_str = str(theory_raw).strip().upper()
+                        if val_str in ('AB', 'ABSENT'):
+                            special_value = 'AB'
+                        elif val_str in ('WH', 'WITHHELD'):
+                            special_value = 'WH'
+                        elif val_str in ('EX', 'EXEMPTED'):
+                            special_value = 'EX'
+                        elif val_str in ('', 'NONE', 'NULL'):
+                            theory_obtained = None
+                        else:
+                            try:
+                                from decimal import Decimal
+                                theory_obtained = Decimal(str(theory_raw))
+                            except Exception:
+                                raise ValueError(f"Invalid theory marks format '{theory_raw}' for student roll {roll}.")
+
+                    # Parse internal marks / special value
+                    internal_obtained = None
+                    if internal_raw is not None and ms.has_internal:
+                        val_str = str(internal_raw).strip().upper()
+                        if val_str in ('AB', 'ABSENT'):
+                            special_value = 'AB'
+                        elif val_str in ('WH', 'WITHHELD'):
+                            special_value = 'WH'
+                        elif val_str in ('EX', 'EXEMPTED'):
+                            special_value = 'EX'
+                        elif val_str in ('', 'NONE', 'NULL'):
+                            internal_obtained = None
+                        else:
+                            try:
+                                from decimal import Decimal
+                                internal_obtained = Decimal(str(internal_raw))
+                            except Exception:
+                                raise ValueError(f"Invalid internal marks format '{internal_raw}' for student roll {roll}.")
+
+                    subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
+
+                # Parse attendance (Present Days)
+                present_days = None
+                total_days = class_total_days
+                if col_idx < len(row) and row[col_idx] is not None:
+                    try:
+                        present_days = int(float(row[col_idx]))
+                    except Exception:
+                        pass
+
+                for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
+                    defaults = {
+                        'school': school,
+                        'special_value': special_value,
+                        'theory_obtained': theory_obtained,
+                        'internal_obtained': internal_obtained,
+                        'entered_by': request.user,
+                    }
+                    if not getattr(request.user, 'is_teacher', False):
+                        defaults['present_days'] = present_days
+                        defaults['total_days'] = total_days
+
+                    MarkEntry.objects.update_or_create(
+                        exam=exam, student=student, subject=subject,
+                        defaults=defaults
+                    )
+                    saved_total += 1
+
+        msg = f'Successfully imported {saved_total} mark entries across classes.'
+        if skipped_sheets:
+            msg += f" Skipped unknown sheets: {', '.join(skipped_sheets)}."
+        messages.success(request, msg)
+
+    except Exception as e:
+        messages.error(request, f'Bulk import failed: {str(e)}')
+
+    return redirect('mark_entry_select')
 

@@ -37,13 +37,21 @@ class ResultProcessingService:
         SubjectResult.objects.filter(**subject_filter).delete()
         StudentResult.objects.filter(**student_filter).delete()
 
+        from apps.students.models import Student
+        if class_obj:
+            students_qs = Student.objects.filter(class_obj=class_obj, school=self.school, is_active=True)
+        else:
+            students_qs = Student.objects.filter(school=self.school, is_active=True)
+
+        student_map = {s.id: s for s in students_qs}
+        student_entries = {s.id: [] for s in students_qs}
+
         # Get all mark entries grouped by student
         all_entries = MarkEntry.objects.filter(**mark_filter).select_related(
             'student', 'subject', 'subject__marking_structure'
         )
 
         # Group by student
-        student_entries = {}
         for entry in all_entries:
             sid = entry.student_id
             if sid not in student_entries:
@@ -112,7 +120,11 @@ class ResultProcessingService:
                 if total_full > 0 else Decimal('0')
             )
 
-            student = entries[0].student
+            student = student_map.get(student_id)
+            if not student:
+                student = entries[0].student if entries else None
+            if not student:
+                continue
             sr_obj = StudentResult(
                 school=self.school,
                 exam=self.exam,
