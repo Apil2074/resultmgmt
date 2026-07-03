@@ -44,7 +44,7 @@ def _get_logo_image(school, width=3*cm, height=3*cm):
     """Return an Image object for the school logo, or None."""
     try:
         if school.logo and os.path.exists(school.logo.path):
-            return Image(school.logo.path, width=width, height=height)
+            return Image(school.logo.path, width=width, height=height, kind='proportional')
     except Exception:
         pass
     return None
@@ -99,8 +99,8 @@ class MarksheetPDFGenerator:
             pagesize=A4,
             rightMargin=0.8*cm,
             leftMargin=0.8*cm,
-            topMargin=0.8*cm,
-            bottomMargin=0.8*cm,
+            topMargin=0.4*cm,
+            bottomMargin=0.4*cm,
         )
         story = self._build_story()
         doc.build(story, onFirstPage=self._header_footer, onLaterPages=self._header_footer)
@@ -112,7 +112,7 @@ class MarksheetPDFGenerator:
         navy_color = colors.HexColor('#1E3A8A')
         canvas_obj.setStrokeColor(navy_color)
         canvas_obj.setLineWidth(1)
-        canvas_obj.rect(0.6*cm, 0.6*cm, A4[0] - 1.2*cm, A4[1] - 1.2*cm)
+        canvas_obj.rect(0.4*cm, 0.4*cm, A4[0] - 0.8*cm, A4[1] - 0.8*cm)
         
         # Faint Logo Watermark in the center of the page
         try:
@@ -139,7 +139,7 @@ class MarksheetPDFGenerator:
         story = []
 
         # 1. School Header
-        logo = _get_logo_image(self.school, 1.6*cm, 1.6*cm)
+        logo = _get_logo_image(self.school, 2.2*cm, 2.2*cm)
         align_type = TA_LEFT if logo else TA_CENTER
         
         school_name_style = ParagraphStyle(
@@ -163,10 +163,6 @@ class MarksheetPDFGenerator:
         school_info.append(Paragraph(self.school.address, subtitle_style))
         
         extra_info_parts = []
-        if self.school.phone:
-            extra_info_parts.append(f"Phone: {self.school.phone}")
-        if self.school.email:
-            extra_info_parts.append(f"Email: {self.school.email}")
         if self.school.establishment_year:
             extra_info_parts.append(f"Estd: {self.school.establishment_year}")
             
@@ -174,7 +170,7 @@ class MarksheetPDFGenerator:
             school_info.append(Paragraph("  |  ".join(extra_info_parts), small_subtitle_style))
             
         if logo:
-            header_table = Table([[logo, school_info]], colWidths=[1.8*cm, 17.6*cm], hAlign='CENTER')
+            header_table = Table([[logo, school_info]], colWidths=[2.4*cm, 17.0*cm], hAlign='CENTER')
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -263,7 +259,7 @@ class MarksheetPDFGenerator:
                 Paragraph(dob_str, info_value_style)
             ]
         ]
-        row1_table = Table(row1_data, colWidths=[3.5*cm, 4.5*cm, 4.0*cm, 2.8*cm, 4.6*cm], hAlign='LEFT')
+        row1_table = Table(row1_data, colWidths=[3.5*cm, 4.5*cm, 2.0*cm, 2.8*cm, 6.6*cm], hAlign='LEFT')
         row1_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -286,7 +282,7 @@ class MarksheetPDFGenerator:
                 Paragraph(f"{self.exam.session.name}  B.S.", info_value_style)
             ]
         ]
-        row2_table = Table(row2_data, colWidths=[1.5*cm, 1.0*cm, 1.5*cm, 5.5*cm, 2.5*cm, 4.0*cm, 3.4*cm], hAlign='LEFT')
+        row2_table = Table(row2_data, colWidths=[1.5*cm, 2.0*cm, 1.5*cm, 5.5*cm, 1.5*cm, 4.0*cm, 3.4*cm], hAlign='LEFT')
         row2_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -607,8 +603,8 @@ class MarksheetPDFGenerator:
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#475569')),
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('LEFTPADDING', (0, 0), (-1, -1), 6),
             ('RIGHTPADDING', (0, 0), (-1, -1), 6),
             ('BACKGROUND', (5, 1), (5, -1), colors.HexColor('#F8FAFC')),

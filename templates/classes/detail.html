@@ -109,9 +109,16 @@
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
           <i class="bi bi-people-fill text-primary me-2"></i>Students ({{ students.count }})
         </h5>
-        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
-          <i class="bi bi-person-plus-fill me-1"></i>Add Student
-        </button>
+        <div class="d-flex gap-2">
+          {% if optional_subjects %}
+          <a href="{% url 'bulk_map_subjects' class_obj.slug %}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-journal-check me-1"></i>Bulk Map Optionals
+          </a>
+          {% endif %}
+          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class="bi bi-person-plus-fill me-1"></i>Add Student
+          </button>
+        </div>
       </div>
       <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
         <table class="table table-hover align-middle mb-0">

@@ -234,6 +234,35 @@
     flex: 0 0 100% !important;
   }
 }
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .marksheet-card {
+    page-break-after: always;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  .marksheet-outer-border {
+    border-width: 2px !important;
+    padding: 16px !important;
+    height: 98vh; /* Force to fit vertically */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+}
 </style>
 {% endblock %}
 

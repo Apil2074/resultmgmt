@@ -51,6 +51,44 @@ class ResultProcessingService:
             'student', 'subject', 'subject__marking_structure'
         )
 
+        from apps.subjects.models import Subject, StudentSubjectEnrollment
+        if class_obj:
+            subjects = list(Subject.objects.filter(class_obj=class_obj, school=self.school))
+        else:
+            subjects = list(Subject.objects.filter(school=self.school))
+
+        optional_enrollments = set(
+            StudentSubjectEnrollment.objects.filter(student__in=students_qs)
+            .values_list('student_id', 'subject_id')
+        )
+        
+        existing_mark_entries = set(MarkEntry.objects.filter(**mark_filter).values_list('student_id', 'subject_id'))
+        
+        missing_entries = []
+        for student in students_qs:
+            for subject in subjects:
+                if subject.class_obj_id != student.class_obj_id:
+                    continue
+                if subject.subject_type == Subject.SubjectType.OPTIONAL:
+                    if (student.id, subject.id) not in optional_enrollments:
+                        continue
+                if (student.id, subject.id) not in existing_mark_entries:
+                    missing_entries.append(MarkEntry(
+                        exam=self.exam,
+                        school=self.school,
+                        session=self.exam.session,
+                        student=student,
+                        subject=subject,
+                        special_value='AB'
+                    ))
+                    
+        if missing_entries:
+            MarkEntry.objects.bulk_create(missing_entries, batch_size=1000)
+            # Re-fetch after creation
+            all_entries = MarkEntry.objects.filter(**mark_filter).select_related(
+                'student', 'subject', 'subject__marking_structure'
+            )
+
         # Group by student
         for entry in all_entries:
             sid = entry.student_id

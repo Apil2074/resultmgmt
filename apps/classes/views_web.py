@@ -298,3 +298,69 @@ def class_detail(request, slug):
         'subjects': subjects,
         'optional_subjects': optional_subjects,
     })
+
+
+@login_required
+def bulk_map_subjects(request, slug):
+    school = request.user.school
+    cls = get_object_or_404(Class, slug=slug, school=school)
+
+    from apps.subjects.models import Subject, StudentSubjectEnrollment
+    from apps.students.models import Student
+    from django.db import transaction
+
+    optional_subjects = cls.subjects.filter(subject_type=Subject.SubjectType.OPTIONAL).order_by('order', 'name')
+    students = cls.students.filter(is_active=True).order_by('roll_number', 'name')
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Delete existing optional subject enrollments for these students and optional subjects
+            StudentSubjectEnrollment.objects.filter(
+                student__in=students,
+                subject__in=optional_subjects
+            ).delete()
+
+            enrollments_to_create = []
+            for student in students:
+                checked_subject_ids = request.POST.getlist(f'student_subjects_{student.id}')
+                for sub_id in checked_subject_ids:
+                    try:
+                        sub_id_int = int(sub_id)
+                    except ValueError:
+                        continue
+
+                    if sub_id_int in [s.id for s in optional_subjects]:
+                        enrollments_to_create.append(
+                            StudentSubjectEnrollment(
+                                student=student,
+                                subject_id=sub_id_int
+                            )
+                        )
+
+            if enrollments_to_create:
+                StudentSubjectEnrollment.objects.bulk_create(enrollments_to_create)
+
+            messages.success(request, f"Bulk optional subjects mapping updated for class {cls.full_name}.")
+            return redirect('class_detail', slug=cls.slug)
+
+    # Fetch existing mappings
+    enrolled_pairs = set(
+        StudentSubjectEnrollment.objects.filter(
+            student__in=students,
+            subject__in=optional_subjects
+        ).values_list('student_id', 'subject_id')
+    )
+
+    student_data = []
+    for s in students:
+        s_enrolled_ids = [sub_id for student_id, sub_id in enrolled_pairs if student_id == s.id]
+        student_data.append({
+            'student': s,
+            'enrolled_ids': s_enrolled_ids
+        })
+
+    return render(request, 'classes/bulk_map_subjects.html', {
+        'class_obj': cls,
+        'optional_subjects': optional_subjects,
+        'student_data': student_data,
+    })

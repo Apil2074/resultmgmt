@@ -365,14 +365,19 @@ def bulk_mark_import(request, exam_id, class_id):
 
         import openpyxl
         from apps.students.models import Student
-        from apps.subjects.models import Subject
+        from apps.subjects.models import Subject, StudentSubjectEnrollment
 
         try:
             wb = openpyxl.load_workbook(request.FILES['excel_file'])
             ws = wb.active
             # Read header row to get subject IDs
             subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
-            students = {s.roll_number: s for s in Student.objects.filter(class_obj=cls, school=school)}
+            students_qs = Student.objects.filter(class_obj=cls, school=school)
+            students = {s.roll_number: s for s in students_qs}
+            
+            optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+                student__in=students_qs, subject__in=subjects
+            ).values_list('student_id', 'subject_id'))
 
             # Check if Row 2 is the Full Marks / Total config row
             row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
@@ -500,6 +505,10 @@ def bulk_mark_import(request, exam_id, class_id):
                         pass
 
                 for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
+                    if subject.subject_type == Subject.SubjectType.OPTIONAL:
+                        if (student.id, subject.id) not in optional_enrollments:
+                            continue
+
                     defaults = {
                         'school': school,
                         'special_value': special_value,
@@ -585,6 +594,13 @@ def mark_entry_template(request, exam_id, class_id):
                                         student__in=students, subject__in=subjects):
         existing_marks[(me.student_id, me.subject_id)] = me
 
+    from apps.subjects.models import StudentSubjectEnrollment
+    optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+        student__in=students, subject__in=subjects
+    ).values_list('student_id', 'subject_id'))
+    
+    black_fill = PatternFill(start_color='000000', end_color='000000', fill_type='solid')
+
     # Row 2: Full Marks / Total Attendance Row
     ws.cell(row=2, column=1, value="")
     cell_fm = ws.cell(row=2, column=2, value="Full Marks / Total")
@@ -624,21 +640,28 @@ def mark_entry_template(request, exam_id, class_id):
         col_idx = 3
         present_days = None
         for subj in subjects:
-            me = existing_marks.get((student.id, subj.id))
-            if me:
-                if me.present_days is not None:
-                    present_days = me.present_days
-                
-                # Pre-populate marks
-                if me.special_value:
-                    ws.cell(row=row_num, column=col_idx, value=me.special_value)
-                    if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
-                        ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
-                else:
-                    if me.theory_obtained is not None:
-                        ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
-                    if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
-                        ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
+            is_unmapped_optional = subj.subject_type == Subject.SubjectType.OPTIONAL and (student.id, subj.id) not in optional_enrollments
+            
+            if is_unmapped_optional:
+                ws.cell(row=row_num, column=col_idx).fill = black_fill
+                if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                    ws.cell(row=row_num, column=col_idx + 1).fill = black_fill
+            else:
+                me = existing_marks.get((student.id, subj.id))
+                if me:
+                    if me.present_days is not None:
+                        present_days = me.present_days
+                    
+                    # Pre-populate marks
+                    if me.special_value:
+                        ws.cell(row=row_num, column=col_idx, value=me.special_value)
+                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                            ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
+                    else:
+                        if me.theory_obtained is not None:
+                            ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
+                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
+                            ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
             col_idx += 2
             
         # Write present days column at the end
