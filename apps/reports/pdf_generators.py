@@ -17,9 +17,12 @@ from reportlab.lib.utils import ImageReader
 import os
 
 def format_mark(val):
+    """
+    Format a numeric mark to string, removing trailing decimal zeros if it's an integer.
+    Returns '—' if the value is None.
+    """
     if val is None:
         return '—'
-    from decimal import Decimal
     try:
         dec = Decimal(str(val))
         if dec == dec.to_integral_value():
@@ -41,7 +44,11 @@ BLACK = colors.black
 
 
 def _get_logo_image(school, width=3*cm, height=3*cm):
-    """Return an Image object for the school logo, or None."""
+    """
+    Safely retrieve the school logo as a ReportLab Image object.
+    Checks if the logo exists on the filesystem before attempting to load it.
+    Returns None if there's no logo or if an error occurs.
+    """
     try:
         if school.logo and os.path.exists(school.logo.path):
             return Image(school.logo.path, width=width, height=height, kind='proportional')
@@ -53,7 +60,31 @@ def _get_logo_image(school, width=3*cm, height=3*cm):
 class MarksheetPDFGenerator:
     """Generates a professional individual marksheet PDF matching the Nepalese grade-sheet template."""
 
+    # Grade remarks mapping (class-level constant — shared across all instances)
+    GRADE_REMARKS = {
+        'A+': 'Outstanding',
+        'A': 'Excellent',
+        'B+': 'Very Good',
+        'B': 'Good',
+        'C+': 'Satisfactory',
+        'C': 'Acceptable',
+        'D+': 'Basic',
+        'D': 'Basic',
+        'E': 'Insufficient',
+        'NG': 'Not Graded',
+    }
+
     def __init__(self, school, exam, student, result, mark_entries):
+        """
+        Initialize the generator with context objects required for the marksheet.
+        
+        Args:
+            school: School instance
+            exam: Exam instance
+            student: Student instance
+            result: Result instance containing aggregate scores
+            mark_entries: Iterable of MarkEntry objects for this student
+        """
         self.school = school
         self.exam = exam
         self.student = student
@@ -61,25 +92,21 @@ class MarksheetPDFGenerator:
         # Sort mark entries by subject order
         self.mark_entries = sorted(list(mark_entries), key=lambda x: x.subject.order if x.subject else 0)
         
+        # Cache the logo path once to avoid repeated disk checks
+        self._logo_path = None
+        try:
+            if school.logo and os.path.exists(school.logo.path):
+                self._logo_path = school.logo.path
+        except Exception:
+            pass
+        
         # Enrich subject result remarks
-        grade_remarks = {
-            'A+': 'Outstanding',
-            'A': 'Excellent',
-            'B+': 'Very Good',
-            'B': 'Good',
-            'C+': 'Satisfactory',
-            'C': 'Acceptable',
-            'D+': 'Basic',
-            'D': 'Basic',
-            'E': 'Insufficient',
-            'NG': 'Not Graded',
-        }
         for me in self.mark_entries:
             sr = getattr(me, 'subject_result', None)
             if sr:
-                sr.theory_remark = grade_remarks.get(sr.theory_grade, '—') if sr.theory_grade else '—'
-                sr.internal_remark = grade_remarks.get(sr.internal_grade, '—') if sr.internal_grade else '—'
-                sr.overall_remark = grade_remarks.get(sr.grade, '—') if sr.grade else '—'
+                sr.theory_remark = self.GRADE_REMARKS.get(sr.theory_grade, '—') if sr.theory_grade else '—'
+                sr.internal_remark = self.GRADE_REMARKS.get(sr.internal_grade, '—') if sr.internal_grade else '—'
+                sr.overall_remark = self.GRADE_REMARKS.get(sr.grade, '—') if sr.grade else '—'
                 
         # Calculate attendance
         self.present_days = '—'
@@ -92,7 +119,118 @@ class MarksheetPDFGenerator:
             if self.present_days != '—' and self.total_days != '—':
                 break
 
+        # Pre-build reusable ParagraphStyles once (avoids re-creating per _build_story call)
+        self._styles = self._create_styles()
+
+    @staticmethod
+    def _create_styles():
+        """Create and return all ParagraphStyle objects used in the marksheet, once."""
+        return {
+            'school_name': ParagraphStyle(
+                'SchoolNameNEB', fontSize=22, fontName='Times-Bold',
+                alignment=TA_CENTER, textColor=colors.black,
+                leading=26, spaceAfter=4
+            ),
+            'address': ParagraphStyle(
+                'AddressNEB', fontSize=12, fontName='Times-Roman',
+                alignment=TA_CENTER, textColor=colors.black,
+                leading=16, spaceAfter=4
+            ),
+            'see': ParagraphStyle(
+                'SEENEB', fontSize=14, fontName='Times-Bold',
+                alignment=TA_CENTER, textColor=colors.black, spaceBefore=4, spaceAfter=4,
+                leading=18
+            ),
+            'gs': ParagraphStyle(
+                'GSNEB', fontSize=16, fontName='Times-Bold',
+                alignment=TA_CENTER, textColor=colors.HexColor('#1e3a8a'),
+                leading=20
+            ),
+            'info_label': ParagraphStyle(
+                'InfoLabel', fontSize=9, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e3a8a')
+            ),
+            'info_value': ParagraphStyle(
+                'InfoValue', fontSize=9.5, fontName='Times-Bold',
+                textColor=colors.HexColor('#0f172a')
+            ),
+            'nested_label': ParagraphStyle(
+                'NestedLabel', fontSize=9, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e3a8a')
+            ),
+            'nested_val': ParagraphStyle(
+                'NestedVal', fontSize=9.5, fontName='Times-Bold',
+                textColor=colors.HexColor('#0f172a'), alignment=TA_CENTER
+            ),
+            'th': ParagraphStyle(
+                'TableHeader', fontSize=7.5, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e3a8a'), alignment=TA_CENTER
+            ),
+            'th_left': ParagraphStyle(
+                'TableHeaderLeft', fontSize=7.5, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
+            ),
+            'cell': ParagraphStyle(
+                'TableCell', fontSize=7.5, fontName='Times-Roman', alignment=TA_CENTER
+            ),
+            'cell_bold': ParagraphStyle(
+                'TableCellBold', fontSize=7.5, fontName='Times-Bold', alignment=TA_CENTER
+            ),
+            'cell_left': ParagraphStyle(
+                'TableCellLeft', fontSize=7.5, fontName='Times-Bold', alignment=TA_LEFT
+            ),
+            'cell_danger': ParagraphStyle(
+                'TableCellDanger', fontSize=7.5, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#EF4444')
+            ),
+            'cell_fg': ParagraphStyle(
+                'TableCellFG', fontSize=8.5, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#1d4ed8')
+            ),
+            'footer_label': ParagraphStyle(
+                'FooterLabel', fontName='Times-Bold', fontSize=8.5,
+                textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT
+            ),
+            'th_non_credit': ParagraphStyle(
+                'ThNonCredit', fontName='Times-Bold', fontSize=8.5,
+                textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
+            ),
+            'note_title': ParagraphStyle(
+                'NoteTitle', fontSize=10.0, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e293b'), spaceAfter=1
+            ),
+            'note_text': ParagraphStyle(
+                'NoteText', fontSize=10.0, fontName='Times-Roman',
+                textColor=colors.HexColor('#475569'), leading=8, spaceAfter=5
+            ),
+            'legend_th': ParagraphStyle(
+                'LegendTh', fontSize=6.5, fontName='Times-Bold',
+                textColor=colors.black, alignment=TA_CENTER
+            ),
+            'legend_td': ParagraphStyle(
+                'LegendTd', fontSize=6.5, fontName='Times-Roman',
+                textColor=colors.black, alignment=TA_CENTER
+            ),
+            'legend_td_bold': ParagraphStyle(
+                'LegendTdBold', fontSize=6.5, fontName='Times-Bold',
+                textColor=colors.black, alignment=TA_CENTER
+            ),
+            'att_label': ParagraphStyle(
+                'AttLabel', fontSize=8, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e293b')
+            ),
+            'att_val': ParagraphStyle(
+                'AttVal', fontSize=8, fontName='Times-Bold',
+                textColor=colors.black, alignment=TA_CENTER
+            ),
+            'sig_label': ParagraphStyle(
+                'SigLabel', fontSize=8, fontName='Times-Bold',
+                textColor=colors.HexColor('#1e293b'), alignment=TA_CENTER
+            ),
+        }
+
     def generate(self):
+        """
+        Build and return the PDF document as a bytes object.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -107,6 +245,11 @@ class MarksheetPDFGenerator:
         return buffer.getvalue()
 
     def _header_footer(self, canvas_obj, doc):
+        """
+        Callback to draw the page header and footer.
+        Adds a double border around the page and a faint logo watermark in the center.
+        Uses cached logo path to avoid repeated disk reads.
+        """
         canvas_obj.saveState()
         # Double border around the page in Navy
         navy_color = colors.HexColor('#1E3A8A')
@@ -114,65 +257,51 @@ class MarksheetPDFGenerator:
         canvas_obj.setLineWidth(1)
         canvas_obj.rect(0.4*cm, 0.4*cm, A4[0] - 0.8*cm, A4[1] - 0.8*cm)
         
-        # Faint Logo Watermark in the center of the page
+        # Faint Logo Watermark in the center of the page (uses cached path)
         try:
-            import os
-            if self.school.logo and os.path.exists(self.school.logo.path):
+            if self._logo_path:
                 logo_w = 9*cm
                 logo_h = 9*cm
                 canvas_obj.setFillAlpha(0.04)
                 canvas_obj.setStrokeAlpha(0.04)
-                canvas_obj.drawImage(self.school.logo.path, (A4[0]-logo_w)/2, (A4[1]-logo_h)/2, width=logo_w, height=logo_h, mask='auto')
+                canvas_obj.drawImage(self._logo_path, (A4[0]-logo_w)/2, (A4[1]-logo_h)/2, width=logo_w, height=logo_h, mask='auto')
         except Exception:
             pass
         
         # Reset alphas and draw Footer text
         canvas_obj.restoreState()
         canvas_obj.saveState()
-        canvas_obj.setFont('Helvetica', 8)
+        canvas_obj.setFont('Times-Roman', 8)
         canvas_obj.setFillColor(colors.HexColor('#64748b'))
         canvas_obj.drawString(0.9*cm, 0.4*cm, self.school.name)
         canvas_obj.restoreState()
 
     def _build_story(self):
-        styles = getSampleStyleSheet()
+        """
+        Build the ReportLab flowable story.
+        Uses pre-built styles from self._styles for performance.
+        """
         story = []
+        s = self._styles  # shorthand for cached styles
 
         # 1. School Header
-        logo = _get_logo_image(self.school, 2.2*cm, 2.2*cm)
-        align_type = TA_LEFT if logo else TA_CENTER
-        
-        school_name_style = ParagraphStyle(
-            'SchoolName', fontSize=20, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a'), alignment=TA_CENTER,
-            spaceAfter=3, leading=20
-        )
-        subtitle_style = ParagraphStyle(
-            'Subtitle', fontSize=12, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#475569'), alignment=TA_CENTER,
-            spaceAfter=3, leading=12
-        )
-        small_subtitle_style = ParagraphStyle(
-            'SmallSubtitle', fontSize=10, fontName='Helvetica',
-            textColor=colors.HexColor('#64748b'), alignment=TA_CENTER,
-            spaceAfter=2, leading=9.5
-        )
-        
-        school_info = []
-        school_info.append(Paragraph(self.school.name, school_name_style))
-        school_info.append(Paragraph(self.school.address, subtitle_style))
-        
-        extra_info_parts = []
+        school_info = [
+            Paragraph(self.school.name, s['school_name']),
+            Paragraph(self.school.address, s['address']),
+        ]
         if self.school.establishment_year:
-            extra_info_parts.append(f"Estd: {self.school.establishment_year}")
-            
-        if extra_info_parts:
-            school_info.append(Paragraph("  |  ".join(extra_info_parts), small_subtitle_style))
-            
+            school_info.append(Paragraph(f"Estd: {self.school.establishment_year}", s['address']))
+        school_info.extend([
+        
+            Paragraph("<u>GRADE-SHEET</u>", s['gs'])
+        ])
+        
+        logo = _get_logo_image(self.school, width=2.5*cm, height=2.5*cm)
         if logo:
-            header_table = Table([[logo, school_info]], colWidths=[2.4*cm, 17.0*cm], hAlign='CENTER')
+            header_table = Table([[logo, school_info, ""]], colWidths=[2.5*cm, 14.4*cm, 2.5*cm], hAlign='CENTER')
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (1, 0), (1, 0), 'CENTER'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -182,6 +311,7 @@ class MarksheetPDFGenerator:
             header_table = Table([[school_info]], colWidths=[19.4*cm], hAlign='CENTER')
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, 0), 'CENTER'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -189,53 +319,19 @@ class MarksheetPDFGenerator:
             ]))
             
         story.append(header_table)
-        story.append(Spacer(1, 1.5*mm))
-        
-        # 2. Title Banner
-        banner_style = ParagraphStyle(
-            'BannerText', fontSize=11, fontName='Helvetica-Bold',
-            textColor=colors.white, alignment=TA_CENTER
-        )
-        banner_table = Table([[Paragraph('GRADE-SHEET', banner_style)]], colWidths=[19.4*cm])
-        banner_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-        ]))
-        story.append(banner_table)
-        story.append(Spacer(1, 1.5*mm))
+        story.append(Spacer(1, 2*mm))
         
         # 3. Student Info Rows (Stacked Tables for perfect alignment and custom widths)
-        info_label_style = ParagraphStyle(
-            'InfoLabel', fontSize=9, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a')
-        )
-        info_value_style = ParagraphStyle(
-            'InfoValue', fontSize=9.5, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#0f172a')
-        )
-        
         dob_str = self.student.dob_full or '—'
-                
-        nested_label_style = ParagraphStyle(
-            'NestedLabel', fontSize=9, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a')
-        )
-        nested_val_style = ParagraphStyle(
-            'NestedVal', fontSize=9.5, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#0f172a'), alignment=TA_CENTER
-        )
         
         # Row 0 Table: THE GRADE(S) SECURED BY, SYMBOL NO (with spacer column)
         row0_data = [
             [
-                Paragraph('THE GRADE(S) SECURED BY :', info_label_style),
-                Paragraph(self.student.name.upper(), info_value_style),
+                Paragraph('THE GRADE(S) SECURED BY :', s['info_label']),
+                Paragraph(self.student.name.upper(), s['info_value']),
                 '',
-                Paragraph('SYMBOL NO :', info_label_style),
-                Paragraph(self.student.symbol_number or '—', info_value_style)
+                Paragraph('SYMBOL NO :', s['info_label']),
+                Paragraph(self.student.symbol_number or '—', s['info_value'])
             ]
         ]
         row0_table = Table(row0_data, colWidths=[4.8*cm, 5.2*cm, 2.0*cm, 2.4*cm, 5.0*cm], hAlign='LEFT')
@@ -245,18 +341,16 @@ class MarksheetPDFGenerator:
             ('RIGHTPADDING', (0, 0), (-1, -1), 2),
             ('TOPPADDING', (0, 0), (-1, -1), 1.5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
-            ('LINEBELOW', (1, 0), (1, 0), 1.0, colors.HexColor('#475569')),
-            ('LINEBELOW', (4, 0), (4, 0), 1.0, colors.HexColor('#475569')),
         ]))
 
         # Row 1 Table: REGISTRATION NO, DATE OF BIRTH (with spacer column)
         row1_data = [
             [
-                Paragraph('REGISTRATION NO :', info_label_style),
-                Paragraph(self.student.registration_number or '—', info_value_style),
+                Paragraph('REGISTRATION NO :', s['info_label']),
+                Paragraph(self.student.registration_number or '—', s['info_value']),
                 '',
-                Paragraph('DATE OF BIRTH :', info_label_style),
-                Paragraph(dob_str, info_value_style)
+                Paragraph('DATE OF BIRTH :', s['info_label']),
+                Paragraph(dob_str, s['info_value'])
             ]
         ]
         row1_table = Table(row1_data, colWidths=[3.5*cm, 4.5*cm, 2.0*cm, 2.8*cm, 6.6*cm], hAlign='LEFT')
@@ -266,36 +360,31 @@ class MarksheetPDFGenerator:
             ('RIGHTPADDING', (0, 0), (-1, -1), 2),
             ('TOPPADDING', (0, 0), (-1, -1), 1.5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
-            ('LINEBELOW', (1, 0), (1, 0), 1.0, colors.HexColor('#475569')),
-            ('LINEBELOW', (4, 0), (4, 0), 1.0, colors.HexColor('#475569')),
         ]))
 
         # Row 2 Table: CLASS, IN THE, EXAMINATION HELD IN (with spacer column)
         row2_data = [
             [
-                Paragraph('CLASS :', info_label_style),
-                Paragraph(self.student.class_obj.name if self.student.class_obj else '—', nested_val_style),
-                Paragraph('IN THE :', nested_label_style),
-                Paragraph(self.exam.name.upper(), nested_val_style),
+                Paragraph('CLASS :', s['info_label']),
+                Paragraph(self.student.class_obj.name if self.student.class_obj else '—', s['nested_val']),
+                Paragraph('IN THE :', s['nested_label']),
+                Paragraph(self.exam.name.upper(), s['nested_val']),
                 '',
-                Paragraph('EXAMINATION HELD IN :', info_label_style),
-                Paragraph(f"{self.exam.session.name}  B.S.", info_value_style)
+                Paragraph('EXAMINATION HELD IN :', s['info_label']),
+                Paragraph(f"{self.exam.session.name}  B.S.", s['info_value'])
             ]
         ]
-        row2_table = Table(row2_data, colWidths=[1.5*cm, 2.0*cm, 1.5*cm, 5.5*cm, 1.5*cm, 4.0*cm, 3.4*cm], hAlign='LEFT')
+        row2_table = Table(row2_data, colWidths=[1.5*cm, 2.0*cm, 1.5*cm, 5.5*cm, 1.5*cm, 4.5*cm, 3*cm], hAlign='LEFT')
         row2_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 2),
             ('TOPPADDING', (0, 0), (-1, -1), 1.5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
-            ('LINEBELOW', (1, 0), (1, 0), 1.0, colors.HexColor('#475569')),
-            ('LINEBELOW', (3, 0), (3, 0), 1.0, colors.HexColor('#475569')),
-            ('LINEBELOW', (6, 0), (6, 0), 1.0, colors.HexColor('#475569')),
         ]))
 
         # Row 3 Table: ARE GIVEN BELOW.
-        row3_data = [[Paragraph('<font color="#64748b">ARE GIVEN BELOW.</font>', info_label_style)]]
+        row3_data = [[Paragraph('<font color="#64748b">ARE GIVEN BELOW.</font>', s['info_label'])]]
         row3_table = Table(row3_data, colWidths=[19.4*cm], hAlign='LEFT')
         row3_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -314,30 +403,14 @@ class MarksheetPDFGenerator:
         story.append(row3_table)
         story.append(Spacer(1, 1.5*mm))
         
-        # 4. Grading Table
-        th_style = ParagraphStyle(
-            'TableHeader', fontSize=7.5, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a'), alignment=TA_CENTER
-        )
-        th_left_style = ParagraphStyle(
-            'TableHeaderLeft', fontSize=7.5, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
-        )
-        cell_style = ParagraphStyle(
-            'TableCell', fontSize=7.5, fontName='Helvetica', alignment=TA_CENTER
-        )
-        cell_bold_style = ParagraphStyle(
-            'TableCellBold', fontSize=7.5, fontName='Helvetica-Bold', alignment=TA_CENTER
-        )
-        cell_left_style = ParagraphStyle(
-            'TableCellLeft', fontSize=7.5, fontName='Helvetica-Bold', alignment=TA_LEFT
-        )
-        cell_danger_style = ParagraphStyle(
-            'TableCellDanger', fontSize=7.5, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#EF4444')
-        )
-        cell_fg_style = ParagraphStyle(
-            'TableCellFG', fontSize=8.5, fontName='Helvetica-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#1d4ed8')
-        )
+        # 4. Grading Table (styles from cached self._styles)
+        th_style = s['th']
+        th_left_style = s['th_left']
+        cell_style = s['cell']
+        cell_bold_style = s['cell_bold']
+        cell_left_style = s['cell_left']
+        cell_danger_style = s['cell_danger']
+        cell_fg_style = s['cell_fg']
         
         table_headers = [
             Paragraph('Subject Code', th_style),
@@ -459,10 +532,7 @@ class MarksheetPDFGenerator:
             row_idx += 1
             
         if self.result:
-            footer_label_style = ParagraphStyle(
-                'FooterLabel', fontName='Helvetica-Bold', fontSize=8.5,
-                textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT
-            )
+            footer_label_style = s['footer_label']
             gpa_val = f"{self.result.overall_gpa:.2f}" if self.result.overall_gpa is not None else "0.00"
             rank_val = str(self.result.class_rank) if self.result.class_rank is not None else "—"
             
@@ -489,10 +559,7 @@ class MarksheetPDFGenerator:
             row_idx += 2
 
         if non_credit_mark_entries:
-            th_non_credit_style = ParagraphStyle(
-                'ThNonCredit', fontName='Helvetica-Bold', fontSize=8.5,
-                textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
-            )
+            th_non_credit_style = s['th_non_credit']
             row_header = [
                 Paragraph('Non-Credit Subjects', th_non_credit_style),
                 '', '', '', '', ''
@@ -616,15 +683,9 @@ class MarksheetPDFGenerator:
         story.append(marks_table)
         story.append(Spacer(1, 3*mm))
         
-        # 5. Bottom Meta & Legend Block
-        note_title_style = ParagraphStyle(
-            'NoteTitle', fontSize=7.0, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e293b'), spaceAfter=1
-        )
-        note_text_style = ParagraphStyle(
-            'NoteText', fontSize=6.0, fontName='Helvetica',
-            textColor=colors.HexColor('#475569'), leading=8
-        )
+        # 5. Bottom Meta & Legend Block (styles from cached self._styles)
+        note_title_style = s['note_title']
+        note_text_style = s['note_text']
         
         note_flowables = [
             Paragraph('NOTE :', note_title_style),
@@ -643,18 +704,9 @@ class MarksheetPDFGenerator:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ]))
         
-        legend_th_style = ParagraphStyle(
-            'LegendTh', fontSize=6.5, fontName='Helvetica-Bold',
-            textColor=colors.black, alignment=TA_CENTER
-        )
-        legend_td_style = ParagraphStyle(
-            'LegendTd', fontSize=6.5, fontName='Helvetica',
-            textColor=colors.black, alignment=TA_CENTER
-        )
-        legend_td_bold_style = ParagraphStyle(
-            'LegendTdBold', fontSize=6.5, fontName='Helvetica-Bold',
-            textColor=colors.black, alignment=TA_CENTER
-        )
+        legend_th_style = s['legend_th']
+        legend_td_style = s['legend_td']
+        legend_td_bold_style = s['legend_td_bold']
         
         legend_headers = [
             Paragraph('Grade Point', legend_th_style),
@@ -685,14 +737,8 @@ class MarksheetPDFGenerator:
             ('RIGHTPADDING', (0, 0), (-1, -1), 3),
         ]))
         
-        att_label_style = ParagraphStyle(
-            'AttLabel', fontSize=8, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e293b')
-        )
-        att_val_style = ParagraphStyle(
-            'AttVal', fontSize=8, fontName='Helvetica-Bold',
-            textColor=colors.black, alignment=TA_CENTER
-        )
+        att_label_style = s['att_label']
+        att_val_style = s['att_val']
         
         att_table_data = [
             [
@@ -705,8 +751,6 @@ class MarksheetPDFGenerator:
         ]
         att_table = Table(att_table_data, colWidths=[2.3*cm, 1.2*cm, 1.3*cm, 1.2*cm, 1.1*cm])
         att_table.setStyle(TableStyle([
-            ('LINEBELOW', (1, 0), (1, 0), 0.75, colors.black),
-            ('LINEBELOW', (3, 0), (3, 0), 0.75, colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -726,7 +770,6 @@ class MarksheetPDFGenerator:
         ]
         issue_table = Table(issue_table_data, colWidths=[2.5*cm, 2.5*cm])
         issue_table.setStyle(TableStyle([
-            ('LINEBELOW', (1, 0), (1, 0), 0.75, colors.black),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -736,27 +779,20 @@ class MarksheetPDFGenerator:
         left_flowables = [
             att_table,
             Spacer(1, 2*mm),
-            issue_table,
-            Spacer(1, 3*mm),
-            note_box
+            issue_table
         ]
         
-        bottom_sections_table = Table([[left_flowables, legend_table]], colWidths=[11.2*cm, 8.2*cm])
-        bottom_sections_table.setStyle(TableStyle([
+        date_att_table = Table([[left_flowables]], colWidths=[19.4*cm])
+        date_att_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
         ]))
-        story.append(bottom_sections_table)
-        story.append(Spacer(1, 0.6*cm))
+        story.append(date_att_table)
+        story.append(Spacer(1, 1.5*cm))  # Space before signatures
         
-        # 6. Signatures
-        sig_label_style = ParagraphStyle(
-            'SigLabel', fontSize=8, fontName='Helvetica-Bold',
-            textColor=colors.HexColor('#1e293b'), alignment=TA_CENTER
-        )
+        # 6. Signatures (style from cached self._styles)
+        sig_label_style = s['sig_label']
         sig_table_data = [
             [
                 Paragraph('CLASS TEACHER', sig_label_style),
@@ -776,14 +812,40 @@ class MarksheetPDFGenerator:
             ('TOPPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(sig_table)
+        story.append(Spacer(1, 1.0*cm))  # Space before note and legend
+        
+        # 7. Note and Legend (moved below signatures)
+        bottom_sections_table = Table([[note_box, legend_table]], colWidths=[11.2*cm, 8.2*cm])
+        bottom_sections_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        story.append(bottom_sections_table)
         
         return story
 
 
 class LedgerPDFGenerator:
-    """Generates a landscape grade ledger PDF matching the standard 4-row Nepalese layout."""
+    """
+    Generates a landscape grade ledger PDF matching the standard 4-row Nepalese layout.
+    The ledger typically contains multiple students across multiple pages, with subjects split horizontally if they exceed page width.
+    """
 
     def __init__(self, school, exam, cls, subjects, student_results, mark_map):
+        """
+        Initialize the Ledger generator with context data.
+        
+        Args:
+            school: School instance
+            exam: Exam instance
+            cls: Class instance
+            subjects: Iterable of subjects to be included in the ledger
+            student_results: Iterable of student results
+            mark_map: Dictionary mapping student_id to their list of MarkEntry objects
+        """
         self.school = school
         self.exam = exam
         self.cls = cls
@@ -792,6 +854,9 @@ class LedgerPDFGenerator:
         self.mark_map = mark_map
 
     def generate(self):
+        """
+        Build and return the PDF document as a bytes object.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -806,6 +871,9 @@ class LedgerPDFGenerator:
         return buffer.getvalue()
 
     def _build_story(self):
+        """
+        Build the ReportLab flowable story.
+        """
         styles = getSampleStyleSheet()
         story = []
         
@@ -1018,6 +1086,25 @@ class LedgerPDFGenerator:
             if include_summary:
                 col_widths += [1.4*cm, 0.9*cm, 0.9*cm, 0.8*cm, 1.2*cm, 1.0*cm] # Summary columns (sum to 6.2 cm)
 
+            # Pre-compute attendance for all students (avoids O(students × subjects) inner loop)
+            attendance_map = {}
+            if include_summary:
+                for sr in self.student_results:
+                    sid = sr.student.id
+                    total_present = 0
+                    total_days = 0
+                    has_attendance = False
+                    for subj in self.subjects:
+                        m_entry = self.mark_map.get((sid, subj.id))
+                        if m_entry:
+                            if m_entry.present_days is not None:
+                                total_present += m_entry.present_days
+                                has_attendance = True
+                            if m_entry.total_days:
+                                total_days += m_entry.total_days
+                    if has_attendance and total_days > 0:
+                        attendance_map[sid] = f"{round((total_present / total_days) * 100, 1)}%"
+
             # Populate student rows
             data_rows = []
             for sn, sr in enumerate(self.student_results, 1):
@@ -1086,20 +1173,7 @@ class LedgerPDFGenerator:
                         row.append(Paragraph('—', c_style))
 
                 if include_summary:
-                    att = '—'
-                    total_present = 0
-                    total_days = 0
-                    has_attendance = False
-                    for s in self.subjects:
-                        m_entry = self.mark_map.get((student.id, s.id))
-                        if m_entry:
-                            if m_entry.present_days is not None:
-                                total_present += m_entry.present_days
-                                has_attendance = True
-                            if m_entry.total_days:
-                                total_days += m_entry.total_days
-                    if has_attendance and total_days > 0:
-                        att = f"{round((total_present / total_days) * 100, 1)}%"
+                    att = attendance_map.get(student.id, '—')
                         
                     row += [
                         Paragraph(str(sr.total_credit_hours), c_style),
@@ -1159,9 +1233,22 @@ class LedgerPDFGenerator:
 
 
 class ClassMarksheetsPDFGenerator:
-    """Generates a merged PDF of all student marksheets in a class."""
+    """
+    Generates a single merged PDF containing marksheets for all students in a given class.
+    Each student's marksheet will appear on a new page.
+    """
 
     def __init__(self, school, exam, cls, student_results, student_mark_map):
+        """
+        Initialize the Class Marksheets generator.
+        
+        Args:
+            school: School instance
+            exam: Exam instance
+            cls: Class instance
+            student_results: Iterable of student results for the class
+            student_mark_map: Dictionary mapping student_id to their MarkEntry objects
+        """
         self.school = school
         self.exam = exam
         self.cls = cls
@@ -1169,6 +1256,9 @@ class ClassMarksheetsPDFGenerator:
         self.student_mark_map = student_mark_map
 
     def generate(self):
+        """
+        Build and return the PDF document as a bytes object.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -1182,6 +1272,7 @@ class ClassMarksheetsPDFGenerator:
         story = []
         from reportlab.platypus import PageBreak
         
+        header_footer_ref = None
         for idx, sr in enumerate(self.student_results):
             student = sr.student
             mark_entries = self.student_mark_map.get(student.id, [])
@@ -1189,17 +1280,17 @@ class ClassMarksheetsPDFGenerator:
             student_generator = MarksheetPDFGenerator(self.school, self.exam, student, sr, mark_entries)
             student_story = student_generator._build_story()
             
+            # Save reference to the first generator for header/footer reuse (avoids creating a duplicate)
+            if header_footer_ref is None:
+                header_footer_ref = student_generator
+            
             story.extend(student_story)
             if idx < len(self.student_results) - 1:
                 story.append(PageBreak())
                 
-        # Re-use the header/footer drawing method of MarksheetPDFGenerator from the first student's generator
-        if self.student_results:
-            first_sr = self.student_results[0]
-            first_student = first_sr.student
-            first_mark_entries = self.student_mark_map.get(first_student.id, [])
-            dummy_generator = MarksheetPDFGenerator(self.school, self.exam, first_student, first_sr, first_mark_entries)
-            doc.build(story, onFirstPage=dummy_generator._header_footer, onLaterPages=dummy_generator._header_footer)
+        # Re-use the header/footer drawing method from the first student's generator
+        if header_footer_ref:
+            doc.build(story, onFirstPage=header_footer_ref._header_footer, onLaterPages=header_footer_ref._header_footer)
         else:
             doc.build(story)
             
@@ -1209,9 +1300,15 @@ class ClassMarksheetsPDFGenerator:
 
 
 class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
-    """Generates an NEB Grade 11 format marksheet."""
+    """
+    Generates an NEB Grade 11 format marksheet.
+    Inherits from MarksheetPDFGenerator but overrides the get_story and generate methods for the specific layout.
+    """
     
     def get_story(self):
+        """
+        Builds the reportlab story (flowables) for the NEB 11 marksheet.
+        """
         story = []
         
         # 1. School Header
@@ -1303,22 +1400,23 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         ], colWidths=[4.6*cm, 6.0*cm, 3.0*cm, 5.8*cm], hAlign='LEFT')
         row1.setStyle(ts_info)
         
+        class_name = self.student.class_obj.name.upper() if self.student.class_obj else '—'
         row2 = Table([
             [
                 Paragraph('REGISTRATION&nbsp;NO.:', info_label_style), Paragraph(reg_no, info_value_style),
                 Paragraph('SYMBOL&nbsp;NO.:', info_label_style), Paragraph(sym_no, info_value_style),
-                Paragraph('GRADE:', info_label_style), Paragraph('(11) ELEVEN', info_value_style)
+                Paragraph('GRADE:', info_label_style), Paragraph(class_name, info_value_style)
             ]
         ], colWidths=[3.6*cm, 2.7*cm, 2.4*cm, 2.0*cm, 1.5*cm, 7.2*cm], hAlign='LEFT')
         row2.setStyle(ts_info)
         
         row3 = Table([
             [
-                Paragraph('IN&nbsp;THE&nbsp;EXAMINATION&nbsp;CONDUCTED&nbsp;IN', info_label_style),
+                Paragraph('IN&nbsp;THE&nbsp;EXAMINATION&nbsp;HELD&nbsp;IN', info_label_style),
                 Paragraph(f"{session_name} B.S.", info_value_style),
                 Paragraph('ARE&nbsp;GIVEN&nbsp;BELOW:', info_label_style)
             ]
-        ], colWidths=[7.0*cm, 2.5*cm, 9.9*cm], hAlign='LEFT')
+        ], colWidths=[6.0*cm, 2.5*cm, 9.2*cm], hAlign='LEFT')
         row3.setStyle(ts_info)
         
         story.append(row1)
@@ -1545,6 +1643,9 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         return story
 
     def generate(self):
+        """
+        Build and return the PDF document as a bytes object.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -1573,9 +1674,15 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
 
 
 class NEB11ClassMarksheetsPDFGenerator:
-    """Generates an NEB 11 merged PDF marksheet for all students in a class."""
+    """
+    Generates an NEB 11 merged PDF marksheet for all students in a class.
+    Combines the output of NEB11MarksheetPDFGenerator for multiple students into one document.
+    """
 
     def __init__(self, school, exam, cls_obj, student_results, student_mark_map):
+        """
+        Initialize the Class NEB11 Marksheets generator.
+        """
         self.school = school
         self.exam = exam
         self.cls_obj = cls_obj
@@ -1583,6 +1690,9 @@ class NEB11ClassMarksheetsPDFGenerator:
         self.student_mark_map = student_mark_map
 
     def generate(self):
+        """
+        Build and return the PDF document as a bytes object.
+        """
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,

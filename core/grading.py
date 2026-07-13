@@ -37,6 +37,8 @@ def percentage_to_grade_info(percentage, system='NEB', custom_table=None):
 
     table = custom_table or GRADE_TABLES.get(system, NEB_GRADE_TABLE)
     pct = float(percentage)
+    if pct > 100.0:
+        pct = 100.0
 
     for min_pct, max_pct, grade, gp in table:
         if min_pct <= pct <= max_pct:
@@ -97,15 +99,18 @@ class GradingEngine:
         theory_pass = True
         pass_threshold_theory = 35.0
 
-        if mark_entry.theory_obtained is not None:
-            theory_pct = marks_to_percentage(
-                mark_entry.theory_obtained, ms.theory_full_marks
-            )
-            t_grade, t_gp = percentage_to_grade_info(theory_pct, self.system, self.custom_table)
-            result['theory_grade'] = t_grade
-            result['theory_grade_point'] = t_gp
-            theory_gp = t_gp
-            theory_pass = float(theory_pct) >= pass_threshold_theory
+        if ms.has_theory:
+            if mark_entry.theory_obtained is not None:
+                theory_pct = marks_to_percentage(
+                    mark_entry.theory_obtained, ms.theory_full_marks
+                )
+                t_grade, t_gp = percentage_to_grade_info(theory_pct, self.system, self.custom_table)
+                result['theory_grade'] = t_grade
+                result['theory_grade_point'] = t_gp
+                theory_gp = t_gp
+                theory_pass = float(theory_pct) >= pass_threshold_theory
+            else:
+                theory_pass = False
 
         # Internal/Practical computation
         internal_pct = None
@@ -113,15 +118,18 @@ class GradingEngine:
         internal_pass = True
         pass_threshold_internal = 40.0
 
-        if subject.has_practical and mark_entry.internal_obtained is not None:
-            internal_pct = marks_to_percentage(
-                mark_entry.internal_obtained, ms.internal_full_marks
-            )
-            i_grade, i_gp = percentage_to_grade_info(internal_pct, self.system, self.custom_table)
-            result['internal_grade'] = i_grade
-            result['internal_grade_point'] = i_gp
-            internal_gp = i_gp
-            internal_pass = float(internal_pct) >= pass_threshold_internal
+        if subject.has_practical:
+            if mark_entry.internal_obtained is not None:
+                internal_pct = marks_to_percentage(
+                    mark_entry.internal_obtained, ms.internal_full_marks
+                )
+                i_grade, i_gp = percentage_to_grade_info(internal_pct, self.system, self.custom_table)
+                result['internal_grade'] = i_grade
+                result['internal_grade_point'] = i_gp
+                internal_gp = i_gp
+                internal_pass = float(internal_pct) >= pass_threshold_internal
+            else:
+                internal_pass = False
 
         # Combined computation
         ch_t = Decimal(str(subject.theory_credit_hour))
@@ -143,13 +151,20 @@ class GradingEngine:
                 # Subject Final Letter Grade Mapping
                 grade = 'NG'
                 fgp = float(gp)
-                if fgp >= 3.61: grade = 'A+'
-                elif fgp >= 3.21: grade = 'A'
-                elif fgp >= 2.81: grade = 'B+'
-                elif fgp >= 2.41: grade = 'B'
-                elif fgp >= 2.01: grade = 'C+'
-                elif fgp >= 1.61: grade = 'C'
-                elif fgp >= 1.60: grade = 'D'
+                if self.custom_table:
+                    sorted_custom = sorted(self.custom_table, key=lambda x: -x[3])
+                    for min_pct, max_pct, g_name, g_point in sorted_custom:
+                        if gp >= Decimal(str(g_point)):
+                            grade = g_name
+                            break
+                else:
+                    if fgp >= 3.61: grade = 'A+'
+                    elif fgp >= 3.21: grade = 'A'
+                    elif fgp >= 2.81: grade = 'B+'
+                    elif fgp >= 2.41: grade = 'B'
+                    elif fgp >= 2.01: grade = 'C+'
+                    elif fgp >= 1.61: grade = 'C'
+                    elif fgp >= 1.60: grade = 'D'
                 
                 result['grade'] = grade
                 result['grade_point'] = gp
@@ -180,19 +195,26 @@ class GradingEngine:
                 total_credit_hours += ch
 
         if total_credit_hours == 0:
-            return Decimal('0.0'), 'NG'
+            return None, '—'
 
         overall_gpa = (total_credit_gpa / total_credit_hours).quantize(Decimal('0.01'))
         
         final_grade = 'NG'
         fgp = float(overall_gpa)
-        if fgp >= 3.61: final_grade = 'A+'
-        elif fgp >= 3.21: final_grade = 'A'
-        elif fgp >= 2.81: final_grade = 'B+'
-        elif fgp >= 2.41: final_grade = 'B'
-        elif fgp >= 2.01: final_grade = 'C+'
-        elif fgp >= 1.61: final_grade = 'C'
-        elif fgp >= 1.60: final_grade = 'D'
+        if self.custom_table:
+            sorted_custom = sorted(self.custom_table, key=lambda x: -x[3])
+            for min_pct, max_pct, g_name, g_point in sorted_custom:
+                if overall_gpa >= Decimal(str(g_point)):
+                    final_grade = g_name
+                    break
+        else:
+            if fgp >= 3.61: final_grade = 'A+'
+            elif fgp >= 3.21: final_grade = 'A'
+            elif fgp >= 2.81: final_grade = 'B+'
+            elif fgp >= 2.41: final_grade = 'B'
+            elif fgp >= 2.01: final_grade = 'C+'
+            elif fgp >= 1.61: final_grade = 'C'
+            elif fgp >= 1.60: final_grade = 'D'
 
         return overall_gpa, final_grade
 
@@ -233,14 +255,14 @@ def calculate_ranks(student_results):
     prev_gpa = None
     prev_marks = None
 
-    for sr in sorted_passed:
+    for idx, sr in enumerate(sorted_passed, 1):
         gpa = float(sr.overall_gpa or 0)
         marks = float(sr.total_marks_obtained or 0)
         
         if gpa == prev_gpa and marks == prev_marks:
             sr.class_rank = rank
         else:
-            rank += 1
+            rank = idx
             sr.class_rank = rank
             
         prev_gpa = gpa

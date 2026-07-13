@@ -14,7 +14,7 @@ class StudentResultAdmin(admin.ModelAdmin):
 
 @admin.register(GradeScale)
 class GradeScaleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'school', 'grading_system']
+    list_display = ['name', 'school']
 
 @admin.register(GradeScaleEntry)
 class GradeScaleEntryAdmin(admin.ModelAdmin):

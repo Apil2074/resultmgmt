@@ -27,6 +27,9 @@
             <td class="text-muted small">{{ exam.published_at|date:"Y-m-d H:i"|default:"-" }}</td>
             <td class="text-end">
               <div class="d-inline-flex gap-2">
+                <a href="{% url 'exam_analytics' exam.id %}" class="btn btn-sm btn-primary">
+                  <i class="bi bi-graph-up-arrow me-1"></i>Analytics
+                </a>
                 <a href="{% url 'toppers_report' exam.id %}" class="btn btn-sm btn-outline-warning">
                   <i class="bi bi-trophy-fill me-1"></i>Toppers
                 </a>

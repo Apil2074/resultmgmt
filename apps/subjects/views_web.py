@@ -15,17 +15,19 @@ def subject_list(request):
     class_id = request.GET.get('class_id', '')
     from apps.classes.models import Class
     classes = Class.objects.filter(school=school)
-    subjects = Subject.objects.filter(school=school)
     
     if active_session:
         classes = classes.filter(session=active_session)
-        subjects = subjects.filter(class_obj__session=active_session)
         
-    subjects = subjects.select_related('class_obj', 'marking_structure')
     if class_id:
-        subjects = subjects.filter(class_obj_id=class_id)
+        classes = classes.filter(id=class_id)
+        
+    classes = classes.prefetch_related('subjects')
 
     if request.method == 'POST':
+        if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+            messages.error(request, 'Access denied.')
+            return redirect('subject_list')
         action = request.POST.get('action')
         if action == 'create':
             class_ids = request.POST.getlist('class_ids')
@@ -53,13 +55,28 @@ def subject_list(request):
                     if not code or not name:
                         continue
                         
-                    theory_credit_hour = float(theory_credits[i]) if i < len(theory_credits) else 3.0
+                    try:
+                        theory_credit_hour = float(theory_credits[i]) if (i < len(theory_credits) and theory_credits[i]) else 3.0
+                    except ValueError:
+                        messages.error(request, f"Invalid theory credit hour value for {name}.")
+                        continue
+
                     subject_type = subject_types[i] if i < len(subject_types) else 'COMPULSORY'
-                    order = int(orders[i]) if i < len(orders) else 0
+                    
+                    try:
+                        order = int(orders[i]) if (i < len(orders) and orders[i]) else 0
+                    except ValueError:
+                        messages.error(request, f"Invalid display order value for {name}.")
+                        continue
                     
                     has_practical = (has_practicals[i] == 'yes') if i < len(has_practicals) else False
                     practical_code = practical_codes[i].strip() if (has_practical and i < len(practical_codes)) else ''
-                    practical_ch = float(practical_credits[i]) if (has_practical and i < len(practical_credits) and practical_credits[i]) else 0.0
+                    
+                    try:
+                        practical_ch = float(practical_credits[i]) if (has_practical and i < len(practical_credits) and practical_credits[i]) else 0.0
+                    except ValueError:
+                        messages.error(request, f"Invalid practical credit hour value for {name}.")
+                        continue
 
                     try:
                         Subject.objects.create(
@@ -83,10 +100,82 @@ def subject_list(request):
             subj = get_object_or_404(Subject, pk=request.POST.get('subject_id'), school=school)
             subj.delete()
             messages.success(request, 'Subject deleted.')
+        elif action == 'edit':
+            subj = get_object_or_404(Subject, pk=request.POST.get('subject_id'), school=school)
+            subj.name = request.POST.get('name', subj.name).strip()
+            subj.code = request.POST.get('code', subj.code).strip()
+            
+            try:
+                subj.theory_credit_hour = float(request.POST.get('theory_credit_hour', subj.theory_credit_hour))
+            except ValueError:
+                messages.error(request, 'Invalid theory credit hour format.')
+                
+            subj.subject_type = request.POST.get('subject_type', subj.subject_type)
+            
+            subj.has_practical = request.POST.get('has_practical') == 'yes'
+            if subj.has_practical:
+                subj.practical_code = request.POST.get('practical_code', '').strip()
+                try:
+                    subj.practical_credit_hour = float(request.POST.get('practical_credit_hour', 0.0))
+                except ValueError:
+                    messages.error(request, 'Invalid practical credit hour format.')
+            else:
+                subj.practical_code = ''
+                subj.practical_credit_hour = 0.0
+                
+            try:
+                subj.save()
+                messages.success(request, f'Subject "{subj.name}" updated successfully.')
+            except IntegrityError:
+                messages.error(request, f'Subject with code "{subj.code}" already exists for this class.')
+        elif action == 'reorder_subjects':
+            from django.http import JsonResponse
+            try:
+                subject_ids = request.POST.getlist('subject_ids[]')
+                for index, sub_id in enumerate(subject_ids):
+                    Subject.objects.filter(pk=sub_id, school=school).update(order=index)
+                return JsonResponse({'status': 'success'})
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        elif action == 'clone_subject':
+            from django.http import JsonResponse
+            try:
+                source_subject = get_object_or_404(Subject, pk=request.POST.get('subject_id'), school=school)
+                target_class_id = request.POST.get('target_class_id')
+                target_class = get_object_or_404(Class, pk=target_class_id, school=school)
+                
+                # Clone subject properties
+                new_subject = Subject(
+                    school=school,
+                    class_obj=target_class,
+                    session=target_class.session,
+                    code=source_subject.code,
+                    name=source_subject.name,
+                    theory_credit_hour=source_subject.theory_credit_hour,
+                    has_practical=source_subject.has_practical,
+                    practical_credit_hour=source_subject.practical_credit_hour,
+                    practical_code=source_subject.practical_code,
+                    subject_type=source_subject.subject_type,
+                    order=999 # temporary order, will be updated by subsequent reorder AJAX
+                )
+                new_subject.save()
+                
+                from django.template.loader import render_to_string
+                html = render_to_string('subjects/partials/subject_item.html', {'sub': new_subject, 'user': request.user}, request=request)
+                
+                return JsonResponse({'status': 'success', 'new_subject_id': new_subject.id, 'html': html})
+            except IntegrityError:
+                return JsonResponse({'status': 'error', 'message': f'A subject with code "{source_subject.code}" already exists in this class.'}, status=400)
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
         return redirect('subject_list')
 
+    all_classes = Class.objects.filter(school=school)
+    if active_session:
+        all_classes = all_classes.filter(session=active_session)
+
     return render(request, 'subjects/list.html', {
-        'subjects': subjects,
         'classes': classes,
+        'all_classes': all_classes,
         'class_id': class_id,
     })

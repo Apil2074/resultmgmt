@@ -12,11 +12,13 @@
           <i class="bi bi-info-circle text-primary me-2"></i>Status & Actions
         </h5>
         <div>
+          {% if user.is_school_admin or user.is_super_admin %}
           {% if exam.is_editable %}
           <a href="{% url 'exam_edit' exam.id %}" class="btn btn-sm btn-outline-primary" title="Edit Exam"><i class="bi bi-pencil"></i></a>
           {% endif %}
           {% if exam.is_editable or user.can_manage_school %}
           <a href="{% url 'exam_delete' exam.id %}" class="btn btn-sm btn-outline-danger" title="Delete Exam"><i class="bi bi-trash"></i></a>
+          {% endif %}
           {% endif %}
         </div>
       </div>
@@ -55,6 +57,16 @@
               {% endif %}
             </div>
           </div>
+          <div class="row mb-2">
+            <div class="col-5 text-muted small">Type:</div>
+            <div class="col-7 fw-medium">
+              {% if exam.is_aggregate %}
+                <span class="badge bg-info">Aggregate Exam</span>
+              {% else %}
+                <span class="badge bg-secondary">Normal Exam</span>
+              {% endif %}
+            </div>
+          </div>
         </div>
 
         <!-- Workflow Transitions -->
@@ -66,8 +78,8 @@
               {% csrf_token %}
               
               {% if exam.status == 'DRAFT' %}
-                <button type=\"submit\" name=\"action\" value=\"publish\" class=\"btn btn-success w-100\">
-                  <i class=\"bi bi-patch-check-fill me-2\"></i>Publish Results
+                <button type="submit" name="action" value="publish" class="btn btn-success w-100">
+                  <i class="bi bi-patch-check-fill me-2"></i>Publish Results
                 </button>
               {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
                 <button type="submit" name="action" value="unlock" class="btn btn-outline-danger w-100">
@@ -81,6 +93,50 @@
 
       </div>
     </div>
+
+    {% if exam.is_aggregate %}
+    <div class="card shadow-sm mt-4">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-diagram-3 text-primary me-2"></i>Aggregation Rules
+        </h5>
+        {% if exam.is_editable and user.can_manage_school %}
+        <a href="{% url 'exam_aggregation_rules' exam.id %}" class="btn btn-sm btn-outline-primary">Manage Rules</a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if aggregation_rules %}
+          <ul class="list-group list-group-flush mb-0">
+            {% for rule in aggregation_rules %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+              <div>
+                <div class="fw-medium text-slate-800">{{ rule.source_exam.name }}</div>
+                <div class="small text-muted">{{ rule.source_exam.session.name }}</div>
+              </div>
+              <span class="badge bg-primary rounded-pill">{{ rule.weight_percentage }}%</span>
+            </li>
+            {% endfor %}
+          </ul>
+          
+          {% if user.is_school_admin or user.is_super_admin %}
+          <div class="p-3 border-top bg-light">
+            <form method="POST" action="{% url 'exam_generate_aggregate' exam.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-primary w-100" onclick="return confirm('This will clear existing marks and recalculate based on the rules. Continue?');">
+                <i class="bi bi-calculator-fill me-2"></i>Generate Aggregate Marks
+              </button>
+            </form>
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+            No rules defined. Add rules to generate marks.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Linked Classes Table -->
@@ -90,10 +146,12 @@
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
           <i class="bi bi-building text-primary me-2"></i>Included Classes
         </h5>
+        {% if user.is_school_admin or user.is_super_admin %}
         {% if exam.is_editable %}
         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addClassesModal">
           <i class="bi bi-plus-circle me-1"></i>Add Classes
         </button>
+        {% endif %}
         {% endif %}
       </div>
       <div class="table-responsive">
@@ -130,13 +188,16 @@
                       Manage Marks & Results
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                      {% if not exam.is_aggregate %}
                       <!-- Marks entry -->
                       <li>
                         <a class="dropdown-item" href="{% url 'mark_entry' exam.id ec.class_obj.id %}">
                           <i class="bi bi-pencil-square me-2 text-primary"></i>Enter Marks
                         </a>
                       </li>
+                      {% endif %}
                       <!-- Excel import marks -->
+                      {% if user.is_school_admin or user.is_super_admin %}
                       <li>
                         <a class="dropdown-item" href="{% url 'bulk_mark_import' exam.id ec.class_obj.id %}">
                           <i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Import Marks Excel
@@ -148,6 +209,7 @@
                           <i class="bi bi-download me-2 text-warning"></i>Download Marks Template
                         </a>
                       </li>
+                      {% endif %}
                       {% if ec.is_locked %}
                       <li><hr class="dropdown-divider"></li>
                       <!-- View grade ledger -->
@@ -164,7 +226,7 @@
                       </li>
                       {% endif %}
                       
-                      {% if exam.is_editable %}
+                      {% if exam.is_editable and user.is_school_admin or exam.is_editable and user.is_super_admin %}
                       <li><hr class="dropdown-divider"></li>
                       <li>
                         <button type="button" class="dropdown-item text-danger btn-remove-class" 

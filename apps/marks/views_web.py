@@ -31,7 +31,10 @@ def mark_entry(request, exam_id, class_id):
     exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=cls)
 
     if exam_class.is_locked:
-        messages.warning(request, 'Results for this class are locked and published. Unlock to edit marks.')
+        if request.user.is_teacher:
+            messages.warning(request, 'Mark entry is locked by Admin.')
+        else:
+            messages.warning(request, 'Results for this class are locked and published. Unlock to edit marks.')
 
     students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
     subjects = Subject.objects.filter(class_obj=cls, school=school).select_related('marking_structure').order_by('order')
@@ -84,12 +87,17 @@ def mark_entry(request, exam_id, class_id):
         student.present_days_val = present_days
         student.total_days_val = total_days
 
+    # Get all classes for this exam to show in the dropdown
+    all_exam_classes = ExamClass.objects.filter(exam=exam).select_related('class_obj')
+    available_classes = [ec.class_obj for ec in all_exam_classes]
+
     return render(request, 'marks/entry.html', {
         'exam': exam,
         'class_obj': cls,
         'exam_class': exam_class,
         'students': students,
         'subjects': subjects,
+        'available_classes': available_classes,
     })
 
 
@@ -112,6 +120,9 @@ def save_mark(request):
     exam = get_object_or_404(Exam, pk=data.get('exam_id'), school=school)
     student = get_object_or_404(Student, pk=data.get('student_id'), school=school)
     subject = get_object_or_404(Subject, pk=data.get('subject_id'), school=school)
+
+    if subject.class_obj_id != student.class_obj_id:
+        return JsonResponse({'error': "Subject does not belong to the student's class"}, status=400)
 
     from apps.exams.models import ExamClass
     exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=student.class_obj)
@@ -269,6 +280,9 @@ def save_marks_bulk(request):
         if not student or not subject:
             return JsonResponse({'error': f'Invalid student or subject ID: {student_id}, {subject_id}'}, status=400)
 
+        if subject.class_obj_id != student.class_obj_id:
+            return JsonResponse({'error': f'Subject {subject.name} does not belong to the class of {student.name}.'}, status=400)
+
         if is_teacher and subject.id not in assigned_subjects:
             return JsonResponse({'error': f'You are not assigned to subject: {subject.name}.'}, status=403)
 
@@ -340,9 +354,9 @@ def save_marks_bulk(request):
             MarkEntry.objects.bulk_update(updates, ['special_value', 'theory_obtained', 'internal_obtained', 'entered_by', 'present_days', 'total_days'])
 
         return JsonResponse({'status': 'saved', 'count': len(creates) + len(updates)})
-    except Exception:
+    except Exception as e:
         logger.exception('Unexpected error in save_marks_bulk for exam=%s', exam_id)
-        return JsonResponse({'error': 'An unexpected error occurred while saving marks.'}, status=500)
+        return JsonResponse({'error': f'An unexpected error occurred while saving marks: {str(e)}'}, status=500)
 
 
 @login_required
@@ -434,7 +448,9 @@ def bulk_mark_import(request, exam_id, class_id):
                 student_start_row = 2
 
             saved = 0
-            for row in ws.iter_rows(min_row=student_start_row, values_only=True):
+            errors = []
+            from django.core.exceptions import ValidationError
+            for row_num, row in enumerate(ws.iter_rows(min_row=student_start_row, values_only=True), start=student_start_row):
                 if not row[0]:
                     continue
                 roll = str(row[0]).strip()
@@ -444,92 +460,111 @@ def bulk_mark_import(request, exam_id, class_id):
 
                 col_idx = 2
                 subject_marks_list = []
-                for subject in subjects:
-                    try:
-                        ms = subject.marking_structure
-                    except Exception:
-                        col_idx += 2
-                        continue
-                    theory_raw = row[col_idx] if col_idx < len(row) else None
-                    internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
-                    col_idx += 2
-
-                    # Parse theory marks / special value
-                    theory_obtained = None
-                    special_value = None
-                    if theory_raw is not None:
-                        val_str = str(theory_raw).strip().upper()
-                        if val_str in ('AB', 'ABSENT'):
-                            special_value = 'AB'
-                        elif val_str in ('WH', 'WITHHELD'):
-                            special_value = 'WH'
-                        elif val_str in ('EX', 'EXEMPTED'):
-                            special_value = 'EX'
-                        elif val_str in ('', 'NONE', 'NULL'):
-                            theory_obtained = None
-                        else:
-                            try:
-                                from decimal import Decimal
-                                theory_obtained = Decimal(str(theory_raw))
-                            except Exception:
-                                raise ValueError(f"Invalid theory marks format '{theory_raw}' for student roll {roll}.")
-
-                    # Parse internal marks / special value
-                    internal_obtained = None
-                    if internal_raw is not None and ms.has_internal:
-                        val_str = str(internal_raw).strip().upper()
-                        if val_str in ('AB', 'ABSENT'):
-                            special_value = 'AB'
-                        elif val_str in ('WH', 'WITHHELD'):
-                            special_value = 'WH'
-                        elif val_str in ('EX', 'EXEMPTED'):
-                            special_value = 'EX'
-                        elif val_str in ('', 'NONE', 'NULL'):
-                            internal_obtained = None
-                        else:
-                            try:
-                                from decimal import Decimal
-                                internal_obtained = Decimal(str(internal_raw))
-                            except Exception:
-                                raise ValueError(f"Invalid internal marks format '{internal_raw}' for student roll {roll}.")
-
-                    subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
-
-                # Parse attendance columns (Present Days)
-                present_days = None
-                total_days = class_total_days
-                if col_idx < len(row) and row[col_idx] is not None:
-                    try:
-                        present_days = int(float(row[col_idx]))
-                    except Exception:
-                        pass
-
-                for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
-                    if subject.subject_type == Subject.SubjectType.OPTIONAL:
-                        if (student.id, subject.id) not in optional_enrollments:
+                try:
+                    for subject in subjects:
+                        try:
+                            ms = subject.marking_structure
+                        except Exception:
+                            col_idx += 2
                             continue
+                        theory_raw = row[col_idx] if col_idx < len(row) else None
+                        internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                        col_idx += 2
 
-                    defaults = {
-                        'school': school,
-                        'special_value': special_value,
-                        'theory_obtained': theory_obtained,
-                        'internal_obtained': internal_obtained,
-                        'entered_by': request.user,
-                    }
-                    if not getattr(request.user, 'is_teacher', False):
-                        defaults['present_days'] = present_days
-                        defaults['total_days'] = total_days
+                        # Parse theory marks / special value
+                        theory_obtained = None
+                        special_value = None
+                        if theory_raw is not None:
+                            val_str = str(theory_raw).strip().upper()
+                            if val_str in ('AB', 'ABSENT'):
+                                special_value = 'AB'
+                            elif val_str in ('WH', 'WITHHELD'):
+                                special_value = 'WH'
+                            elif val_str in ('EX', 'EXEMPTED'):
+                                special_value = 'EX'
+                            elif val_str in ('', 'NONE', 'NULL'):
+                                theory_obtained = None
+                            else:
+                                try:
+                                    from decimal import Decimal
+                                    theory_obtained = Decimal(str(theory_raw))
+                                except Exception:
+                                    raise ValidationError(f"Invalid theory marks format '{theory_raw}' for subject '{subject.name}'.")
 
-                    MarkEntry.objects.update_or_create(
-                        exam=exam, student=student, subject=subject,
-                        defaults=defaults
-                    )
-                    saved += 1
+                        # Parse internal marks / special value
+                        internal_obtained = None
+                        if internal_raw is not None and ms.has_internal:
+                            val_str = str(internal_raw).strip().upper()
+                            if val_str in ('AB', 'ABSENT'):
+                                special_value = 'AB'
+                            elif val_str in ('WH', 'WITHHELD'):
+                                special_value = 'WH'
+                            elif val_str in ('EX', 'EXEMPTED'):
+                                special_value = 'EX'
+                            elif val_str in ('', 'NONE', 'NULL'):
+                                internal_obtained = None
+                            else:
+                                try:
+                                    from decimal import Decimal
+                                    internal_obtained = Decimal(str(internal_raw))
+                                except Exception:
+                                    raise ValidationError(f"Invalid internal marks format '{internal_raw}' for subject '{subject.name}'.")
 
-            messages.success(request, f'{saved} mark entries imported.')
-        except Exception:
+                        subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
+
+                    # Parse attendance columns (Present Days)
+                    present_days = None
+                    total_days = class_total_days
+                    if col_idx < len(row) and row[col_idx] is not None:
+                        try:
+                            present_days = int(float(row[col_idx]))
+                        except Exception:
+                            pass
+
+                    with transaction.atomic():
+                        for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
+                            if subject.subject_type == Subject.SubjectType.OPTIONAL:
+                                if (student.id, subject.id) not in optional_enrollments:
+                                    continue
+
+                            defaults = {
+                                'school': school,
+                                'special_value': special_value,
+                                'theory_obtained': theory_obtained,
+                                'internal_obtained': internal_obtained,
+                                'entered_by': request.user,
+                            }
+                            if not getattr(request.user, 'is_teacher', False):
+                                defaults['present_days'] = present_days
+                                defaults['total_days'] = total_days
+
+                            # Run model level validation via clean()
+                            me = MarkEntry(
+                                exam=exam, student=student, subject=subject,
+                                **defaults
+                            )
+                            me.clean()
+
+                            MarkEntry.objects.update_or_create(
+                                exam=exam, student=student, subject=subject,
+                                defaults=defaults
+                            )
+                            saved += 1
+                except ValidationError as ve:
+                    errors.append(f"Row {row_num} (Student {student.name}): {', '.join(ve.messages) if hasattr(ve, 'messages') else str(ve)}")
+                except Exception as e:
+                    errors.append(f"Row {row_num} (Student {student.name}): {str(e)}")
+
+            if saved > 0:
+                messages.success(request, f'{saved} mark entries imported successfully.')
+            if errors:
+                for err in errors[:10]:
+                    messages.error(request, err)
+                if len(errors) > 10:
+                    messages.warning(request, f"And {len(errors) - 10} more validation errors.")
+        except Exception as e:
             logger.exception('Bulk mark import failed for exam=%s class=%s', exam_id, class_id)
-            messages.error(request, 'Import failed. Please check the file format and try again.')
+            messages.error(request, f'Import failed: {str(e)}. Please check the file format and try again.')
 
         return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
 
@@ -962,6 +997,7 @@ def bulk_mark_all_import(request, exam_id):
         
         saved_total = 0
         skipped_sheets = []
+        errors = []
         
         # Get all class names mapping to class objects
         classes_map = {}
@@ -1042,101 +1078,124 @@ def bulk_mark_all_import(request, exam_id):
             else:
                 student_start_row = 2
 
-            for row in ws.iter_rows(min_row=student_start_row, values_only=True):
-                if not row[0]:
-                    continue
-                roll = str(row[0]).strip()
-                student = students.get(roll)
-                if not student:
-                    continue
-
-                col_idx = 2
-                subject_marks_list = []
-                for subject in subjects:
-                    try:
-                        ms = subject.marking_structure
-                    except Exception:
-                        col_idx += 2
+            for row_num, row in enumerate(ws.iter_rows(min_row=student_start_row, values_only=True), start=student_start_row):
+                try:
+                    if not row[0]:
                         continue
-                    theory_raw = row[col_idx] if col_idx < len(row) else None
-                    internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
-                    col_idx += 2
+                    roll = str(row[0]).strip()
+                    student = students.get(roll)
+                    if not student:
+                        continue
+    
+                    col_idx = 2
+                    subject_marks_list = []
+                    for subject in subjects:
+                        try:
+                            ms = subject.marking_structure
+                        except Exception:
+                            col_idx += 2
+                            continue
+                        theory_raw = row[col_idx] if col_idx < len(row) else None
+                        internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                        col_idx += 2
+    
+                        # Parse theory marks / special value
+                        theory_obtained = None
+                        special_value = None
+                        if theory_raw is not None:
+                            val_str = str(theory_raw).strip().upper()
+                            if val_str in ('AB', 'ABSENT'):
+                                special_value = 'AB'
+                            elif val_str in ('WH', 'WITHHELD'):
+                                special_value = 'WH'
+                            elif val_str in ('EX', 'EXEMPTED'):
+                                special_value = 'EX'
+                            elif val_str in ('', 'NONE', 'NULL'):
+                                theory_obtained = None
+                            else:
+                                try:
+                                    from decimal import Decimal
+                                    theory_obtained = Decimal(str(theory_raw))
+                                except Exception:
+                                    raise ValueError(f"Invalid theory marks format '{theory_raw}' in sheet '{sheet_name}', row {row_num}, for subject '{subject.name}'.")
+    
+                        # Parse internal marks / special value
+                        internal_obtained = None
+                        if internal_raw is not None and ms.has_internal:
+                            val_str = str(internal_raw).strip().upper()
+                            if val_str in ('AB', 'ABSENT'):
+                                special_value = 'AB'
+                            elif val_str in ('WH', 'WITHHELD'):
+                                special_value = 'WH'
+                            elif val_str in ('EX', 'EXEMPTED'):
+                                special_value = 'EX'
+                            elif val_str in ('', 'NONE', 'NULL'):
+                                internal_obtained = None
+                            else:
+                                try:
+                                    from decimal import Decimal
+                                    internal_obtained = Decimal(str(internal_raw))
+                                except Exception:
+                                    raise ValueError(f"Invalid internal marks format '{internal_raw}' in sheet '{sheet_name}', row {row_num}, for subject '{subject.name}'.")
+    
+                        subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
+    
+                    # Parse attendance (Present Days)
+                    present_days = None
+                    total_days = class_total_days
+                    if col_idx < len(row) and row[col_idx] is not None:
+                        try:
+                            present_days = int(float(row[col_idx]))
+                        except Exception:
+                            pass
+    
+                    from django.core.exceptions import ValidationError
+                    for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
+                        defaults = {
+                            'school': school,
+                            'special_value': special_value,
+                            'theory_obtained': theory_obtained,
+                            'internal_obtained': internal_obtained,
+                            'entered_by': request.user,
+                        }
+                        if not getattr(request.user, 'is_teacher', False):
+                            defaults['present_days'] = present_days
+                            defaults['total_days'] = total_days
+    
+                        # Run model level validation via clean()
+                        me = MarkEntry(
+                            exam=exam, student=student, subject=subject,
+                            **defaults
+                        )
+                        try:
+                            me.clean()
+                        except ValidationError as ve:
+                            raise ValueError(f"Sheet '{sheet_name}', Row {row_num} (Student {roll}): {', '.join(ve.messages) if hasattr(ve, 'messages') else str(ve)}")
+    
+                        MarkEntry.objects.update_or_create(
+                            exam=exam, student=student, subject=subject,
+                            defaults=defaults
+                        )
+                        saved_total += 1
+                except ValueError as ve:
+                    errors.append(str(ve))
+                except Exception as e:
+                    errors.append(f"Sheet '{sheet_name}', Row {row_num} (Student {roll}): {str(e)}")
 
-                    # Parse theory marks / special value
-                    theory_obtained = None
-                    special_value = None
-                    if theory_raw is not None:
-                        val_str = str(theory_raw).strip().upper()
-                        if val_str in ('AB', 'ABSENT'):
-                            special_value = 'AB'
-                        elif val_str in ('WH', 'WITHHELD'):
-                            special_value = 'WH'
-                        elif val_str in ('EX', 'EXEMPTED'):
-                            special_value = 'EX'
-                        elif val_str in ('', 'NONE', 'NULL'):
-                            theory_obtained = None
-                        else:
-                            try:
-                                from decimal import Decimal
-                                theory_obtained = Decimal(str(theory_raw))
-                            except Exception:
-                                raise ValueError(f"Invalid theory marks format '{theory_raw}' for student roll {roll}.")
+        if saved_total > 0:
+            msg = f'Successfully imported {saved_total} mark entries across classes.'
+            if skipped_sheets:
+                msg += f" Skipped unknown sheets: {', '.join(skipped_sheets)}."
+            messages.success(request, msg)
 
-                    # Parse internal marks / special value
-                    internal_obtained = None
-                    if internal_raw is not None and ms.has_internal:
-                        val_str = str(internal_raw).strip().upper()
-                        if val_str in ('AB', 'ABSENT'):
-                            special_value = 'AB'
-                        elif val_str in ('WH', 'WITHHELD'):
-                            special_value = 'WH'
-                        elif val_str in ('EX', 'EXEMPTED'):
-                            special_value = 'EX'
-                        elif val_str in ('', 'NONE', 'NULL'):
-                            internal_obtained = None
-                        else:
-                            try:
-                                from decimal import Decimal
-                                internal_obtained = Decimal(str(internal_raw))
-                            except Exception:
-                                raise ValueError(f"Invalid internal marks format '{internal_raw}' for student roll {roll}.")
+        if errors:
+            for err in errors[:10]:
+                messages.error(request, err)
+            if len(errors) > 10:
+                messages.warning(request, f"And {len(errors) - 10} more validation errors.")
 
-                    subject_marks_list.append((subject, theory_obtained, internal_obtained, special_value))
-
-                # Parse attendance (Present Days)
-                present_days = None
-                total_days = class_total_days
-                if col_idx < len(row) and row[col_idx] is not None:
-                    try:
-                        present_days = int(float(row[col_idx]))
-                    except Exception:
-                        pass
-
-                for subject, theory_obtained, internal_obtained, special_value in subject_marks_list:
-                    defaults = {
-                        'school': school,
-                        'special_value': special_value,
-                        'theory_obtained': theory_obtained,
-                        'internal_obtained': internal_obtained,
-                        'entered_by': request.user,
-                    }
-                    if not getattr(request.user, 'is_teacher', False):
-                        defaults['present_days'] = present_days
-                        defaults['total_days'] = total_days
-
-                    MarkEntry.objects.update_or_create(
-                        exam=exam, student=student, subject=subject,
-                        defaults=defaults
-                    )
-                    saved_total += 1
-
-        msg = f'Successfully imported {saved_total} mark entries across classes.'
-        if skipped_sheets:
-            msg += f" Skipped unknown sheets: {', '.join(skipped_sheets)}."
-        messages.success(request, msg)
-
-    except Exception:
+    except Exception as e:
         logger.exception('Bulk all-class import failed for exam=%s', exam_id)
-        messages.error(request, 'Bulk import failed. Please check the file format and try again.')
+        messages.error(request, f'Bulk import failed: {str(e)}. Please check the file format and try again.')
 
     return redirect('mark_entry_select')

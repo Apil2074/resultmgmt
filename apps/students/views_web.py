@@ -35,10 +35,15 @@ def student_list(request):
     if class_id:
         students = students.filter(class_obj_id=class_id)
 
-    # Convert to list and apply sorting
+    # Convert to list and apply natural sorting (class, then roll number naturally)
     students_list = list(students)
-    # Convert to list
-    students_list = list(students)
+    students_list.sort(key=lambda s: (
+        s.class_obj.numeric_level,
+        s.class_obj.name,
+        s.class_obj.section,
+        len(s.roll_number),
+        s.roll_number
+    ))
 
     from apps.classes.models import Class
     classes_qs = Class.objects.filter(school=school)
@@ -56,6 +61,9 @@ def student_list(request):
 
 @login_required
 def student_create(request):
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('student_list')
     school = request.user.school
     active_session = school.get_active_session() if school else None
     from apps.classes.models import Class
@@ -69,6 +77,7 @@ def student_create(request):
             class_obj_id=request.POST.get('class_id'),
             roll_number=request.POST.get('roll_number'),
             name=request.POST.get('name'),
+            gender=request.POST.get('gender'),
             registration_number=request.POST.get('registration_number', ''),
             symbol_number=request.POST.get('symbol_number', ''),
             date_of_birth=request.POST.get('date_of_birth') or None,
@@ -99,6 +108,9 @@ def student_detail(request, pk):
 
 @login_required
 def student_edit(request, pk):
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('student_list')
     school = request.user.school
     active_session = school.get_active_session() if school else None
     student = get_object_or_404(Student, pk=pk, school=school)
@@ -112,6 +124,7 @@ def student_edit(request, pk):
         student.roll_number = request.POST.get('roll_number', student.roll_number)
         student.registration_number = request.POST.get('registration_number', '')
         student.symbol_number = request.POST.get('symbol_number', '')
+        student.gender = request.POST.get('gender', student.gender)
         student.parent_name = request.POST.get('parent_name', '')
         student.contact_number = request.POST.get('contact_number', '')
         student.address = request.POST.get('address', '')
@@ -147,6 +160,9 @@ def student_edit(request, pk):
 
 @login_required
 def student_delete(request, pk):
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('student_list')
     school = request.user.school
     student = get_object_or_404(Student, pk=pk, school=school)
     if request.method == 'POST':
@@ -176,6 +192,9 @@ def parse_class_and_section(class_str):
 
 @login_required
 def student_import(request):
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('student_list')
     """Import students from Excel."""
     school = request.user.school
     active_session = school.get_active_session() if school else None
@@ -229,11 +248,16 @@ def student_import(request):
                 class_roll_counters[cls_obj.pk] += 1
                 return str(class_roll_counters[cls_obj.pk])
 
-            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            for row_num, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
                 if not row[0]:
                     continue
+                # Skip the title row or header row
+                sn_val = str(row[0]).strip().upper()
+                if sn_val.startswith('CLASS:') or sn_val == 'SN*' or sn_val == 'SN':
+                    continue
+
                 try:
-                    # Column 0 is SN (serial number) — kept in Excel for reference, NOT used as roll number
+                    # Column 0 is SN (serial number)
                     # Symbol No
                     symbol = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ''
                     # REG NO
@@ -243,29 +267,32 @@ def student_import(request):
                     if not name:
                         raise ValueError("Student name is required.")
                     
-                    # Class
-                    cls = None
-                    class_str = str(row[4]).strip() if len(row) > 4 and row[4] is not None else ''
-                    if class_str:
-                        class_name, section = parse_class_and_section(class_str)
-                        if class_name:
-                            cls, _ = Class.objects.get_or_create(
-                                school=school,
-                                session=active_session,
-                                name=class_name,
-                                section=section
-                            )
+                    # Gender
+                    gender_raw = str(row[4]).strip() if len(row) > 4 and row[4] is not None else ''
+                    gender = None
+                    if gender_raw:
+                        gen_cap = gender_raw.strip().upper()
+                        if gen_cap in ('M', 'MALE'):
+                            gender = 'M'
+                        elif gen_cap in ('F', 'FEMALE'):
+                            gender = 'F'
+                        elif gen_cap in ('O', 'OTHER'):
+                            gender = 'O'
                     
+                    # Class is taken from the dropdown
+                    cls = dropdown_cls
                     if not cls:
-                        cls = dropdown_cls
+                        raise ValueError("No class specified for this import.")
                     
-                    if not cls:
-                        raise ValueError("No class specified for this student.")
-
                     # DOB (Excel has BS date, convert to AD and save both)
                     dob_ad = None
                     dob_bs_str = ""
                     dob_val = row[5] if len(row) > 5 else None
+                    
+                    student_obj = None
+                    if reg_num:
+                        student_obj = Student.objects.filter(registration_number=reg_num, school=school).first()
+
                     if dob_val is not None:
                         import nepali_datetime
                         if isinstance(dob_val, (datetime.date, datetime.datetime)):
@@ -305,33 +332,42 @@ def student_import(request):
                         existing_student.name = name
                         existing_student.registration_number = reg_num
                         existing_student.symbol_number = symbol
+                        existing_student.gender = gender
                         existing_student.date_of_birth = dob_ad
                         existing_student.date_of_birth_bs = dob_bs_str
-                        existing_student.is_active = True
-                        existing_student.save()
+                    if student_obj:
+                        # Update existing student
+                        if name: student_obj.name = name
+                        if symbol: student_obj.symbol_number = symbol
+                        if reg_num: student_obj.registration_number = reg_num
+                        if gender: student_obj.gender = gender
+                        if cls: student_obj.class_obj = cls
+                        if dob_ad: student_obj.date_of_birth = dob_ad
+                        if dob_bs_str: student_obj.date_of_birth_bs = dob_bs_str
+                        student_obj.save()
                     else:
-                        # Assign next sequential roll number for this class (starts from 1)
-                        roll = get_next_roll(cls)
+                        # Create new student
                         Student.objects.create(
                             school=school,
-                            class_obj=cls,
-                            roll_number=roll,
                             name=name,
-                            registration_number=reg_num,
                             symbol_number=symbol,
+                            registration_number=reg_num,
+                            gender=gender,
+                            class_obj=cls,
+                            roll_number=get_next_roll(cls),
                             date_of_birth=dob_ad,
                             date_of_birth_bs=dob_bs_str,
-                            is_active=True,
+                            is_active=True
                         )
-                    created += 1
+                        created += 1
+
                 except Exception as e:
-                    errors.append(f'Row {row_num}: {str(e)}')
+                    errors.append(f"Row {row_num}: {str(e)}")
 
-            messages.success(request, f'{created} students imported successfully.')
             if errors:
-                for err in errors[:5]:
-                    messages.warning(request, err)
-
+                messages.warning(request, f"Imported {created} students. However, there were some errors: {', '.join(errors[:5])}{'...' if len(errors) > 5 else ''}")
+            else:
+                messages.success(request, f"Successfully processed students. {created} new created, others updated.")
         except Exception as e:
             messages.error(request, f'Failed to read Excel file: {str(e)}')
 
@@ -360,11 +396,10 @@ def student_export_excel(request):
     ws = wb.active
     ws.title = 'Students'
 
-    # Header
-    headers = ['Roll No', 'Name', 'Reg. No', 'Symbol No', 'Gender',
-               'Parent Name', 'Contact', 'Address', 'Class']
+    # Header matching import template
+    headers = ['SN*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Date of Birth BS.']
     header_font = Font(bold=True, color='FFFFFF')
-    header_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
+    header_fill = PatternFill(start_color='F59E0B', end_color='F59E0B', fill_type='solid')
 
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=header)
@@ -373,24 +408,28 @@ def student_export_excel(request):
         cell.alignment = Alignment(horizontal='center')
 
     for row_num, student in enumerate(students, 2):
-        ws.cell(row=row_num, column=1, value=student.roll_number)
-        ws.cell(row=row_num, column=2, value=student.name)
+        ws.cell(row=row_num, column=1, value=student.roll_number or row_num - 1)
+        ws.cell(row=row_num, column=2, value=student.symbol_number)
         ws.cell(row=row_num, column=3, value=student.registration_number)
-        ws.cell(row=row_num, column=4, value=student.symbol_number)
-        ws.cell(row=row_num, column=6, value=student.parent_name)
-        ws.cell(row=row_num, column=7, value=student.contact_number)
-        ws.cell(row=row_num, column=8, value=student.address)
-        ws.cell(row=row_num, column=9, value=student.class_obj.full_name)
+        ws.cell(row=row_num, column=4, value=student.name)
+        ws.cell(row=row_num, column=5, value=student.get_gender_display() or '')
+        ws.cell(row=row_num, column=6, value=student.date_of_birth_bs or '')
 
     # Auto-width
+    from openpyxl.utils import get_column_letter
     for col in ws.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = min(max_len + 4, 40)
+
+    from apps.classes.models import Class
+    target_class = Class.objects.filter(pk=class_id).first() if class_id else None
+    filename = f"{target_class.name} Students.xlsx" if target_class else "Students.xlsx"
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = 'attachment; filename="students.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
 
@@ -399,23 +438,26 @@ def student_export_excel(request):
 def student_import_template(request):
     """Download blank Excel template for student import."""
     import openpyxl
-    from openpyxl.styles import Font, PatternFill
+    from openpyxl.styles import Font, PatternFill, Alignment
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = 'Students'
-    # Exactly matching user layout: SN, Symbol No, REG NO, Name of Students, Class, Date of Birth BS.
-    headers = ['SN*', 'Symbol No', 'REG NO', 'Name of Students*', 'Class*', 'Date of Birth BS.']
+    
+    headers = ['SN*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Date of Birth BS.']
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='F59E0B', end_color='F59E0B', fill_type='solid')
     for col, h in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col, value=h)
         cell.font = header_font
         cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center')
 
     # Set column widths nicely
+    from openpyxl.utils import get_column_letter
     for col in ws.columns:
         max_len = max(len(str(cell.value or '')) for cell in col)
-        ws.column_dimensions[col[0].column_letter].width = max(max_len + 4, 18)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 4, 18)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

@@ -1,15 +1,14 @@
 """
-Schools App — School Profile and Academic Session models
+Schools App � School Profile and Academic Session models
 """
 from django.db import models
 from django.utils import timezone
-
+from django.conf import settings
 
 class School(models.Model):
-    """Top-level tenant — all data is scoped to a school."""
+    """Top-level tenant � all data is scoped to a school."""
 
-    class GradingSystem(models.TextChoices):
-        NEB = 'NEB', 'NEB Grading'
+
 
     name = models.CharField(max_length=255)
     logo = models.ImageField(upload_to='school_logos/', null=True, blank=True)
@@ -19,12 +18,6 @@ class School(models.Model):
     website = models.URLField(blank=True)
     establishment_year = models.PositiveIntegerField(null=True, blank=True)
     principal_name = models.CharField(max_length=150)
-    exam_head_name = models.CharField(max_length=150, blank=True)
-    grading_system = models.CharField(
-        max_length=10,
-        choices=GradingSystem.choices,
-        default=GradingSystem.NEB,
-    )
     is_active = models.BooleanField(default=True)
     subscription_start_date = models.DateField(null=True, blank=True)
     subscription_end_date = models.DateField(null=True, blank=True)
@@ -70,7 +63,7 @@ class AcademicSession(models.Model):
         ordering = ['-name']
 
     def __str__(self):
-        return f"{self.school.name} — {self.name}"
+        return f"{self.school.name} � {self.name}"
 
     def save(self, *args, **kwargs):
         # If setting this session as active, deactivate all others for this school
@@ -79,3 +72,40 @@ class AcademicSession(models.Model):
                 school=self.school, is_active=True
             ).exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
+
+
+class SupportTicket(models.Model):
+    """A ticket raised by a school admin for super admin support."""
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', 'Open'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+        RESOLVED = 'RESOLVED', 'Resolved'
+        CLOSED = 'CLOSED', 'Closed'
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='support_tickets')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.status}] {self.subject} - {self.school.name}"
+
+
+class TicketMessage(models.Model):
+    """A single reply within a support ticket thread."""
+    ticket = models.ForeignKey(SupportTicket, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    message = models.TextField()
+    attachment = models.ImageField(upload_to='ticket_attachments/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"Message by {self.sender} on {self.ticket}"

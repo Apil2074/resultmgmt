@@ -4,6 +4,7 @@ Classes App — Web views
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models.functions import Length
 from .models import Class, ClassTeacher
 
 
@@ -21,6 +22,9 @@ def class_list(request):
     classes = list(classes_qs)
 
     if request.method == 'POST':
+        if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+            messages.error(request, 'Access denied.')
+            return redirect('class_list')
         action = request.POST.get('action')
 
         if action == 'create':
@@ -138,6 +142,9 @@ def class_detail(request, slug):
 
     if request.method == 'POST':
         action = request.POST.get('action')
+        if action != 'map_subjects' and request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+            messages.error(request, 'Access denied.')
+            return redirect('class_detail', slug=cls.slug)
         if action == 'add_student':
             from apps.students.models import Student
             name = request.POST.get('name', '').strip()
@@ -147,17 +154,24 @@ def class_detail(request, slug):
             registration_number = request.POST.get('registration_number', '').strip()
 
             if name and roll_number:
-                Student.objects.create(
-                    school=school,
-                    class_obj=cls,
-                    name=name,
-                    roll_number=roll_number,
-                    gender=gender,
-                    symbol_number=symbol_number,
-                    registration_number=registration_number,
-                    is_active=True
-                )
-                messages.success(request, f'Student "{name}" added to this class.')
+                if Student.objects.filter(school=school, class_obj=cls, roll_number=roll_number).exists():
+                    messages.error(request, f'A student with Roll Number "{roll_number}" already exists in this class.')
+                elif registration_number and Student.objects.filter(school=school, registration_number=registration_number).exists():
+                    messages.error(request, f'A student with Registration Number "{registration_number}" already exists.')
+                elif symbol_number and Student.objects.filter(school=school, symbol_number=symbol_number).exists():
+                    messages.error(request, f'A student with Symbol Number "{symbol_number}" already exists.')
+                else:
+                    Student.objects.create(
+                        school=school,
+                        class_obj=cls,
+                        name=name,
+                        roll_number=roll_number,
+                        gender=gender,
+                        symbol_number=symbol_number,
+                        registration_number=registration_number,
+                        is_active=True
+                    )
+                    messages.success(request, f'Student "{name}" added to this class.')
             else:
                 messages.error(request, 'Student name and roll number are required.')
 
@@ -206,12 +220,27 @@ def class_detail(request, slug):
                 if not code or not name:
                     continue
 
-                t_credit = float(theory_credits[i]) if i < len(theory_credits) else 3.0
-                ord_val = int(orders[i]) if i < len(orders) else 0
+                try:
+                    t_credit = float(theory_credits[i]) if (i < len(theory_credits) and theory_credits[i]) else 3.0
+                except ValueError:
+                    messages.error(request, f"Invalid theory credit hour value: {theory_credits[i] if i < len(theory_credits) else ''}")
+                    continue
+
+                try:
+                    ord_val = int(orders[i]) if (i < len(orders) and orders[i]) else 0
+                except ValueError:
+                    messages.error(request, f"Invalid display order value: {orders[i] if i < len(orders) else ''}")
+                    continue
+
                 sub_type = subject_types[i] if i < len(subject_types) else 'COMPULSORY'
                 has_prac = (has_practicals[i] == 'yes') if i < len(has_practicals) else False
                 p_code = practical_codes[i].strip() if (has_prac and i < len(practical_codes)) else ''
-                p_credit = float(practical_credits[i]) if (has_prac and i < len(practical_credits)) else 0.0
+                
+                try:
+                    p_credit = float(practical_credits[i]) if (has_prac and i < len(practical_credits) and practical_credits[i]) else 0.0
+                except ValueError:
+                    messages.error(request, f"Invalid practical credit hour value: {practical_credits[i] if i < len(practical_credits) else ''}")
+                    continue
 
                 Subject.objects.create(
                     school=school,
@@ -239,12 +268,28 @@ def class_detail(request, slug):
             
             code = request.POST.get('code', '').strip()
             name = request.POST.get('name', '').strip()
-            t_credit = float(request.POST.get('theory_credit_hour') or 3.0)
-            ord_val = int(request.POST.get('order') or 0)
+            
+            try:
+                t_credit = float(request.POST.get('theory_credit_hour') or 3.0)
+            except ValueError:
+                messages.error(request, "Invalid theory credit hour format.")
+                return redirect('class_detail', slug=cls.slug)
+
+            try:
+                ord_val = int(request.POST.get('order') or 0)
+            except ValueError:
+                messages.error(request, "Invalid display order format.")
+                return redirect('class_detail', slug=cls.slug)
+
             sub_type = request.POST.get('subject_type', 'COMPULSORY')
             has_prac = request.POST.get('has_practical') == 'yes'
             p_code = request.POST.get('practical_code', '').strip() if has_prac else ''
-            p_credit = float(request.POST.get('practical_credit_hour') or 0.0) if has_prac else 0.0
+            
+            try:
+                p_credit = float(request.POST.get('practical_credit_hour') or 0.0) if has_prac else 0.0
+            except ValueError:
+                messages.error(request, "Invalid practical credit hour format.")
+                return redirect('class_detail', slug=cls.slug)
 
             subj.code = code
             subj.name = name
@@ -310,7 +355,7 @@ def bulk_map_subjects(request, slug):
     from django.db import transaction
 
     optional_subjects = cls.subjects.filter(subject_type=Subject.SubjectType.OPTIONAL).order_by('order', 'name')
-    students = cls.students.filter(is_active=True).order_by('roll_number', 'name')
+    students = cls.students.filter(is_active=True).order_by(Length('roll_number'), 'roll_number', 'name')
 
     if request.method == 'POST':
         with transaction.atomic():

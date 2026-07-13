@@ -18,7 +18,7 @@
         <tr>
           <th>School Name</th>
           <th>Establishment</th>
-          <th>Grading System</th>
+         
           <th>Subscription Period</th>
           <th>Subscription Status</th>
           <th>Stats</th>
@@ -44,11 +44,7 @@
               </div>
             </td>
             <td>{{ s.establishment_year|default:"—" }}</td>
-            <td>
-              <span class="badge bg-secondary-subtle text-secondary border px-2 py-1 rounded">
-                {{ s.get_grading_system_display }}
-              </span>
-            </td>
+
             <td>
               <div class="small">
                 {% if s.subscription_start_date or s.subscription_end_date %}

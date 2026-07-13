@@ -70,3 +70,24 @@ class User(AbstractUser):
 
     def can_manage_school(self):
         return self.role in [self.Role.SUPER_ADMIN, self.Role.SCHOOL_ADMIN]
+
+
+class Notification(models.Model):
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    sender = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='sent_notifications'
+    )
+    recipients = models.ManyToManyField(
+        User, related_name='received_notifications', blank=True
+    )
+    read_by = models.ManyToManyField(
+        User, related_name='read_notifications', blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title

@@ -139,4 +139,40 @@ function makeTableSortable(tableId) {
 // ── Initialize on DOM ready ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // Sorting disabled
+  initTheme();
+  const toggleBtns = document.querySelectorAll('.btn-theme-toggle');
+  toggleBtns.forEach(btn => {
+    btn.addEventListener('click', toggleTheme);
+  });
 });
+
+// ── Theme Toggle ──────────────────────────────────────────────────
+function initTheme() {
+  const savedTheme = localStorage.getItem('rms-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('rms-theme', newTheme);
+  updateThemeIcon(newTheme);
+}
+
+function updateThemeIcon(theme) {
+  const icons = document.querySelectorAll('.theme-toggle-icon');
+  icons.forEach(icon => {
+    if (theme === 'dark') {
+      icon.classList.remove('bi-moon-fill');
+      icon.classList.add('bi-sun-fill');
+    } else {
+      icon.classList.remove('bi-sun-fill');
+      icon.classList.add('bi-moon-fill');
+    }
+  });
+}
+
+// Execute initTheme immediately to avoid flash of unstyled content
+initTheme();

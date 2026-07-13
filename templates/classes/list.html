@@ -3,9 +3,18 @@
 {% block page_title %}🏫 Classes{% endblock %}
 
 {% block content %}
+{% if not active_session %}
+<div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+  <div>
+    <strong>No Active Academic Session!</strong>
+    You must <a href="{% url 'session_list' %}" class="alert-link text-decoration-underline">start an academic session</a> before managing this section.
+  </div>
+</div>
+{% endif %}
 <div class="row">
   <!-- Class List Card -->
-  <div class="col-lg-8 mb-4">
+  <div class="{% if user.is_school_admin or user.is_super_admin %}col-lg-8{% else %}col-lg-12{% endif %} mb-4">
     <div class="card shadow-sm">
       <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
@@ -67,6 +76,7 @@
                   <a href="{% url 'class_detail' c.slug %}" class="btn btn-sm btn-outline-primary" title="View Details">
                     <i class="bi bi-eye-fill"></i>
                   </a>
+                  {% if user.is_school_admin or user.is_super_admin %}
                   <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-class"
                     data-class-id="{{ c.id }}" data-class-name="{{ c.name|escapejs }}"
                     data-class-section="{{ c.section|escapejs }}"
@@ -84,6 +94,7 @@
                     title="Delete Class">
                     <i class="bi bi-trash-fill"></i>
                   </button>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -102,6 +113,7 @@
   </div>
 
   <!-- Add Class Form Sidebar -->
+  {% if user.is_school_admin or user.is_super_admin %}
   <div class="col-lg-4">
     <div class="card shadow-sm">
       <div class="card-header bg-white py-3">
@@ -183,18 +195,20 @@
         </form>
         {% else %}
         <div class="text-center py-4">
-          <i class="bi bi-exclamation-triangle text-warning fs-1 mb-2"></i>
-          <p class="text-muted">You must have an active Academic Session to create classes.</p>
-          <a href="{% url 'session_list' %}" class="btn btn-sm btn-primary">
-            <i class="bi bi-calendar3 me-2"></i>Manage Sessions
-          </a>
-        </div>
+            <i class="bi bi-info-circle text-primary fs-3 mb-3 d-block"></i>
+            <h5 class="text-slate-800">No Active Session</h5>
+            <p class="text-muted">You must have an active academic session to create classes. Please configure sessions in School Settings first.</p>
+            <a href="{% url 'school_profile' %}" class="btn btn-outline-primary mt-2">Go to Settings</a>
+          </div>
         {% endif %}
       </div>
     </div>
   </div>
+  {% endif %}
 </div>
 
+<!-- Modals -->
+{% if user.is_school_admin or user.is_super_admin %}
 <!-- Shared Delete Class Modal -->
 <div class="modal fade" id="deleteClassModal" tabindex="-1" aria-labelledby="deleteClassModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -354,6 +368,8 @@
     </div>
   </div>
 </div>
+
+{% endif %}
 
 {% endblock %}
 

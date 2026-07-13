@@ -1,59 +1,417 @@
 {% extends 'base.html' %}
 {% block title %}Teacher Dashboard{% endblock %}
-{% block page_title %}👋 Welcome, {{ teacher.name }}{% endblock %}
+{% block page_title %}Teacher Portal{% endblock %}
 
 {% block content %}
 {% if error %}
-<div class="alert alert-danger">
+<div class="alert alert-danger rounded-3">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     Your account is not linked to any active teacher profile. Please contact the school administrator.
 </div>
 {% else %}
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="text-muted small text-uppercase">Total Classes</h6>
-                <h2 class="fw-bold text-primary mb-0">{{ classes_dict.keys|length }}</h2>
-            </div>
+
+<style>
+  /* ── Teacher Dashboard Design System ── */
+  .btn-modern-ripple {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #3b82f6, #4f46e5);
+    color: #fff !important; border: none;
+    border-radius: 50px; padding: 0.5rem 1.25rem;
+    font-weight: 600; font-size: 0.85rem; letter-spacing: 0.3px;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-modern-ripple:hover {
+    transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  }
+  .btn-modern-ripple::after {
+    content: ''; position: absolute;
+    top: 50%; left: 50%; width: 5px; height: 5px;
+    background: rgba(255, 255, 255, 0.5); opacity: 0;
+    border-radius: 100%; transform: scale(1, 1) translate(-50%); transform-origin: 50% 50%;
+  }
+  @keyframes ripple-anim {
+    0% { transform: scale(0, 0); opacity: 0.5; }
+    100% { transform: scale(40, 40); opacity: 0; }
+  }
+  .btn-modern-ripple:active::after {
+    animation: ripple-anim 0.6s ease-out;
+  }
+  
+  .td-hero {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    color: #0f172a;
+    margin-bottom: 1.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .td-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 240px; height: 240px;
+    border-radius: 50%;
+    background: rgba(99,102,241,.05);
+  }
+  .td-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(14,165,233,.05);
+  }
+  .td-hero-name { font-size: 1.7rem; font-weight: 800; line-height: 1.2; }
+  .td-hero-sub  { font-size: .9rem; color: #64748b; margin-top:.35rem; }
+  .td-hero-badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: #f1f5f9; border: 1px solid #e2e8f0;
+    border-radius: 50px; padding: .3rem .9rem; font-size: .78rem;
+    font-weight: 600; color: #475569;
+  }
+  .td-hero-stats { display: flex; gap: 2rem; margin-top: 1.5rem; flex-wrap: wrap; }
+  .td-hero-stat-val { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+  .td-hero-stat-lbl { font-size: .72rem; color: #64748b; text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ── KPI Strip ── */
+  .td-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+  .td-kpi {
+    background: #fff; border-radius: 14px; padding: 1.1rem 1.25rem;
+    border: 1px solid #e2e8f0; position: relative; overflow: hidden;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .td-kpi:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .td-kpi-accent { position: absolute; top:0; left:0; width:4px; height:100%; border-radius:4px 0 0 4px; }
+  .td-kpi-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; margin-bottom: .75rem;
+  }
+  .td-kpi-val  { font-size: 1.55rem; font-weight: 800; color: #0f172a; line-height: 1; }
+  .td-kpi-lbl  { font-size: .72rem; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin-top: .25rem; }
+  .td-kpi-sub  { font-size: .75rem; color: #64748b; margin-top: .35rem; }
+
+  /* ── Section labels ── */
+  .td-section-label {
+    font-size: .72rem; font-weight: 700; letter-spacing: .8px;
+    text-transform: uppercase; color: #94a3b8; margin-bottom: .85rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .td-section-label::after { content:''; flex:1; height:1px; background:#e2e8f0; }
+
+  /* ── Chart Card ── */
+  .td-chart-card {
+    background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;
+    overflow: hidden; height: 100%;
+  }
+  .td-chart-card .card-header { background: #fff; border-bottom: 1px solid #f1f5f9; padding: 1rem 1.25rem; }
+  .td-chart-card .card-title { font-size: .9rem; font-weight: 700; color: #1e293b; }
+
+  /* ── Class Cards ── */
+  .td-class-card {
+    background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0;
+    transition: box-shadow .2s, transform .2s; overflow: hidden; height: 100%;
+  }
+  .td-class-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,.03); }
+  .td-class-header {
+    padding: 1.25rem; background: #ffffff;
+    border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .td-class-name { font-weight: 700; font-size: 1.05rem; color: #0f172a; line-height: 1.2; }
+  .td-subj-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .85rem 0; border-bottom: 1px solid #f1f5f9;
+  }
+  .td-subj-row:last-child { border-bottom: none; }
+  .td-subj-code { font-size: .75rem; color: #94a3b8; margin-top: .15rem; }
+
+  /* ── Top performers ── */
+  .td-rank-1 { background: linear-gradient(135deg,#fef08a,#facc15); color:#7c3200; }
+  .td-rank-2 { background: linear-gradient(135deg,#e2e8f0,#cbd5e1); color:#334155; }
+  .td-rank-3 { background: linear-gradient(135deg,#fed7aa,#fb923c); color:#7c2d12; }
+  .td-rank-n { background: #f1f5f9; color:#475569; }
+  .td-rank-badge {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: .75rem;
+  }
+</style>
+
+<!-- ── HERO BANNER ── -->
+<div class="td-hero">
+  <div style="position:relative;z-index:2;">
+    <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+      <div>
+        <div class="td-hero-badge mb-3">
+          <i class="bi bi-person-badge-fill"></i> Teacher Portal
         </div>
+        <div class="td-hero-name">{{ teacher.name }}</div>
+        <div class="td-hero-sub">
+          <i class="bi bi-building me-1"></i>{{ teacher.school.name }}
+          {% if active_session %}&nbsp;·&nbsp;<i class="bi bi-calendar3 me-1"></i>{{ active_session.name }}{% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-1">
+        <a href="{% url 'exam_list' %}" class="btn-modern-ripple">
+          <i class="bi bi-clipboard2-check me-2"></i>Enter Marks
+        </a>
+      </div>
     </div>
+
+    <div class="td-hero-stats">
+      <div>
+        <div class="td-hero-stat-val">{{ total_classes }}</div>
+        <div class="td-hero-stat-lbl">Classes</div>
+      </div>
+      <div style="width:1px;background:#e2e8f0;"></div>
+      <div>
+        <div class="td-hero-stat-val">{{ total_students }}</div>
+        <div class="td-hero-stat-lbl">Students</div>
+      </div>
+      <div style="width:1px;background:#e2e8f0;"></div>
+      <div>
+        <div class="td-hero-stat-val">{{ total_subjects }}</div>
+        <div class="td-hero-stat-lbl">Subjects</div>
+      </div>
+      <div style="width:1px;background:#e2e8f0;"></div>
+      <div>
+        <div class="td-hero-stat-val">{{ avg_gpa }}</div>
+        <div class="td-hero-stat-lbl">Avg GPA</div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<h5 class="fw-bold mb-3">Your Classes & Subjects</h5>
-<div class="row">
-    {% for cls, subjects in classes_dict.items %}
-    <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card shadow-sm h-100 border-0">
-            <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
-                <h5 class="card-title fw-bold text-slate-800">{{ cls.full_name }}</h5>
-                <span class="badge bg-light text-slate-600 border">{{ cls.session.name }}</span>
-            </div>
-            <div class="card-body">
-                <div class="list-group list-group-flush mt-3">
-                    {% for sub in subjects %}
-                    <div class="list-group-item px-0 border-light d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold text-slate-700">{{ sub.name }}</div>
-                            <small class="text-muted">{{ sub.code }}</small>
-                        </div>
-                        <a href="{% url 'exam_list' %}?class_id={{ cls.id }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                            Marks
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="col-12">
-        <div class="alert alert-info text-center py-5">
-            <i class="bi bi-info-circle d-block fs-1 mb-3"></i>
-            You have not been assigned to any subjects yet.
-        </div>
-    </div>
-    {% endfor %}
+<!-- ── KPI CARDS ── -->
+<div class="td-kpi-row">
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:#6366f1;"></div>
+    <div class="td-kpi-icon" style="background:#eef2ff;color:#6366f1;"><i class="bi bi-journal-bookmark-fill"></i></div>
+    <div class="td-kpi-val">{{ total_classes }}</div>
+    <div class="td-kpi-lbl">My Classes</div>
+    <div class="td-kpi-sub">Active this session</div>
+  </div>
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:#0ea5e9;"></div>
+    <div class="td-kpi-icon" style="background:#f0f9ff;color:#0ea5e9;"><i class="bi bi-people-fill"></i></div>
+    <div class="td-kpi-val">{{ total_students }}</div>
+    <div class="td-kpi-lbl">Total Students</div>
+    <div class="td-kpi-sub">Across all classes</div>
+  </div>
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:#8b5cf6;"></div>
+    <div class="td-kpi-icon" style="background:#faf5ff;color:#8b5cf6;"><i class="bi bi-book-fill"></i></div>
+    <div class="td-kpi-val">{{ total_subjects }}</div>
+    <div class="td-kpi-lbl">Subjects</div>
+    <div class="td-kpi-sub" title="{{ primary_subject }}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">{{ primary_subject }}</div>
+  </div>
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:{% if pending_marks > 0 %}#ef4444{% else %}#22c55e{% endif %};"></div>
+    <div class="td-kpi-icon" style="background:{% if pending_marks > 0 %}#fef2f2;color:#ef4444{% else %}#f0fdf4;color:#22c55e{% endif %};"><i class="bi bi-{% if pending_marks > 0 %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %}"></i></div>
+    <div class="td-kpi-val" style="color:{% if pending_marks > 0 %}#ef4444{% else %}#22c55e{% endif %};">{{ pending_marks }}</div>
+    <div class="td-kpi-lbl">Pending Marks</div>
+    <div class="td-kpi-sub">{% if pending_marks > 0 %}Action required{% else %}All up to date{% endif %}</div>
+  </div>
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:#f59e0b;"></div>
+    <div class="td-kpi-icon" style="background:#fffbeb;color:#f59e0b;"><i class="bi bi-patch-check-fill"></i></div>
+    <div class="td-kpi-val">{{ published_percentage }}%</div>
+    <div class="td-kpi-lbl">Published</div>
+    <div class="td-kpi-sub">Results released</div>
+  </div>
+  <div class="td-kpi">
+    <div class="td-kpi-accent" style="background:#10b981;"></div>
+    <div class="td-kpi-icon" style="background:#ecfdf5;color:#10b981;"><i class="bi bi-star-fill"></i></div>
+    <div class="td-kpi-val">{{ avg_gpa }}</div>
+    <div class="td-kpi-lbl">Average GPA</div>
+    <div class="td-kpi-sub">Across my students</div>
+  </div>
 </div>
+
+<!-- ── ANALYTICS ROW ── -->
+<div class="td-section-label"><i class="bi bi-bar-chart-line-fill text-primary"></i> Analytics</div>
+<div class="row g-3 mb-4">
+  <!-- Grade Distribution -->
+  <div class="col-lg-5">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title mb-0"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Grade Distribution</div>
+      </div>
+      <div class="card-body" style="height:240px;padding:1.25rem;">
+        <div style="position:relative;height:100%;width:100%;">
+          <canvas id="gradeDistributionChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Performers -->
+  <div class="col-lg-7">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="card-title mb-0"><i class="bi bi-trophy-fill text-warning me-2"></i>Top Performers</div>
+        <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3">Per Subject</span>
+      </div>
+      <div class="card-body p-0">
+        {% if top_performers %}
+        {% regroup top_performers by class as classes_list %}
+        
+        <nav class="px-3 pt-2">
+          <div class="nav nav-tabs border-bottom-0 gap-2" id="nav-tab-performers" role="tablist">
+            {% for cls_group in classes_list %}
+            <button class="nav-link {% if forloop.first %}active{% endif %} py-2 px-3 fw-medium" 
+                    style="border-radius: 8px 8px 0 0; font-size: 0.85rem;"
+                    id="nav-perf-{{ cls_group.grouper.id }}-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#nav-perf-{{ cls_group.grouper.id }}" 
+                    type="button" role="tab" 
+                    aria-controls="nav-perf-{{ cls_group.grouper.id }}" 
+                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+              {{ cls_group.grouper.name }}
+            </button>
+            {% endfor %}
+          </div>
+        </nav>
+        
+        <div class="tab-content border-top" id="nav-tabContent-performers" style="max-height:264px;overflow-y:auto;">
+          {% for cls_group in classes_list %}
+          <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
+               id="nav-perf-{{ cls_group.grouper.id }}" 
+               role="tabpanel" 
+               aria-labelledby="nav-perf-{{ cls_group.grouper.id }}-tab">
+               
+            <table class="table table-hover align-middle mb-0 small">
+              <thead class="table-light sticky-top" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
+                <tr>
+                  <th class="ps-3" style="width:50px;">Rank</th>
+                  <th>Student</th>
+                  <th>Subject</th>
+                  <th class="text-end pe-3">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for group in cls_group.list %}
+                  {% for leader in group.leaders %}
+                  <tr>
+                    <td class="ps-3">
+                      <div class="td-rank-badge {% if leader.rank == 1 %}td-rank-1{% elif leader.rank == 2 %}td-rank-2{% elif leader.rank == 3 %}td-rank-3{% else %}td-rank-n{% endif %}">
+                        {{ leader.rank }}
+                      </div>
+                    </td>
+                    <td class="fw-semibold text-slate-800">{{ leader.student.name }}</td>
+                    <td class="text-muted"><span class="text-primary fw-semibold">{{ group.subject.name }}</span></td>
+                    <td class="text-end pe-3">
+                      <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">{{ leader.score|floatformat:"0" }}</span>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                {% endfor %}
+              </tbody>
+            </table>
+            
+          </div>
+          {% endfor %}
+        </div>
+        
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-trophy d-block fs-2 mb-2 text-warning opacity-50"></i>
+          No performer data yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MY CLASSES & SUBJECTS ── -->
+<div class="td-section-label"><i class="bi bi-journal-bookmark-fill text-primary"></i> My Classes & Subjects</div>
+<div class="row g-3">
+  {% for cls, subjects in classes_dict.items %}
+  <div class="col-md-6 col-lg-4">
+    <div class="td-class-card">
+      <div class="td-class-header">
+        <div>
+          <div class="td-class-name">{{ cls.full_name }}</div>
+          <div style="font-size:.72rem;color:#94a3b8;margin-top:.1rem;">{{ cls.session.name }}</div>
+        </div>
+        <span class="badge rounded-pill" style="background:#eef2ff;color:#6366f1;font-size:.72rem;">{{ subjects|length }} subj.</span>
+      </div>
+      <div class="px-3 py-2">
+        {% for sub in subjects %}
+        <div class="td-subj-row">
+          <div>
+            <div class="fw-medium text-slate-800" style="font-size:.9rem;">{{ sub.name }}</div>
+            <div class="td-subj-code">{{ sub.code }}</div>
+          </div>
+          <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.78rem;background:#eef2ff;color:#4f46e5;border:none;white-space:nowrap;">
+            <i class="bi bi-pencil-square me-1" style="font-size:.7rem;"></i>Marks
+          </a>
+        </div>
+        {% empty %}
+        <div class="text-muted small py-3 text-center">No subjects assigned.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="text-center py-5 text-muted rounded-3 border" style="background:#f8fafc;">
+      <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-50"></i>
+      You have not been assigned to any subjects yet.
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const gradeLabelsRaw = '{{ grade_labels_json|safe }}';
+    const gradeDataRaw   = '{{ grade_data_json|safe }}';
+
+    if (gradeLabelsRaw && gradeLabelsRaw !== '[]') {
+        try {
+            const gradeLabels = JSON.parse(gradeLabelsRaw);
+            const gradeData   = JSON.parse(gradeDataRaw);
+            const ctx = document.getElementById('gradeDistributionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: gradeLabels,
+                    datasets: [{
+                        data: gradeData,
+                        backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#ec4899','#64748b','#06b6d4'],
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { font: { family: "'Inter', sans-serif", size: 11 }, usePointStyle: true, padding: 16 }
+                        }
+                    },
+                    cutout: '72%'
+                }
+            });
+        } catch(e) { console.error('Chart error', e); }
+    } else {
+        const el = document.getElementById('gradeDistributionChart');
+        if (el) el.parentElement.innerHTML = '<div class="text-muted text-center w-100 py-5 small"><i class="bi bi-bar-chart d-block fs-3 mb-2 opacity-50"></i>No grade data yet.</div>';
+    }
+});
+</script>
 {% endblock %}

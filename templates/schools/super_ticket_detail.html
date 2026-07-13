@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block page_title %}Ticket: {{ ticket.subject }}{% endblock %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <a href="{% url 'super_ticket_list' %}" class="text-decoration-none text-muted">
+        <i class="bi bi-arrow-left"></i> Back to Tickets
+    </a>
+</div>
+
+<div class="row">
+    <!-- Left Column: The Conversation -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <h2 class="h5 mb-1">{{ ticket.subject }}</h2>
+                <p class="text-muted small">
+                    School: <span class="fw-medium text-slate-800">{{ ticket.school.name }}</span> &bull; 
+                    Created by: {{ ticket.created_by.get_full_name|default:ticket.created_by.email }} &bull;
+                    {{ ticket.created_at|date:"M d, Y H:i" }}
+                </p>
+            </div>
+            
+            <div class="card-body bg-light" style="max-height: 600px; overflow-y: auto;">
+                {% for msg in messages %}
+                    <div class="d-flex mb-4 {% if msg.sender.is_super_admin %}justify-content-end{% else %}justify-content-start{% endif %}">
+                        <div class="card border-0 shadow-sm {% if msg.sender.is_super_admin %}bg-primary text-white{% else %}bg-white{% endif %}" style="max-width: 80%;">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold small {% if msg.sender.is_super_admin %}text-white-50{% else %}text-muted{% endif %}">
+                                        {{ msg.sender.get_full_name|default:msg.sender.email }} {% if msg.sender.is_super_admin %}(Support){% endif %}
+                                    </span>
+                                    <span class="small {% if msg.sender.is_super_admin %}text-white-50{% else %}text-muted{% endif %} ms-3">
+                                        {{ msg.created_at|timesince }} ago
+                                    </span>
+                                </div>
+                                <div class="mb-0 text-break" style="white-space: pre-wrap;">{{ msg.message }}</div>
+                                {% if msg.attachment %}
+                                <div class="mt-3">
+                                    <a href="{{ msg.attachment.url }}" target="_blank">
+                                        <img src="{{ msg.attachment.url }}" alt="Attachment" class="img-fluid rounded border {% if msg.sender.is_super_admin %}border-light{% endif %}" style="max-height: 200px;">
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="card-footer bg-white border-top-0 pb-4 pt-3">
+                <form method="post" action="{% url 'super_ticket_detail' ticket.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reply">
+                    <div class="mb-3">
+                        <textarea name="message" class="form-control" rows="3" required placeholder="Type your reply here..." {% if ticket.status == 'CLOSED' %}disabled{% endif %}></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Attach Image (optional)</label>
+                        <input type="file" name="attachment" class="form-control form-control-sm" accept="image/*" {% if ticket.status == 'CLOSED' %}disabled{% endif %}>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary" {% if ticket.status == 'CLOSED' %}disabled{% endif %}>
+                            <i class="bi bi-send-fill"></i> Send Reply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Controls -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white pt-4">
+                <h3 class="h6 mb-0">Ticket Details</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="d-block text-muted small mb-1">Current Status</span>
+                    {% if ticket.status == 'OPEN' %}
+                        <span class="badge bg-primary fs-6">Open</span>
+                    {% elif ticket.status == 'IN_PROGRESS' %}
+                        <span class="badge bg-warning text-dark fs-6">In Progress</span>
+                    {% elif ticket.status == 'RESOLVED' %}
+                        <span class="badge bg-success fs-6">Resolved</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">Closed</span>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <form method="post" action="{% url 'super_ticket_detail' ticket.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_status">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Update Status</label>
+                        <select name="status" class="form-select">
+                            {% for code, label in status_choices %}
+                                <option value="{{ code }}" {% if ticket.status == code %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-secondary w-100">Update Status</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white pt-4">
+                <h3 class="h6 mb-0">School Information</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <span class="d-block text-muted small">School Name</span>
+                    <span class="fw-medium">{{ ticket.school.name }}</span>
+                </div>
+                <div class="mb-2">
+                    <span class="d-block text-muted small">Principal</span>
+                    <span>{{ ticket.school.principal_name|default:"N/A" }}</span>
+                </div>
+                <div class="mb-2">
+                    <span class="d-block text-muted small">Contact</span>
+                    <span>{{ ticket.school.email|default:"N/A" }}</span><br>
+                    <span>{{ ticket.school.phone|default:"N/A" }}</span>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'edit_school' ticket.school.id %}" class="btn btn-sm btn-outline-primary w-100" target="_blank">
+                        View School Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

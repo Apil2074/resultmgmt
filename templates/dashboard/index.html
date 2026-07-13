@@ -26,6 +26,9 @@
       </a>
       {% endif %}
       {% if user.can_manage_school %}
+      <a href="{% url 'support_ticket_list' %}" class="btn btn-info text-white">
+        <i class="bi bi-headset"></i> Raise Ticket
+      </a>
       <a href="{% url 'school_profile' %}" class="btn btn-primary">
         <i class="bi bi-gear-fill"></i> School Settings
       </a>
@@ -35,82 +38,361 @@
 </div>
 
 {% if user.is_super_admin %}
-<!-- ── Super Admin Dashboard ───────────────────────────────── -->
-<div class="stats-grid mb-4">
-  <div class="stat-card blue">
-    <div class="stat-icon"><i class="bi bi-building-fill"></i></div>
-    <div class="stat-value">{{ total_schools|default:0 }}</div>
-    <div class="stat-label">Total Schools</div>
-  </div>
-  <div class="stat-card emerald">
-    <div class="stat-icon"><i class="bi bi-shield-lock-fill"></i></div>
-    <div class="stat-value">Active</div>
-    <div class="stat-label">Multi-Tenant System</div>
-  </div>
-</div>
+<!-- ── Super Admin Premium SaaS Dashboard ────────────────────────── -->
+<style>
+  .sa-card {
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+  }
+  .sa-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  }
+  .sa-badge-percent {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #3b82f6;
+  }
+  .progress-adoption {
+    height: 8px;
+    border-radius: 4px;
+    background-color: #f1f5f9;
+  }
+  .progress-adoption .progress-bar {
+    border-radius: 4px;
+  }
+</style>
 
-<div class="row mt-4">
-  <div class="col-12">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
-        <h5 class="card-title mb-0 fw-semibold text-slate-800">
-          <i class="bi bi-building text-primary me-2"></i>School Tenants
-        </h5>
-        <a href="{% url 'super_schools' %}" class="btn btn-sm btn-outline-primary">
-          Manage All Schools
-        </a>
+<!-- Row 1: KPI Grid 1 -->
+<div class="row g-3 mb-3">
+  <!-- Card 1: Total Schools -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="rounded-3 p-2" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+          <i class="bi bi-building fs-5"></i>
+        </div>
+        <span class="sa-badge-percent">+12%</span>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>School Name</th>
-              <th>Establishment</th>
-              <th>Address</th>
-              <th>Principal</th>
-              <th>Students</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for school in all_schools %}
-              <tr>
-                <td class="fw-semibold text-slate-700">
-                  <div class="d-flex align-items-center">
-                    {% if school.logo %}
-                      <img src="{{ school.logo.url }}" alt="{{ school.name }}" class="rounded border me-2" style="width: 32px; height: 32px; object-fit: cover;">
-                    {% else %}
-                      <div class="rounded bg-secondary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.9rem; font-weight: bold;">
-                        {{ school.name|first|upper }}
-                      </div>
-                    {% endif %}
-                    {{ school.name }}
-                  </div>
-                </td>
-                <td>{{ school.establishment_year|default:"—" }}</td>
-                <td>{{ school.address }}</td>
-                <td>{{ school.principal_name }}</td>
-                <td><span class="badge bg-secondary">{{ school.student_count }}</span></td>
-                <td class="text-end">
-                  <a href="{% url 'super_schools' %}" class="btn btn-sm btn-outline-primary">
-                    Manage Details
-                  </a>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="6" class="text-center py-4 text-muted">
-                  No schools registered yet.
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="text-muted small fw-semibold">Total Schools</div>
+      <h2 class="fw-bold text-slate-800 my-1">{{ total_schools }}</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Overall customer base</div>
+    </div>
+  </div>
+  
+  <!-- Card 2: New Schools -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="rounded-3 p-2" style="background-color: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+          <i class="bi bi-plus-circle fs-5"></i>
+        </div>
+        <span class="text-muted small fw-bold">MTD</span>
       </div>
+      <div class="text-muted small fw-semibold">New Schools (MTD)</div>
+      <h2 class="fw-bold text-slate-800 my-1">+{{ new_schools_this_month }}</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Customer acquisition</div>
+    </div>
+  </div>
+
+  <!-- Card 3: User Growth -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="rounded-3 p-2" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;">
+          <i class="bi bi-graph-up fs-5"></i>
+        </div>
+      </div>
+      <div class="text-muted small fw-semibold">User Growth</div>
+      <h2 class="fw-bold text-slate-800 my-1">{{ user_growth_rate }}%</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Month-over-month</div>
+    </div>
+  </div>
+
+  <!-- Card 4: MAU -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div class="rounded-3 p-2" style="background-color: rgba(100, 116, 139, 0.1); color: #64748b;">
+          <i class="bi bi-people fs-5"></i>
+        </div>
+      </div>
+      <div class="text-muted small fw-semibold">MAU</div>
+      <h2 class="fw-bold text-slate-800 my-1">{{ mau_count }}</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Platform engagement</div>
     </div>
   </div>
 </div>
 
+<!-- Row 2: KPI Grid 2 -->
+<div class="row g-3 mb-4">
+  <!-- Card 5: Active Schools -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="d-inline-block rounded-circle bg-primary" style="width: 8px; height: 8px;"></span>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Active Schools (7D)</span>
+      </div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ active_schools_count }}</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">System usage</div>
+    </div>
+  </div>
+
+  <!-- Card 6: Renewal Rate -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-arrow-repeat text-warning small"></i>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Renewal Rate</span>
+      </div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ subscription_renewal_rate }}%</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Business health</div>
+    </div>
+  </div>
+
+  <!-- Card 7: Health Score -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <i class="bi bi-shield-check text-success small"></i>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Health Score</span>
+      </div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ customer_health_score }}<span class="text-muted fs-6">/100</span></h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">SaaS metric</div>
+    </div>
+  </div>
+
+  <!-- Card 8: Expiring Soon -->
+  <div class="col-md-3">
+    <div class="card sa-card p-3 h-100" style="background-color: rgba(239, 68, 68, 0.02); border-color: rgba(239, 68, 68, 0.15);">
+      <div class="d-flex align-items-center gap-2 mb-2 text-danger">
+        <i class="bi bi-clock-history small"></i>
+        <span class="small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Expiring Soon</span>
+      </div>
+      <h3 class="fw-bold text-danger m-0">{{ schools_at_risk_count }}</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Follow-up required</div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Product Analytics & Insights -->
+<div class="row g-4 mb-4">
+  <!-- Left Side: Feature Adoption -->
+  <div class="col-lg-8">
+    <div class="card sa-card p-4 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold text-slate-800 mb-0">Feature Adoption Rate</h5>
+        <i class="bi bi-bar-chart-steps text-muted"></i>
+      </div>
+      
+      <div class="d-flex flex-column gap-3">
+        <!-- Results -->
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-medium text-slate-700">Results</span>
+            <span class="fw-bold text-primary">{{ adoption_rates.Results|floatformat:"0" }}%</span>
+          </div>
+          <div class="progress progress-adoption">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ adoption_rates.Results }}%;" aria-valuenow="{{ adoption_rates.Results }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+
+        <!-- Attendance -->
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-medium text-slate-700">Attendance</span>
+            <span class="fw-bold text-primary">{{ adoption_rates.Attendance|floatformat:"0" }}%</span>
+          </div>
+          <div class="progress progress-adoption">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ adoption_rates.Attendance }}%;" aria-valuenow="{{ adoption_rates.Attendance }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+
+        <!-- Timetable / Exams -->
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-medium text-slate-700">Exams / Timetable</span>
+            <span class="fw-bold text-primary">{{ adoption_rates.Exams|floatformat:"0" }}%</span>
+          </div>
+          <div class="progress progress-adoption">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ adoption_rates.Exams }}%;" aria-valuenow="{{ adoption_rates.Exams }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+
+        <!-- Finance / Backup -->
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="fw-medium text-slate-700">Backup & Storage</span>
+            <span class="fw-bold text-primary">{{ adoption_rates.Backup|floatformat:"0" }}%</span>
+          </div>
+          <div class="progress progress-adoption">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ adoption_rates.Backup }}%;" aria-valuenow="{{ adoption_rates.Backup }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Usage & Engagement -->
+  <div class="col-lg-4">
+    <div class="d-flex flex-column gap-3 h-100">
+      <!-- Usage Insights -->
+      <div class="card sa-card p-3 flex-grow-1">
+        <h6 class="fw-bold text-slate-500 text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;">Usage Insights</h6>
+        
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="rounded-3 p-2 bg-success bg-opacity-10 text-success">
+            <i class="bi bi-star"></i>
+          </div>
+          <div>
+            <div class="small text-muted">Most Used Module</div>
+            <div class="fw-bold text-slate-800" style="font-size: 0.95rem;">{{ most_used_module }}</div>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-3 p-2 bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-dash-circle"></i>
+          </div>
+          <div>
+            <div class="small text-muted">Least Used Module</div>
+            <div class="fw-bold text-slate-800" style="font-size: 0.95rem;">{{ least_used_module }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engagement Metrics -->
+      <div class="card sa-card p-3 flex-grow-1">
+        <h6 class="fw-bold text-slate-500 text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 0.5px;">Engagement Metrics</h6>
+        <div class="row">
+          <div class="col-6 border-end">
+            <div class="small text-muted">Website/App Visits</div>
+            <h4 class="fw-bold text-slate-800 my-1">{{ website_visits }}</h4>
+          </div>
+          <div class="col-6 ps-3">
+            <div class="small text-muted">Avg. Session</div>
+            <h5 class="fw-bold text-slate-800 my-1">{{ avg_session_duration }}</h5>
+          </div>
+        </div>
+      </div>
+
+
+    </div>
+  </div>
+</div>
+
+<!-- Row 4: School Tenants Table -->
+<div class="card sa-card mb-4">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+    <h5 class="card-title mb-0 fw-bold text-slate-800">
+      <i class="bi bi-building text-primary me-2"></i>School Tenants
+    </h5>
+    <a href="{% url 'super_schools' %}" class="text-decoration-none fw-semibold small">
+      Manage All Schools <i class="bi bi-arrow-right ms-1"></i>
+    </a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+        <tr>
+          <th class="ps-4">School Name</th>
+          <th>Est.</th>
+          <th>Address</th>
+          <th>Principal</th>
+          <th>Students</th>
+          <th class="text-end pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for school in all_schools %}
+          <tr>
+            <td class="fw-semibold text-slate-700 ps-4">
+              <div class="d-flex align-items-center">
+                {% if school.logo %}
+                  <img src="{{ school.logo.url }}" alt="{{ school.name }}" class="rounded border me-2" style="width: 32px; height: 32px; object-fit: cover;">
+                {% else %}
+                  <div class="rounded bg-primary text-white d-flex align-items-center justify-content-center me-2 fw-bold" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                    {{ school.name|first|upper }}
+                  </div>
+                {% endif %}
+                {{ school.name }}
+              </div>
+            </td>
+            <td>{{ school.establishment_year|default:"—" }}</td>
+            <td class="text-muted">{{ school.address|truncatechars:40 }}</td>
+            <td class="text-muted">{{ school.principal_name }}</td>
+            <td><span class="badge bg-secondary rounded-pill px-3">{{ school.student_count }}</span></td>
+            <td class="text-end pe-4">
+              <a href="{% url 'super_schools' %}" class="text-decoration-none fw-semibold">
+                Manage Details
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">No schools registered yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white py-3 d-flex justify-content-between align-items-center border-top">
+    <span class="small text-muted">Showing {{ all_schools.count }} of {{ total_schools }} schools</span>
+    <nav>
+      <ul class="pagination pagination-sm m-0">
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+        <li class="page-item active"><span class="page-link">1</span></li>
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+
+<!-- Row 5: Footer Row (System Health & Support) -->
+<div class="row g-3 mb-4">
+  <!-- System Uptime -->
+  <div class="col-md-4">
+    <div class="card sa-card p-3 d-flex flex-row align-items-center gap-3">
+      <div class="rounded-circle p-2 d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success" style="width: 48px; height: 48px;">
+        <i class="bi bi-check-circle fs-4"></i>
+      </div>
+      <div>
+        <h5 class="fw-bold text-slate-800 m-0">{{ system_uptime }}% Uptime</h5>
+        <div class="text-muted small">System Reliability</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Storage Usage -->
+  <div class="col-md-4">
+    <div class="card sa-card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="fw-semibold text-slate-800" style="font-size: 0.95rem;">{{ storage_usage_mb }} MB / 1000 MB</span>
+        <span class="small text-muted">{% widthratio storage_usage_mb 10 1 %}%</span>
+      </div>
+      <div class="progress" style="height: 6px;">
+        <div class="progress-bar bg-primary" role="progressbar" style="width: {% widthratio storage_usage_mb 10 1 %}%;" aria-valuenow="{{ storage_usage_mb }}" aria-valuemin="0" aria-valuemax="1000"></div>
+      </div>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Storage Usage</div>
+    </div>
+  </div>
+
+  <!-- Active Support Tickets -->
+  <div class="col-md-4">
+    <div class="card sa-card p-3 d-flex flex-row align-items-center gap-3 bg-danger bg-opacity-10 border-danger border-opacity-25" style="border-radius: 12px;">
+      <div class="rounded-circle p-2 d-flex align-items-center justify-content-center bg-danger text-white shadow-sm" style="width: 48px; height: 48px;">
+        <i class="bi bi-ticket-perforated fs-4"></i>
+      </div>
+      <div>
+        <h5 class="fw-bold text-danger m-0">{{ open_support_tickets }} Active Tickets</h5>
+        <div class="text-danger small" style="opacity: 0.85;">Support Workload</div>
+      </div>
+    </div>
+  </div>
+</div>
 {% else %}
 <!-- ── KPI Stats ───────────────────────────────────────────── -->
 <div class="stats-grid">
@@ -123,6 +405,11 @@
     <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
     <div class="stat-value">{{ total_students|default:0 }}</div>
     <div class="stat-label">Active Students</div>
+  </div>
+  <div class="stat-card" style="border-top: 4px solid var(--color-indigo);">
+    <div class="stat-icon" style="color: var(--color-indigo); background: rgba(99, 102, 241, 0.1);"><i class="bi bi-person-workspace"></i></div>
+    <div class="stat-value">{{ total_teachers|default:0 }}</div>
+    <div class="stat-label">Teachers</div>
   </div>
   <div class="stat-card purple">
     <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
@@ -146,22 +433,51 @@
   </div>
 </div>
 
-<!-- ── Charts Row ──────────────────────────────────────────── -->
+<!-- Removed Advanced Analytics Row -->
+
+<!-- ── Detailed GPA Analytics Row ────────────────────────────── -->
 <div class="row g-3 mb-4">
   <!-- GPA Distribution Chart -->
   <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="card-header">
-        <div class="card-title"><i class="bi bi-pie-chart-fill me-2" style="color:var(--color-gold);"></i>Grade Distribution</div>
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-graph-up me-2" style="color:var(--color-purple);"></i>GPA Distribution</div>
       </div>
-      <div class="chart-container" style="height:220px;">
-        <canvas id="gradeChart"></canvas>
+      <div class="card-body chart-container" style="height:250px;">
+        <canvas id="gpaDistChart"></canvas>
       </div>
     </div>
   </div>
 
-  <!-- Recent Exams -->
+  <!-- Avg GPA By Class -->
   <div class="col-lg-4">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-bar-chart-steps me-2" style="color:var(--color-orange);"></i>Average GPA by Class</div>
+      </div>
+      <div class="card-body chart-container" style="height:250px;">
+        <canvas id="classAvgChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Distribution Chart -->
+  <div class="col-lg-4">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2" style="color:var(--color-gold);"></i>Grade Distribution</div>
+      </div>
+      <div class="card-body chart-container" style="height:250px;">
+        <canvas id="gradeChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Quick Actions & Recent Activity Row ────────────────────── -->
+<div class="row g-3 mb-4">
+  <!-- Recent Exams -->
+  <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
         <div class="card-title"><i class="bi bi-clipboard2-fill me-2" style="color:var(--color-blue);"></i>Recent Exams</div>
@@ -189,28 +505,48 @@
   </div>
 
   <!-- Quick Actions -->
-  <div class="col-lg-4">
+  <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header">
         <div class="card-title"><i class="bi bi-lightning-fill me-2" style="color:var(--color-gold);"></i>Quick Actions</div>
       </div>
-      <div class="d-flex flex-column gap-2 p-1">
-        <a href="{% url 'student_create' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-person-plus-fill me-2"></i>Add Student
-        </a>
-        <a href="{% url 'student_import' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-upload me-2"></i>Import Students
-        </a>
-        <a href="{% url 'exam_list' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-clipboard2-plus me-2"></i>Create Exam
-        </a>
-        <a href="{% url 'subject_list' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-book-plus me-2"></i>Manage Subjects
-        </a>
-        <a href="{% url 'reports_index' %}" class="btn btn-secondary w-100 text-start">
-          <i class="bi bi-file-earmark-bar-graph me-2"></i>View Reports
-        </a>
-        
+      <div class="row g-2 p-2">
+        <div class="col-4">
+          <a href="{% url 'mark_entry_select' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-pencil-square fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Enter Marks</span>
+          </a>
+        </div>
+        <div class="col-4">
+          <a href="{% url 'marksheet_select' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-printer fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Marksheets</span>
+          </a>
+        </div>
+        <div class="col-4">
+          <a href="{% url 'student_create' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-person-plus fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Add Student</span>
+          </a>
+        </div>
+        <div class="col-4">
+          <a href="{% url 'exam_list' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-clipboard2-plus fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Create Exam</span>
+          </a>
+        </div>
+        <div class="col-4">
+          <a href="{% url 'teacher_notifications' %}" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-broadcast fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Notify Teachers</span>
+          </a>
+        </div>
+        <div class="col-4">
+          <a href="{% url 'class_list' %}" class="btn btn-outline-dark w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" style="border-width: 2px;">
+            <i class="bi bi-building fs-3 mb-1"></i>
+            <span style="font-size:0.8rem; font-weight:600;">Manage Classes</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -273,36 +609,241 @@
 
 {% block extra_js %}
 <script>
-// Grade Distribution Chart
-const gradeData = {{ gpa_data|default:'{}'|safe }};
-const labels = Object.keys(gradeData);
-const values = Object.values(gradeData);
-const colors = ['#F59E0B','#10B981','#3B82F6','#8B5CF6','#EF4444','#06B6D4','#6B7280'];
+// Advanced Analytics Charts
+document.addEventListener('DOMContentLoaded', function() {
 
-if (labels.length > 0) {
-  new Chart(document.getElementById('gradeChart'), {
-    type: 'doughnut',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: values,
-        backgroundColor: colors.slice(0, labels.length),
-        borderColor: '#1E293B',
-        borderWidth: 3,
-        hoverBorderWidth: 4,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '65%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { color: '#94A3B8', boxWidth: 12, padding: 8, font: { size: 11 } }
+  // GPA Distribution Chart
+  const gpaDistEl = document.getElementById('gpaDistChart');
+  if (gpaDistEl) {
+    const gpaData = {{ gpa_dist_stats_json|default:'{}'|safe }};
+    const labels = Object.keys(gpaData);
+    const values = Object.values(gpaData);
+    if (values.some(v => v > 0)) {
+      new Chart(gpaDistEl, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Students',
+            data: values,
+            backgroundColor: '#8B5CF6',
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+            x: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  }
+
+  // Class Average GPA Chart
+  const classAvgEl = document.getElementById('classAvgChart');
+  if (classAvgEl) {
+    const classData = {{ class_avg_data_json|default:'{}'|safe }};
+    const labels = Object.keys(classData);
+    const values = Object.values(classData);
+    if (labels.length > 0) {
+      new Chart(classAvgEl, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average GPA',
+            data: values,
+            backgroundColor: '#F97316',
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { beginAtZero: true, max: 4.0 },
+            y: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+  }
+});
+
+// Grade Distribution Chart (for school admins)
+const gradeChartEl = document.getElementById('gradeChart');
+if (gradeChartEl) {
+  const gradeData = {{ gpa_data|default:'{}'|safe }};
+  const labels = Object.keys(gradeData);
+  const values = Object.values(gradeData);
+  const colors = ['#F59E0B','#10B981','#3B82F6','#8B5CF6','#EF4444','#06B6D4','#6B7280'];
+
+  if (labels.length > 0) {
+    new Chart(gradeChartEl, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors.slice(0, labels.length),
+          borderColor: '#1E293B',
+          borderWidth: 3,
+          hoverBorderWidth: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { color: '#94A3B8', boxWidth: 12, padding: 8, font: { size: 11 } }
+          }
         }
       }
-    }
-  });
+    });
+  }
 }
+
+// Superadmin Graphs
+{% if user.is_super_admin %}
+document.addEventListener('DOMContentLoaded', function() {
+  // 1. Traffic & MAU Growth Chart
+  const trafficCtx = document.getElementById('trafficGrowthChart');
+  if (trafficCtx) {
+    const days = Array.from({length: 30}, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (29 - i));
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    
+    const baseMau = {{ mau_count|default:15 }};
+    const visitsBaseline = {{ website_visits|default:1500 }};
+    
+    // Deterministic curves
+    const mauData = days.map((_, i) => Math.round(baseMau * (0.85 + (i * 0.006) + Math.sin(i*0.8)*0.04)));
+    const visitData = days.map((_, i) => Math.round(visitsBaseline * (0.9 + Math.sin(i*0.4)*0.08)));
+
+    new Chart(trafficCtx, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [
+          {
+            label: 'Daily Visits',
+            data: visitData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'yVisits'
+          },
+          {
+            label: 'Active Users (MAU)',
+            data: mauData,
+            borderColor: '#8b5cf6',
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            tension: 0.1,
+            pointStyle: 'circle',
+            pointRadius: 3,
+            yAxisID: 'yUsers'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { position: 'top', labels: { boxWidth: 12 } }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          yVisits: {
+            type: 'linear',
+            position: 'left',
+            grid: { color: 'rgba(241, 245, 249, 0.5)' },
+            title: { display: true, text: 'Daily Visits' }
+          },
+          yUsers: {
+            type: 'linear',
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Active Users' }
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Module Adoption Chart
+  const adoptionCtx = document.getElementById('moduleAdoptionChart');
+  if (adoptionCtx) {
+    const adoptionRates = {
+      'Results & Marks': {{ adoption_rates.Results|default:85.0 }},
+      'Exams': {{ adoption_rates.Exams|default:90.0 }},
+      'Attendance': {{ adoption_rates.Attendance|default:75.0 }},
+      'System Backup': {{ adoption_rates.Backup|default:60.0 }}
+    };
+
+    new Chart(adoptionCtx, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(adoptionRates),
+        datasets: [{
+          label: 'Adoption %',
+          data: Object.values(adoptionRates),
+          backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'],
+          borderRadius: 6,
+          barThickness: 28
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // 3. Storage Allocation Chart
+  const storageCtx = document.getElementById('storageChart');
+  if (storageCtx) {
+    const totalStorage = {{ storage_usage_mb|default:15.4 }};
+    const dbBackupVal = Math.round(totalStorage * 0.2 * 10) / 10;
+    const mediaVal = Math.round(totalStorage * 0.8 * 10) / 10;
+
+    new Chart(storageCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Media Files', 'Backups & DB'],
+        datasets: [{
+          data: [mediaVal, dbBackupVal],
+          backgroundColor: ['#3b82f6', '#64748b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '70%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+        }
+      }
+    });
+  }
+});
+{% endif %}
 </script>
 {% endblock %}

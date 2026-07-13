@@ -89,25 +89,63 @@ input[data-field="theory"], input[data-field="internal"] {
 }
 
 /* Hide number inputs spinner/arrows */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
 }
-input[type=number] {
-  -moz-appearance: textfield;
+
+/* Subject Banding Colors */
+.bg-band-even {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+.bg-band-odd {
+  background-color: transparent;
+}
+[data-theme="dark"] .bg-band-even {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Inline Auto-Save Indicator */
+.inline-save-indicator {
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-emerald);
+  font-size: 0.8rem;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.inline-save-indicator.show {
+  opacity: 1;
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header flex-column align-items-start gap-3">
-  <div>
-    <h1 class="page-title">📝 Mark Entry</h1>
-    <div class="page-subtitle">
-      <strong>{{ exam.name }}</strong> &nbsp;|&nbsp; {{ class_obj.full_name }}
-      &nbsp;|&nbsp; {{ students.count }} students
+  <div class="d-flex justify-content-between w-100 align-items-start flex-wrap gap-3">
+    <div>
+      <h1 class="page-title">📝 Mark Entry</h1>
+      <div class="page-subtitle">
+        <strong>{{ exam.name }}</strong> &nbsp;|&nbsp; {{ class_obj.full_name }}
+        &nbsp;|&nbsp; {{ students.count }} students
+      </div>
     </div>
+    {% if available_classes %}
+    <div>
+      <label class="form-label mb-1" style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500;">Switch Class:</label>
+      <select class="form-select" onchange="if(this.value) window.location.href=this.value;" style="min-width: 250px;">
+        {% for c in available_classes %}
+        <option value="{% url 'mark_entry' exam.id c.id %}" {% if c.id == class_obj.id %}selected{% endif %}>
+          {{ c.full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
   </div>
   <div class="d-flex justify-content-start align-items-center gap-2 flex-wrap w-100">
     <a href="{% url 'mark_entry_template' exam.id class_obj.id %}" class="btn btn-secondary">
@@ -122,7 +160,7 @@ input[type=number] {
     </button>
     {% endif %}
     {% if request.user.can_manage_school %}
-      <form method="POST" action="{% url 'toggle_class_lock' exam.id class_obj.id %}" style="display:inline;" onsubmit="return confirm('Are you sure? Locking will process results and publish them for this class.')">
+      <form method="POST" action="{% url 'toggle_class_lock' exam.id class_obj.id %}" style="display:inline;" onsubmit="event.preventDefault(); {% if exam_class.is_locked %}confirmAction('Are you sure you want to unlock marks for editing?', () => this.submit());{% else %}validateAndLock(this);{% endif %}">
         {% csrf_token %}
         {% if exam_class.is_locked %}
           <input type="hidden" name="action" value="unlock">
@@ -137,17 +175,20 @@ input[type=number] {
         {% endif %}
       </form>
     {% endif %}
-    <span id="saveStatus" class="auto-save-indicator ms-2" style="display:none;">
-      <i class="bi bi-check-circle-fill" style="color:var(--color-emerald);"></i>
-      <span style="color:var(--color-emerald);font-size:0.78rem;">Saved</span>
+    <span id="saveStatus" class="ms-3 d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="display:none; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:var(--color-emerald); font-weight:600; font-size:0.85rem; transition: opacity 0.3s;">
+      <i class="bi bi-cloud-check-fill"></i>
+      <span>All changes saved to cloud</span>
     </span>
   </div>
 </div>
 
 {% if exam_class.is_locked %}
 <div class="alert alert-warning">
-  <i class="bi bi-lock-fill"></i>
-  Results for this class are <strong>locked and processed</strong>. Only an Admin can unlock for editing.
+  {% if request.user.is_teacher %}
+    Mark entry is locked by Admin.
+  {% else %}
+    Results for this class are <strong>locked and processed</strong>. Only an Admin can unlock for editing.
+  {% endif %}
 </div>
 {% endif %}
 
@@ -174,6 +215,7 @@ input[type=number] {
               style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center;">
             {{ subject.name }}
             <span class="badge badge-gray ms-1" style="font-size:0.6rem;">{{ subject.get_subject_type_display }}</span>
+            <div data-bs-toggle="tooltip" title="Credit Hours determine the overall weight of this subject in GPA calculation" style="font-size:0.7rem; font-weight:normal; color:var(--color-text-muted); opacity:0.8; margin-top:4px; cursor:help;">TH: {{ subject.theory_credit_hour|floatformat:"-1" }}{% if subject.marking_structure.has_internal %}, IN: {{ subject.practical_credit_hour|default:0|floatformat:"-1" }}{% endif %} <i class="bi bi-question-circle"></i></div>
           </th>
           {% endfor %}
           {% if not request.user.is_teacher %}
@@ -193,7 +235,7 @@ input[type=number] {
         <!-- Row 2: Sub-headers -->
         <tr>
           {% for subject in subjects %}
-            <th>
+            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
               Th.
               <input type="number" 
                      class="full-marks-input" 
@@ -201,10 +243,11 @@ input[type=number] {
                      data-subject="{{ subject.id }}" 
                      data-field="theory"
                      {% if exam_class.is_locked %}disabled{% endif %}
-                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;">
+                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;"
+                     data-bs-toggle="tooltip" title="Full Marks (Theory)">
             </th>
             {% if subject.marking_structure.has_internal %}
-            <th>
+            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
               Int.
               <input type="number" 
                      class="full-marks-input" 
@@ -212,10 +255,11 @@ input[type=number] {
                      data-subject="{{ subject.id }}" 
                      data-field="internal"
                      {% if exam_class.is_locked %}disabled{% endif %}
-                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;">
+                     style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;"
+                     data-bs-toggle="tooltip" title="Full Marks (Internal)">
             </th>
             {% endif %}
-            <th>Special</th>
+            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">Special</th>
           {% endfor %}
           {% if not request.user.is_teacher %}
           <th>Present Days</th>
@@ -231,44 +275,53 @@ input[type=number] {
           </td>
 
           {% for sm in student.subject_marks %}
-            <td>
-              <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.theory_full_marks }}"
-                step="1"
-                value="{{ sm.me.theory_obtained|default:'' }}"
-                data-student="{{ student.id }}"
-                data-subject="{{ sm.subject.id }}"
-                data-field="theory"
-                data-max="{{ sm.subject.marking_structure.theory_full_marks }}"
-                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
-                oninput="scheduleSave(this)"
-                title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.marking_structure.theory_full_marks }}){% endif %}">
+            <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
+              <div style="position: relative; display: inline-block;">
+                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                  step="1"
+                  value="{{ sm.me.theory_obtained|default:'' }}"
+                  data-student="{{ student.id }}"
+                  data-subject="{{ sm.subject.id }}"
+                  data-field="theory"
+                  data-max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                  {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                  oninput="scheduleSave(this)"
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.marking_structure.theory_full_marks }}){% endif %}">
+                <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-theory"></i>
+              </div>
             </td>
             {% if sm.subject.marking_structure.has_internal %}
-            <td>
-              <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.internal_full_marks }}"
-                step="1"
-                value="{{ sm.me.internal_obtained|default:'' }}"
-                data-student="{{ student.id }}"
-                data-subject="{{ sm.subject.id }}"
-                data-field="internal"
-                data-max="{{ sm.subject.marking_structure.internal_full_marks }}"
-                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
-                oninput="scheduleSave(this)"
-                title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.marking_structure.internal_full_marks }}){% endif %}">
+            <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
+              <div style="position: relative; display: inline-block;">
+                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                  step="1"
+                  value="{{ sm.me.internal_obtained|default:'' }}"
+                  data-student="{{ student.id }}"
+                  data-subject="{{ sm.subject.id }}"
+                  data-field="internal"
+                  data-max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                  {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                  oninput="scheduleSave(this)"
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.marking_structure.internal_full_marks }}){% endif %}">
+                <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-internal"></i>
+              </div>
             </td>
             {% endif %}
-            <td>
-              <select class="special-select {% if sm.is_restricted %}restricted-input{% endif %}"
-                data-student="{{ student.id }}"
-                data-subject="{{ sm.subject.id }}"
-                data-field="special"
-                {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
-                onchange="scheduleSave(this)">
-                <option value="" {% if sm.is_restricted %}disabled{% endif %}>—</option>
-                <option value="AB" {% if sm.me.special_value == 'AB' %}selected{% endif %}>AB</option>
-                <option value="WH" {% if sm.me.special_value == 'WH' %}selected{% endif %}>WH</option>
-                <option value="EX" {% if sm.me.special_value == 'EX' %}selected{% endif %}>EX</option>
-              </select>
+            <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
+              <div style="position: relative; display: inline-block;">
+                <select class="special-select {% if sm.is_restricted %}restricted-input{% endif %}"
+                  data-student="{{ student.id }}"
+                  data-subject="{{ sm.subject.id }}"
+                  data-field="special"
+                  {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
+                  onchange="scheduleSave(this)">
+                  <option value="" {% if sm.is_restricted %}disabled{% endif %}>—</option>
+                  <option value="AB" {% if sm.me.special_value == 'AB' %}selected{% endif %}>AB</option>
+                  <option value="WH" {% if sm.me.special_value == 'WH' %}selected{% endif %}>WH</option>
+                  <option value="EX" {% if sm.me.special_value == 'EX' %}selected{% endif %}>EX</option>
+                </select>
+                <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-special"></i>
+              </div>
             </td>
           {% endfor %}
 
@@ -361,6 +414,29 @@ function scheduleSave(input) {
   if (subjectId) pendingSaves[key].subject_id = subjectId;
   pendingSaves[key].student_id = studentId;
 
+  // Interaction logic: reset special status when marks are entered
+  if ((field === 'theory' || field === 'internal') && input.value.trim() !== '') {
+    const specialSelect = document.querySelector(`select[data-field="special"][data-student="${studentId}"][data-subject="${subjectId}"]`);
+    if (specialSelect && specialSelect.value !== '') {
+      specialSelect.value = '';
+      pendingSaves[key]['special'] = '';
+    }
+  }
+
+  // Interaction logic: clear marks when special status is set
+  if (field === 'special' && input.value.trim() !== '') {
+    const theoryInput = document.querySelector(`input[data-field="theory"][data-student="${studentId}"][data-subject="${subjectId}"]`);
+    const internalInput = document.querySelector(`input[data-field="internal"][data-student="${studentId}"][data-subject="${subjectId}"]`);
+    if (theoryInput && theoryInput.value.trim() !== '') {
+      theoryInput.value = '';
+      pendingSaves[key]['theory'] = '';
+    }
+    if (internalInput && internalInput.value.trim() !== '') {
+      internalInput.value = '';
+      pendingSaves[key]['internal'] = '';
+    }
+  }
+
   clearTimeout(saveTimers[key]);
   saveTimers[key] = setTimeout(() => doSave(key), 800);
 }
@@ -391,6 +467,7 @@ async function doSave(key) {
   };
 
   try {
+    showSaving();
     const res = await fetch(SAVE_URL, {
       method: 'POST',
       headers: {
@@ -409,6 +486,14 @@ async function doSave(key) {
           el.classList.remove('error');
           el.classList.add('saved');
           setTimeout(() => el.classList.remove('saved'), 2000);
+          
+          // Show inline indicator if it exists
+          const field = el.dataset.field;
+          const ind = document.getElementById(`save-ind-${studentId}-${subjectId}-${field}`);
+          if (ind) {
+            ind.classList.add('show');
+            setTimeout(() => ind.classList.remove('show'), 2000);
+          }
         });
     } else {
       const err = await res.json();
@@ -559,22 +644,73 @@ document.querySelectorAll('.full-marks-input').forEach(input => {
   });
 });
 
+function showSaving() {
+  const indicator = document.getElementById('saveStatus');
+  indicator.style.display = 'inline-flex';
+  indicator.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="color:var(--color-emerald);"></span><span style="color:var(--color-emerald);font-size:0.85rem;">Saving...</span>';
+}
+
 function showSaved() {
   const indicator = document.getElementById('saveStatus');
   indicator.style.display = 'inline-flex';
-  clearTimeout(window._savedTimer);
-  window._savedTimer = setTimeout(() => indicator.style.display = 'none', 2000);
+  indicator.innerHTML = '<i class="bi bi-cloud-check-fill" style="color:var(--color-emerald);"></i><span style="color:var(--color-emerald);font-size:0.85rem;">All changes saved to cloud</span>';
 }
 
-function processResults() {
-  // Not used anymore - handled by the lock endpoint
+function validateAndLock(formElement) {
+  const emptyInputs = document.querySelectorAll('tbody .mark-input:not([disabled]):not(.restricted-input)');
+  let missingCount = 0;
+  emptyInputs.forEach(inp => {
+    if (inp.value.trim() === '') {
+      const studentId = inp.dataset.student;
+      const subjectId = inp.dataset.subject;
+      const specialSelect = document.querySelector(`select[data-field="special"][data-student="${studentId}"][data-subject="${subjectId}"]`);
+      if (!specialSelect || specialSelect.value === '') {
+         missingCount++;
+      }
+    }
+  });
+
+  let warningMessage = 'Are you sure? Locking will process results and publish them for this class.';
+  if (missingCount > 0) {
+    warningMessage = `⚠️ WARNING: There are ${missingCount} missing marks without a special status (e.g. AB/WH). Are you sure you want to lock and process results with missing data?`;
+  }
+  
+  confirmAction(warningMessage, () => formElement.submit());
 }
 
-// Prevent up/down arrow keys and mouse wheel from changing values in number inputs
+// Excel-Like Grid Navigation (#10)
 document.addEventListener('keydown', function(e) {
-  if (e.target.type === 'number') {
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      e.preventDefault();
+  if (e.target.classList.contains('mark-input') || e.target.classList.contains('special-select')) {
+    if (e.target.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault(); // Prevent native number spinner
+    }
+    
+    // Only handle movement keys: Up, Down, Enter, Shift+Left, Shift+Right
+    if (['ArrowUp', 'ArrowDown', 'Enter'].includes(e.key) || (e.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(e.key))) {
+      const allInputs = Array.from(document.querySelectorAll('tbody .mark-input, tbody .special-select'));
+      const firstRow = document.querySelector('tbody tr');
+      if (!firstRow) return;
+      const cols = firstRow.querySelectorAll('.mark-input, .special-select').length;
+      
+      const index = allInputs.indexOf(e.target);
+      if (index === -1) return;
+      
+      let step = 0;
+      if (e.key === 'ArrowUp') step = -cols;
+      else if (e.key === 'ArrowDown' || e.key === 'Enter') step = cols;
+      else if (e.key === 'ArrowRight' && e.shiftKey) step = 1;
+      else if (e.key === 'ArrowLeft' && e.shiftKey) step = -1;
+      
+      let nextIndex = index + step;
+      while (nextIndex >= 0 && nextIndex < allInputs.length) {
+        if (!allInputs[nextIndex].disabled) {
+          e.preventDefault();
+          allInputs[nextIndex].focus();
+          if (allInputs[nextIndex].select) allInputs[nextIndex].select();
+          break;
+        }
+        nextIndex += step;
+      }
     }
   }
 });

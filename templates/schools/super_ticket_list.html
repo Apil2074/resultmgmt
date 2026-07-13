@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block page_title %}Support Tickets{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2 class="h4 mb-0 text-slate-800">Support Tickets</h2>
+        <p class="text-muted mb-0 small">Manage support requests from all schools</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <form method="get" class="d-inline-flex gap-2">
+            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">All Statuses</option>
+                <option value="OPEN" {% if current_status == 'OPEN' %}selected{% endif %}>Open</option>
+                <option value="IN_PROGRESS" {% if current_status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                <option value="RESOLVED" {% if current_status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+                <option value="CLOSED" {% if current_status == 'CLOSED' %}selected{% endif %}>Closed</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="border-0 px-4">School</th>
+                        <th class="border-0">Subject</th>
+                        <th class="border-0">Status</th>
+                        <th class="border-0">Last Updated</th>
+                        <th class="border-0 text-end px-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr>
+                        <td class="px-4">
+                            <div class="fw-medium text-slate-800">{{ ticket.school.name }}</div>
+                            <div class="small text-muted">{{ ticket.created_by.get_full_name|default:ticket.created_by.email }}</div>
+                        </td>
+                        <td class="fw-medium">{{ ticket.subject }}</td>
+                        <td>
+                            {% if ticket.status == 'OPEN' %}
+                                <span class="badge bg-primary">Open</span>
+                            {% elif ticket.status == 'IN_PROGRESS' %}
+                                <span class="badge bg-warning text-dark">In Progress</span>
+                            {% elif ticket.status == 'RESOLVED' %}
+                                <span class="badge bg-success">Resolved</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Closed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ ticket.updated_at|date:"M d, Y H:i" }}</td>
+                        <td class="text-end px-4">
+                            <a href="{% url 'super_ticket_detail' ticket.id %}" class="btn btn-sm btn-outline-primary">Manage</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No support tickets found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

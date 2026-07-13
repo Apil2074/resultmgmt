@@ -48,14 +48,23 @@ class Subject(models.Model):
         from decimal import Decimal
         return self.theory_credit_hour + (self.practical_credit_hour or Decimal('0.0'))
 
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+        if self.theory_credit_hour is not None and self.theory_credit_hour < 0:
+            raise ValidationError("Theory credit hour cannot be negative.")
+        if self.practical_credit_hour is not None and self.practical_credit_hour < 0:
+            raise ValidationError("Practical credit hour cannot be negative.")
+
     def save(self, *args, **kwargs):
+        self.clean()
         if not self.session and self.class_obj:
             self.session = self.class_obj.session
         super().save(*args, **kwargs)
         
         # Auto-create or update SubjectMarkingStructure
         from apps.subjects.models import SubjectMarkingStructure
-        pass_marks = 35 if self.school.grading_system == 'NEB' else 30
+        pass_marks = 35
         
         sms, created = SubjectMarkingStructure.objects.get_or_create(
             subject=self,
@@ -124,6 +133,30 @@ class SubjectMarkingStructure(models.Model):
             total += (self.internal_pass_marks or 0)
         return total
 
+    def clean(self):
+        super().clean()
+        if self.pk:
+            from django.core.exceptions import ValidationError
+            from apps.marks.models import MarkEntry
+            exceeding_theory = MarkEntry.objects.filter(
+                subject=self.subject,
+                theory_obtained__gt=self.theory_full_marks
+            ).exists()
+            if exceeding_theory:
+                raise ValidationError("Cannot reduce theory full marks because some students already have marks exceeding the new limit.")
+            
+            if self.has_internal and self.internal_full_marks is not None:
+                exceeding_internal = MarkEntry.objects.filter(
+                    subject=self.subject,
+                    internal_obtained__gt=self.internal_full_marks
+                ).exists()
+                if exceeding_internal:
+                    raise ValidationError("Cannot reduce internal full marks because some students already have marks exceeding the new limit.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
 
 class StudentSubjectEnrollment(models.Model):
     """Enrollment of a student in an optional subject."""
@@ -142,3 +175,28 @@ class StudentSubjectEnrollment(models.Model):
 
     def __str__(self):
         return f"{self.student.name} → {self.subject.name}"
+
+
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+@receiver(post_delete, sender=StudentSubjectEnrollment)
+def delete_orphaned_mark_entries(sender, instance, **kwargs):
+    """
+    Delete MarkEntry records for a student when they are unmapped from an optional subject.
+    """
+    from apps.marks.models import MarkEntry
+    MarkEntry.objects.filter(
+        student=instance.student,
+        subject=instance.subject
+    ).delete()
+
+
+@receiver(post_delete, sender=Subject)
+def delete_stale_student_results_on_subject_delete(sender, instance, **kwargs):
+    """
+    When a Subject is deleted, delete overall StudentResult records for all students in that class
+    so that overall results are forced to be recalculated and do not remain stale.
+    """
+    from apps.results.models import StudentResult
+    StudentResult.objects.filter(student__class_obj=instance.class_obj).delete()

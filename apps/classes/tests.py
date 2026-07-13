@@ -91,3 +91,42 @@ class BulkMapSubjectsTest(TestCase):
         self.assertFalse(StudentSubjectEnrollment.objects.filter(student=self.student1, subject=self.opt_sub2).exists())
         self.assertTrue(StudentSubjectEnrollment.objects.filter(student=self.student2, subject=self.opt_sub1).exists())
         self.assertTrue(StudentSubjectEnrollment.objects.filter(student=self.student2, subject=self.opt_sub2).exists())
+
+    def test_unmap_cleanup_marks(self):
+        from apps.marks.models import MarkEntry
+        from apps.exams.models import Exam
+        from decimal import Decimal
+
+        # 1. Create enrollment
+        enrollment = StudentSubjectEnrollment.objects.create(
+            student=self.student1,
+            subject=self.opt_sub1
+        )
+        
+        # 2. Create exam
+        exam = Exam.objects.create(
+            school=self.school,
+            session=self.session,
+            name="Mid Term Exam",
+            status=Exam.Status.DRAFT
+        )
+        
+        # 3. Create marks
+        mark = MarkEntry.objects.create(
+            school=self.school,
+            exam=exam,
+            session=self.session,
+            student=self.student1,
+            subject=self.opt_sub1,
+            theory_obtained=Decimal("85.00")
+        )
+        
+        # Verify mark exists
+        self.assertTrue(MarkEntry.objects.filter(student=self.student1, subject=self.opt_sub1).exists())
+        
+        # 4. Unmap student (delete enrollment)
+        enrollment.delete()
+        
+        # Verify mark is deleted
+        self.assertFalse(MarkEntry.objects.filter(student=self.student1, subject=self.opt_sub1).exists())
+

@@ -14,6 +14,11 @@ class Teacher(models.Model):
         on_delete=models.CASCADE,
         related_name='teachers'
     )
+    sessions = models.ManyToManyField(
+        'schools.AcademicSession',
+        related_name='teachers',
+        blank=True
+    )
     sn = models.CharField(max_length=50, blank=True)
     name = models.CharField(max_length=200)
     contact_number = models.CharField(max_length=50, blank=True)
@@ -52,3 +57,14 @@ class TeacherSubject(models.Model):
 
     def __str__(self):
         return f"{self.teacher.name} -> {self.subject.name} ({self.subject.class_obj.full_name})"
+
+    def clean(self):
+        super().clean()
+        from django.core.exceptions import ValidationError
+        if self.teacher and self.subject:
+            if self.teacher.school_id != self.subject.school_id:
+                raise ValidationError("Teacher and Subject must belong to the same school.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)

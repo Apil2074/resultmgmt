@@ -109,14 +109,13 @@ class GradeScale(models.Model):
         'schools.School', on_delete=models.CASCADE, related_name='grade_scales'
     )
     name = models.CharField(max_length=100)
-    grading_system = models.CharField(max_length=20)
 
     class Meta:
         verbose_name = 'Grade Scale'
-        unique_together = ['school', 'grading_system']
+        unique_together = ['school']
 
     def __str__(self):
-        return f"{self.name} ({self.grading_system})"
+        return f"{self.name}"
 
 
 class GradeScaleEntry(models.Model):

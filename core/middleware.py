@@ -32,7 +32,11 @@ class SchoolRequiredMiddleware:
                 'login', 'logout', 'change_password', 'profile', 'dashboard',
                 'api_login', 'api_logout', 'api_change_password', 'api_me',
                 'super_schools', 'create_school_and_admin', 'subscription_expired', 
-                'edit_school', 'reset_school_admin_password', 'forgot_password'
+                'edit_school', 'reset_school_admin_password', 'forgot_password',
+                'send_notification', 'mark_notification_read',
+                'super_notifications', 'super_subscriptions', 'super_analytics',
+                'super_reports', 'super_settings',
+                'super_ticket_list', 'super_ticket_detail'
             ]
             exempt_prefixes = ['/admin/', '/static/', '/media/', '/api/']
 
@@ -44,18 +48,6 @@ class SchoolRequiredMiddleware:
                     if request.path_info.startswith(prefix):
                         is_exempt = True
                         break
-
-            # 2. Enforce Teacher Access Control
-            if request.user.is_authenticated and getattr(request.user, 'is_teacher', False):
-                allowed_teacher_urls = {
-                    'teacher_dashboard', 'login', 'logout', 'change_password', 'profile',
-                    'exam_list', 'mark_entry', 'save_mark', 'save_full_marks',
-                    'bulk_mark_import', 'mark_entry_template', 'subject_analysis'
-                }
-                
-                if url_name not in allowed_teacher_urls and not request.path_info.startswith('/static/') and not request.path_info.startswith('/media/') and not request.path_info.startswith('/api/'):
-                    messages.error(request, 'Access denied. Teachers cannot access this section.')
-                    return redirect('teacher_dashboard')
 
             if not is_exempt and not getattr(request.user, 'school', None):
                 messages.error(request, 'No school is assigned to your account. You must have an assigned school to manage this section.')

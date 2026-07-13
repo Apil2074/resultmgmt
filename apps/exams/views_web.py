@@ -30,6 +30,7 @@ def exam_list(request):
                 end_date=request.POST.get('end_date') or None,
                 result_date=request.POST.get('result_date') or None,
                 is_locked=(request.POST.get('is_locked') == 'on'),
+                is_aggregate=(request.POST.get('is_aggregate') == 'on'),
             )
             # Link classes
             class_ids = request.POST.getlist('class_ids')
@@ -61,6 +62,10 @@ def exam_detail(request, pk):
     exam_classes = exam.exam_classes.select_related('class_obj')
 
     if request.method == 'POST':
+        if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+            messages.error(request, 'Access denied.')
+            return redirect('exam_detail', pk=pk)
+            
         action = request.POST.get('action')
         
         if action == 'add_classes':
@@ -110,6 +115,7 @@ def exam_detail(request, pk):
         'exam': exam,
         'exam_classes': exam_classes,
         'available_classes': available_classes,
+        'aggregation_rules': exam.aggregation_rules.all() if exam.is_aggregate else [],
     })
 
 
@@ -164,6 +170,7 @@ def exam_edit(request, pk):
         exam.end_date = request.POST.get('end_date') or None
         exam.result_date = request.POST.get('result_date') or None
         exam.is_locked = (request.POST.get('is_locked') == 'on')
+        exam.is_aggregate = (request.POST.get('is_aggregate') == 'on')
         
         session_id = request.POST.get('session_id')
         if session_id:
@@ -226,3 +233,74 @@ def exam_delete(request, pk):
     return render(request, 'exams/delete.html', {
         'exam': exam
     })
+
+
+@login_required
+def exam_aggregation_rules(request, pk):
+    school = request.user.school
+    exam = get_object_or_404(Exam, pk=pk, school=school, is_aggregate=True)
+
+    if not exam.is_editable:
+        messages.error(request, 'Cannot edit this exam as it is locked.')
+        return redirect('exam_detail', pk=pk)
+
+    from .models import ExamAggregationRule
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'add_rule':
+            source_exam_id = request.POST.get('source_exam_id')
+            weight = request.POST.get('weight_percentage')
+            try:
+                source_exam = Exam.objects.get(pk=source_exam_id, school=school)
+                ExamAggregationRule.objects.create(
+                    aggregate_exam=exam,
+                    source_exam=source_exam,
+                    weight_percentage=weight
+                )
+                messages.success(request, f'Added {source_exam.name} with weight {weight}%')
+            except Exception as e:
+                messages.error(request, f'Error adding rule: {e}')
+        
+        elif action == 'delete_rule':
+            rule_id = request.POST.get('rule_id')
+            rule = ExamAggregationRule.objects.filter(pk=rule_id, aggregate_exam=exam).first()
+            if rule:
+                rule.delete()
+                messages.success(request, 'Rule deleted.')
+                
+        return redirect('exam_aggregation_rules', pk=pk)
+
+    rules = exam.aggregation_rules.select_related('source_exam')
+    available_exams = Exam.objects.filter(
+        school=school, 
+        session=exam.session
+    ).exclude(id=exam.id).exclude(id__in=rules.values_list('source_exam_id', flat=True))
+
+    return render(request, 'exams/aggregate_rules.html', {
+        'exam': exam,
+        'rules': rules,
+        'available_exams': available_exams,
+    })
+
+
+@login_required
+def exam_generate_aggregate(request, pk):
+    school = request.user.school
+    exam = get_object_or_404(Exam, pk=pk, school=school, is_aggregate=True)
+
+    if not request.user.can_manage_school():
+        messages.error(request, 'Permission denied.')
+        return redirect('exam_detail', pk=pk)
+
+    if request.method == 'POST':
+        from .services import ExamAggregationService
+        try:
+            service = ExamAggregationService(exam)
+            count = service.generate_aggregate_marks()
+            messages.success(request, f'Successfully generated aggregate marks for {count} subjects/students.')
+        except Exception as e:
+            messages.error(request, f'Error generating aggregate results: {e}')
+
+    return redirect('exam_detail', pk=pk)
+

@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import transaction
+from django.db.models.functions import Length
 from django_ratelimit.decorators import ratelimit
 
 from apps.exams.models import ExamClass
@@ -61,7 +62,7 @@ def grade_ledger(request, exam_id, class_id):
     # Get all student results
     student_results = StudentResult.objects.filter(
         exam=exam, student__class_obj=cls, school=school
-    ).select_related('student').order_by('class_rank', 'student__roll_number')
+    ).select_related('student').order_by('class_rank', Length('student__roll_number'), 'student__roll_number')
 
     # Build subject-keyed mark map
     mark_map = {}
@@ -210,7 +211,7 @@ def marksheet(request, exam_id, student_id):
 
     # Navigation — prev/next student
     all_students = list(
-        student.class_obj.students.filter(is_active=True).order_by('roll_number')
+        student.class_obj.students.filter(is_active=True).order_by(Length('roll_number'), 'roll_number')
         .values_list('id', flat=True)
     )
     current_idx = all_students.index(student_id) if student_id in all_students else 0
@@ -300,7 +301,7 @@ def class_marksheets_pdf(request, exam_id, class_id):
 
     student_results = StudentResult.objects.filter(
         exam=exam, student__class_obj=cls, school=school
-    ).select_related('student').order_by('class_rank', 'student__roll_number')
+    ).select_related('student').order_by('class_rank', Length('student__roll_number'), 'student__roll_number')
 
     if not student_results.exists():
         messages.error(request, 'No student results processed yet for this class.')
@@ -655,11 +656,28 @@ def grade_ledger_select(request):
                 else:
                     sr.attendance_pct = None
 
+            ledger_pages = []
+            chunk_size = 4
+            for i in range(0, len(subjects), chunk_size):
+                page_subjects = subjects[i:i + chunk_size]
+                page_students = []
+                for sr in student_results:
+                    page_students.append({
+                        'sr': sr,
+                        'scores': sr.subject_scores[i:i + chunk_size]
+                    })
+                ledger_pages.append({
+                    'subjects': page_subjects,
+                    'students': page_students,
+                    'is_last_page': (i + chunk_size >= len(subjects))
+                })
+
             context.update({
                 'exam': exam,
                 'class_obj': cls,
                 'subjects': subjects,
                 'student_results': student_results,
+                'ledger_pages': ledger_pages,
             })
         except Exception as e:
             messages.error(request, f"Error retrieving grade ledger: {str(e)}")
@@ -703,7 +721,7 @@ def marksheet_select(request):
     students_qs = Student.objects.filter(school=school, is_active=True)
     if active_session:
         students_qs = students_qs.filter(class_obj__session=active_session)
-    students_qs = students_qs.order_by('roll_number')
+    students_qs = students_qs.order_by(Length('roll_number'), 'roll_number')
     class_students_map = {}
     for s in students_qs:
         class_students_map.setdefault(s.class_obj_id, []).append({
@@ -750,7 +768,7 @@ def marksheet_select(request):
                 return redirect('marksheet_select')
 
             if student_id == 'all':
-                students_to_process = list(cls.students.filter(is_active=True).order_by('roll_number'))
+                students_to_process = list(cls.students.filter(is_active=True).order_by(Length('roll_number'), 'roll_number'))
                 prev_student_id = None
                 next_student_id = None
             else:
@@ -759,7 +777,7 @@ def marksheet_select(request):
                 
                 # Navigation - prev/next student relative to this class
                 all_students = list(
-                    student.class_obj.students.filter(is_active=True).order_by('roll_number')
+                    student.class_obj.students.filter(is_active=True).order_by(Length('roll_number'), 'roll_number')
                     .values_list('id', flat=True)
                 )
                 current_idx = all_students.index(student.id) if student.id in all_students else 0
@@ -930,6 +948,10 @@ def public_report_card(request, exam_id, student_id):
 
     student = get_object_or_404(Student, pk=student_id)
     exam = get_object_or_404(Exam, pk=exam_id, status='PUBLISHED')
+
+    if student.school_id != exam.school_id:
+        messages.error(request, "Invalid request details.")
+        return redirect('public_result_search')
 
     try:
         result = StudentResult.objects.get(exam=exam, student=student)

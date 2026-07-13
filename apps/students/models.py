@@ -23,6 +23,12 @@ class Student(models.Model):
     name = models.CharField(max_length=200)
     registration_number = models.CharField(max_length=50, blank=True, db_index=True)
     symbol_number = models.CharField(max_length=50, blank=True, db_index=True)
+    gender = models.CharField(
+        max_length=10,
+        choices=[('M', 'Male'), ('F', 'Female'), ('O', 'Other')],
+        blank=True,
+        null=True
+    )
     date_of_birth = models.DateField(null=True, blank=True)
     date_of_birth_bs = models.CharField(max_length=20, blank=True, null=True)
     parent_name = models.CharField(max_length=200, blank=True)
@@ -112,3 +118,90 @@ class Student(models.Model):
             return f"{bs_str} BS ({ad_str} A.D)"
         except Exception:
             return f"{ad_str} A.D"
+
+
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
+
+def recalculate_class_ranks(class_obj, exam):
+    from apps.results.models import StudentResult
+    from core.grading import calculate_ranks
+    
+    results = list(StudentResult.objects.filter(
+        exam=exam, student__class_obj=class_obj
+    ).select_related('student'))
+    
+    ranked = calculate_ranks(results)
+    for r in ranked:
+        StudentResult.objects.filter(pk=r.pk).update(class_rank=r.class_rank)
+
+@receiver(pre_save, sender=Student)
+def handle_student_class_transfer(sender, instance, **kwargs):
+    """
+    Clean up marks and results when a student is transferred/promoted to a different class,
+    or when they are deactivated.
+    """
+    if not instance.pk:
+        return
+    try:
+        old_instance = Student.objects.get(pk=instance.pk)
+    except Student.DoesNotExist:
+        return
+        
+    if old_instance.class_obj != instance.class_obj:
+        from apps.marks.models import MarkEntry
+        from apps.results.models import StudentResult
+        from apps.exams.models import Exam
+        
+        # Get list of exam IDs for the student's results before deletion
+        exams = list(StudentResult.objects.filter(student=instance).values_list('exam_id', flat=True))
+        
+        # Delete MarkEntries for subjects of the old class (cascades to SubjectResult)
+        MarkEntry.objects.filter(
+            student=instance,
+            subject__class_obj=old_instance.class_obj
+        ).delete()
+        
+        # Delete StudentResults to force recalculation of overall GPA and ranks
+        StudentResult.objects.filter(student=instance).delete()
+        
+        # Recalculate ranks for remaining students in the old class
+        for exam_id in exams:
+            try:
+                exam = Exam.objects.get(pk=exam_id)
+                recalculate_class_ranks(old_instance.class_obj, exam)
+            except Exam.DoesNotExist:
+                continue
+
+    if old_instance.is_active and not instance.is_active:
+        from apps.results.models import StudentResult
+        from apps.exams.models import Exam
+        
+        # Delete overall StudentResult
+        exams = list(StudentResult.objects.filter(student=instance).values_list('exam_id', flat=True))
+        StudentResult.objects.filter(student=instance).delete()
+        
+        # Recalculate ranks for each of those exams
+        for exam_id in exams:
+            try:
+                exam = Exam.objects.get(pk=exam_id)
+                recalculate_class_ranks(old_instance.class_obj, exam)
+            except Exam.DoesNotExist:
+                continue
+
+@receiver(post_delete, sender=Student)
+def handle_student_deletion(sender, instance, **kwargs):
+    """
+    Recalculate ranks for remaining students when a student is deleted.
+    """
+    from apps.results.models import StudentResult
+    from apps.exams.models import Exam
+    
+    exam_ids = set(StudentResult.objects.filter(student__class_obj=instance.class_obj).values_list('exam_id', flat=True))
+    for exam_id in exam_ids:
+        try:
+            exam = Exam.objects.get(pk=exam_id)
+            recalculate_class_ranks(instance.class_obj, exam)
+        except Exam.DoesNotExist:
+            continue
+

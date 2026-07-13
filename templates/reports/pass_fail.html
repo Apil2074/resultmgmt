@@ -1,67 +1,139 @@
 {% extends 'base.html' %}
 {% block title %}Pass/Fail Report: {{ exam.name }}{% endblock %}
-{% block page_title %}📊 Pass/Fail Report: {{ exam.name }}{% endblock %}
+{% block page_title %}📊 Pass/Fail Dashboard: {{ exam.name }}{% endblock %}
 
 {% block content %}
-<!-- Back button -->
-<div class="mb-4">
+<!-- Page Header / Actions -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
   <a href="{% url 'reports_index' %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Back to Reports Hub
   </a>
 </div>
 
-<!-- KPI Cards -->
-<div class="row mb-4">
-  <div class="col-md-3">
-    <div class="card shadow-sm border-start border-primary border-4 h-100">
-      <div class="card-body">
-        <h6 class="text-muted small text-uppercase mb-1">Total Examined</h6>
-        <h3 class="fw-bold text-slate-800 mb-0">{{ total }}</h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm border-start border-success border-4 h-100">
-      <div class="card-body">
-        <h6 class="text-muted small text-uppercase mb-1">Total Passed</h6>
-        <h3 class="fw-bold text-success mb-0">{{ passed }}</h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm border-start border-danger border-4 h-100">
-      <div class="card-body">
-        <h6 class="text-muted small text-uppercase mb-1">Total Failed</h6>
-        <h3 class="fw-bold text-danger mb-0">{{ failed }}</h3>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card shadow-sm border-start border-info border-4 h-100">
-      <div class="card-body">
-        <h6 class="text-muted small text-uppercase mb-1">Pass Percentage</h6>
-        <h3 class="fw-bold text-info mb-0">{{ pass_pct }}%</h3>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Passed Progression Bar -->
-<div class="card shadow-sm mb-4">
+<!-- Filters Panel -->
+<div class="card shadow-sm border-0 mb-4 bg-light">
   <div class="card-body">
-    <div class="d-flex justify-content-between mb-2">
-      <span class="fw-semibold text-slate-800">Pass Rate</span>
-      <span class="text-slate-600 font-monospace">{{ pass_pct }}%</span>
+    <form method="GET" class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <label for="class_id" class="form-label small fw-semibold text-slate-700">Filter by Class</label>
+        <select name="class_id" id="class_id" class="form-select">
+          <option value="">All Classes</option>
+          {% for cls in classes %}
+            <option value="{{ cls.id }}" {% if selected_class_id == cls.id %}selected{% endif %}>
+              {{ cls.full_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="gender" class="form-label small fw-semibold text-slate-700">Filter by Gender</label>
+        <select name="gender" id="gender" class="form-select">
+          <option value="">All Genders</option>
+          <option value="M" {% if selected_gender == 'M' %}selected{% endif %}>Male</option>
+          <option value="F" {% if selected_gender == 'F' %}selected{% endif %}>Female</option>
+          <option value="O" {% if selected_gender == 'O' %}selected{% endif %}>Other</option>
+        </select>
+      </div>
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-funnel-fill me-1"></i>Apply Filters
+        </button>
+        <a href="?" class="btn btn-outline-secondary" title="Reset Filters">
+          <i class="bi bi-arrow-counterclockwise"></i>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4 g-3">
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm border-0 border-start border-primary border-4 h-100 transition-hover">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1 fw-semibold">Total Examined</h6>
+        <h3 class="fw-bold text-slate-800 mb-0 font-monospace">{{ total }}</h3>
+      </div>
     </div>
-    <div class="progress" style="height: 12px;">
-      <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ pass_pct }}%;" aria-valuenow="{{ pass_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm border-0 border-start border-success border-4 h-100 transition-hover">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1 fw-semibold">Total Passed</h6>
+        <h3 class="fw-bold text-success mb-0 font-monospace">{{ passed }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm border-0 border-start border-danger border-4 h-100 transition-hover">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1 fw-semibold">Total Failed</h6>
+        <h3 class="fw-bold text-danger mb-0 font-monospace">{{ failed }}</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="card shadow-sm border-0 border-start border-info border-4 h-100 transition-hover">
+      <div class="card-body">
+        <h6 class="text-muted small text-uppercase mb-1 fw-semibold">Pass Percentage</h6>
+        <h3 class="fw-bold text-info mb-0 font-monospace">{{ pass_pct }}%</h3>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Failed Students list -->
-<div class="card shadow-sm">
-  <div class="card-header bg-white border-bottom py-3">
+{% if total > 0 %}
+  <!-- Graphical Analysis Panel -->
+  <div class="row g-4 mb-4">
+    <!-- Pass/Fail Pie Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white py-3">
+          <h6 class="card-title mb-0 fw-bold text-slate-800">
+            <i class="bi bi-pie-chart text-primary me-2"></i>Pass / Fail Share
+          </h6>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 280px;">
+          <div style="width: 100%; max-width: 250px;">
+            <canvas id="passFailChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grade Distribution Bar Chart -->
+    <div class="col-lg-4 col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white py-3">
+          <h6 class="card-title mb-0 fw-bold text-slate-800">
+            <i class="bi bi-bar-chart-steps text-primary me-2"></i>Grade Distribution
+          </h6>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 280px;">
+          <canvas id="gradeChart" style="max-height: 240px;"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- GPA Breakdown Chart -->
+    <div class="col-lg-4 col-md-12">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-white py-3">
+          <h6 class="card-title mb-0 fw-bold text-slate-800">
+            <i class="bi bi-graph-up-arrow text-primary me-2"></i>GPA Ranges Distribution
+          </h6>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="min-height: 280px;">
+          <canvas id="gpaChart" style="max-height: 240px;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Failed Students List -->
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white py-3">
     <h5 class="card-title mb-0 fw-semibold text-danger">
       <i class="bi bi-x-circle-fill me-2"></i>Students Needing Support ({{ failed_list.count }})
     </h5>
@@ -81,7 +153,7 @@
       <tbody>
         {% for r in failed_list %}
           <tr>
-            <td>{{ r.student.roll_number }}</td>
+            <td class="font-monospace fw-semibold">{{ r.student.roll_number }}</td>
             <td class="text-start fw-semibold text-slate-800">
               {{ r.student.name }}
             </td>
@@ -114,4 +186,113 @@
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if total > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // 1. Pass/Fail Pie Chart
+    const ctxPF = document.getElementById('passFailChart').getContext('2d');
+    new Chart(ctxPF, {
+      type: 'doughnut',
+      data: {
+        labels: ['Passed', 'Failed'],
+        datasets: [{
+          data: [{{ passed }}, {{ failed }}],
+          backgroundColor: ['#10b981', '#ef4444'], // Emerald / Rose red
+          borderWidth: 2,
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 8,
+              font: {
+                family: 'Inter, system-ui, sans-serif',
+                size: 11
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+
+    // 2. Grade Distribution Chart
+    const gradeData = JSON.parse('{{ grade_dist_json|safe }}');
+    const ctxGrade = document.getElementById('gradeChart').getContext('2d');
+    new Chart(ctxGrade, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(gradeData),
+        datasets: [{
+          label: 'Students Count',
+          data: Object.values(gradeData),
+          backgroundColor: '#3b82f6', // Bright Blue
+          borderRadius: 6,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+
+    // 3. GPA Range Distribution
+    const gpaData = JSON.parse('{{ gpa_dist_json|safe }}');
+    const ctxGpa = document.getElementById('gpaChart').getContext('2d');
+    new Chart(ctxGpa, {
+      type: 'bar',
+      data: {
+        labels: Object.keys(gpaData),
+        datasets: [{
+          label: 'Students Count',
+          data: Object.values(gpaData),
+          backgroundColor: '#06b6d4', // Cyan
+          borderRadius: 6,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endif %}
+
+<style>
+  .transition-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .transition-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  }
+</style>
 {% endblock %}

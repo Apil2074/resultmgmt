@@ -3,12 +3,22 @@
 {% block page_title %}Students{% endblock %}
 
 {% block content %}
+{% if not active_session %}
+<div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+  <div>
+    <strong>No Active Academic Session!</strong>
+    You must <a href="{% url 'session_list' %}" class="alert-link text-decoration-underline">start an academic session</a> before managing this section.
+  </div>
+</div>
+{% endif %}
 <div class="page-header">
   <div>
     <h1 class="page-title">👥 Students</h1>
     <div class="page-subtitle">{{ students|length }} students found</div>
   </div>
   <div class="d-flex gap-2 flex-wrap">
+    {% if user.is_school_admin or user.is_super_admin %}
     <a href="{% url 'student_import' %}" class="btn btn-secondary">
       <i class="bi bi-upload"></i> Import Excel
     </a>
@@ -18,6 +28,7 @@
     <a href="{% url 'student_create' %}" class="btn btn-primary">
       <i class="bi bi-person-plus-fill"></i> Add Student
     </a>
+    {% endif %}
   </div>
 </div>
 
@@ -88,12 +99,14 @@
               <a href="{% url 'student_detail' student.pk %}" class="btn btn-icon btn-secondary" data-tooltip="View">
                 <i class="bi bi-eye-fill"></i>
               </a>
+              {% if user.is_school_admin or user.is_super_admin %}
               <a href="{% url 'student_edit' student.pk %}" class="btn btn-icon btn-secondary" data-tooltip="Edit">
                 <i class="bi bi-pencil-fill"></i>
               </a>
               <a href="{% url 'student_delete' student.pk %}" class="btn btn-icon btn-danger" data-tooltip="Delete">
                 <i class="bi bi-trash-fill"></i>
               </a>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -103,7 +116,9 @@
             <div class="empty-state">
               <div class="empty-icon">👤</div>
               <p>No students found</p>
+              {% if user.is_school_admin or user.is_super_admin %}
               <a href="{% url 'student_create' %}" class="btn btn-primary mt-2">Add First Student</a>
+              {% endif %}
             </div>
           </td>
         </tr>

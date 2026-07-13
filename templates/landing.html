@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-School Result Management System</title>
     
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,66 +40,104 @@
     </div>
 
     <!-- Navbar -->
-    <nav class="navbar-glass">
-        <div class="container d-flex justify-content-between align-items-center">
+    <nav class="navbar navbar-expand-md navbar-glass">
+        <div class="container-fluid d-flex justify-content-between align-items-center px-0">
             <a href="#" class="text-decoration-none">
-                <div class="brand-logo">RMS</div>
+                <div class="brand-logo">
+                    <span class="d-none d-sm-inline">Result Management System</span>
+                    <span class="d-inline d-sm-none">RMS</span>
+                </div>
             </a>
-            <div>
-                {% if request.user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow">
-                        Dashboard <i class="bi bi-arrow-right"></i>
-                    </a>
-                {% else %}
-                    <a href="{% url 'public_result_search' %}" class="btn-modern btn-outline-glass me-2">
-                        Student Portal
-                    </a>
-                    <a href="{% url 'login' %}" class="btn-modern btn-primary-glow">
-                        Admin Login <i class="bi bi-box-arrow-in-right"></i>
-                    </a>
-                {% endif %}
+            
+            <div class="d-flex align-items-center gap-2 order-md-last">
+                <button id="theme-toggle" class="btn-theme-toggle" aria-label="Toggle theme">
+                    <i class="bi bi-sun-fill sun-icon"></i>
+                    <i class="bi bi-moon-fill moon-icon"></i>
+                </button>
+                <button class="navbar-toggler btn-theme-toggle border-1" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <i class="bi bi-list fs-5 text-current"></i>
+                </button>
+            </div>
+
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <div class="d-flex flex-column flex-md-row gap-2 mt-3 mt-md-0 align-items-stretch align-items-md-center">
+                    {% if request.user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow justify-content-center">
+                            Dashboard <i class="bi bi-arrow-right"></i>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'public_result_search' %}" class="btn-modern btn-outline-glass justify-content-center">
+                            Student Portal
+                        </a>
+                        <a href="{% url 'register_demo' %}" class="btn-modern btn-primary-glow justify-content-center">
+                            Try Demo <i class="bi bi-star"></i>
+                        </a>
+                        <a href="{% url 'login' %}" class="btn-modern btn-outline-glass justify-content-center">
+                            Admin Login <i class="bi bi-box-arrow-in-right"></i>
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
 
     <!-- Hero -->
     <section class="hero-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6 mb-5 mb-lg-0">
-                    <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mb-4 d-inline-block">
-                        <i class="bi bi-stars me-1"></i> Next-Gen Education Platform
-                    </div>
-                    <h1 class="hero-title">
-                        Elevate Your School's <br>
-                        <span class="text-gradient">Result Management</span>
-                    </h1>
-                    <p class="hero-subtitle">
-                        A centralized, multi-tenant platform to effortlessly manage grades, automate report cards, and provide transparent academic insights for teachers, students, and parents.
-                    </p>
-                    <div class="d-flex gap-3 flex-wrap">
-                        {% if request.user.is_authenticated %}
-                            <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow">
-                                Enter Dashboard <i class="bi bi-rocket-fill"></i>
-                            </a>
-                        {% else %}
-                            <a href="{% url 'login' %}" class="btn-modern btn-primary-glow">
-                                Get Started <i class="bi bi-arrow-right"></i>
-                            </a>
-                            <a href="#features" class="btn-modern btn-outline-glass">
-                                Explore Features
-                            </a>
-                        {% endif %}
-                    </div>
+        <div class="container d-flex justify-content-center align-items-center">
+            <div class="hero-content-card">
+                <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mb-4 d-inline-block">
+                    <i class="bi bi-stars me-1"></i> Next-Gen Education Platform
                 </div>
-                <div class="col-lg-6 text-center">
-                    <div class="hero-img-wrapper">
-                        <img src="{% static 'img/hero.png' %}" alt="RMS Dashboard Illustration" class="hero-image img-fluid">
-                    </div>
+                <h1 class="hero-title text-center">
+                    Elevate Your School's <br>
+                    <span class="text-gradient" id="typed-text">Result Management</span><span class="typed-cursor">|</span>
+                </h1>
+                <p class="hero-subtitle text-center mx-auto">
+                    A centralized, multi-tenant platform to effortlessly manage grades, automate report cards, and provide transparent academic insights for teachers, students, and parents.
+                </p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    {% if request.user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn-modern btn-primary-glow">
+                            Enter Dashboard <i class="bi bi-rocket-fill"></i>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'register_demo' %}" class="btn-modern btn-primary-glow">
+                            Start Free Demo <i class="bi bi-arrow-right"></i>
+                        </a>
+                        <a href="#features" class="btn-modern btn-outline-glass">
+                            Explore Features
+                        </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </section>
+
+    <!-- Trusted By / Schools Logos Carousel -->
+    {% if schools %}
+    <section class="logo-carousel-section">
+        <div class="container-fluid px-0">
+            <h5 class="text-center text-muted mb-4" style="font-weight: 600; font-family: var(--font-display); letter-spacing: 1px; text-transform: uppercase;">Trusted By Innovative Schools</h5>
+            <div class="logo-carousel-container">
+                <div class="logo-carousel-track">
+                    <!-- First set of logos -->
+                    {% for school in schools %}
+                        <div class="logo-item">
+                            <img src="{{ school.logo.url }}" alt="{{ school.name }} Logo" class="img-thumbnail shadow-sm p-2" title="{{ school.name }}">
+                        </div>
+                    {% endfor %}
+                    <!-- Duplicate set of logos for seamless infinite scroll -->
+                    {% for school in schools %}
+                        <div class="logo-item" aria-hidden="true">
+                            <img src="{{ school.logo.url }}" alt="{{ school.name }} Logo" class="img-thumbnail shadow-sm p-2">
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
 
     <!-- Stats -->
     <section class="stats-section">
@@ -187,6 +232,176 @@
         </div>
     </section>
 
+    <!-- How it Works -->
+    <section id="how-it-works" class="py-6 workflow-section">
+        <div class="container">
+            <h2 class="section-title">Seamless Workflow <br><span class="text-gradient">From Setup to Report Cards</span></h2>
+            <div class="row g-4 justify-content-center mt-4">
+                <div class="col-md-6 col-lg-3 text-center">
+                    <div class="workflow-step-card">
+                        <div class="step-num">01</div>
+                        <h4 class="step-title">Quick Setup</h4>
+                        <p class="step-text text-muted">Register your school, input classes, and add subjects and grading boundaries in minutes.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <div class="workflow-step-card">
+                        <div class="step-num">02</div>
+                        <h4 class="step-title">Grade & Input</h4>
+                        <p class="step-text text-muted">Teachers enter raw theory/practical marks directly or upload bulk scores using pre-formatted Excel sheets.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <div class="workflow-step-card">
+                        <div class="step-num">03</div>
+                        <h4 class="step-title">Automate Ledgers</h4>
+                        <p class="step-text text-muted">The system automatically calculates grade points, percentages, class ranks, and generates beautiful reports.</p>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 text-center">
+                    <div class="workflow-step-card">
+                        <div class="step-num">04</div>
+                        <h4 class="step-title">Instant Publish</h4>
+                        <p class="step-text text-muted">Publish results instantly to the secure, public student portal for parents and students to download.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GPA Calculator Widget -->
+    <section class="py-6 calculator-section">
+        <div class="container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mb-3">
+                        <i class="bi bi-calculator me-1"></i> Interactive Widget
+                    </span>
+                    <h2 class="hero-title mb-4" style="font-size: 2.5rem; line-height: 1.2; text-align: left;">
+                        Test Our Grading Logic <br><span class="text-gradient">In Real-Time</span>
+                    </h2>
+                    <p class="text-muted mb-4 fs-5">
+                        Input course credits and expected grades to instantly see how our automated system computes cumulative grade points and averages.
+                    </p>
+                    <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Supports GPA scaling models.</span></li>
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Weighted average computation.</span></li>
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Instant grade points matching.</span></li>
+                    </ul>
+                </div>
+                <div class="col-lg-6">
+                    <div class="feature-card calculator-card">
+                        <h4 class="mb-4 text-center">Live GPA Simulator</h4>
+                        <div id="calculator-rows">
+                            <div class="row g-2 mb-3 calc-row">
+                                <div class="col-6">
+                                    <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Mathematics" value="Mathematics">
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select bg-transparent text-current credit-select">
+                                        <option value="4" selected>4 Cr.</option>
+                                        <option value="3">3 Cr.</option>
+                                        <option value="2">2 Cr.</option>
+                                        <option value="1">1 Cr.</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select bg-transparent text-current grade-select">
+                                        <option value="4.0" selected>A</option>
+                                        <option value="3.6">A-</option>
+                                        <option value="3.2">B+</option>
+                                        <option value="2.8">B</option>
+                                        <option value="2.4">C+</option>
+                                        <option value="2.0">C</option>
+                                        <option value="0.0">F</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-3 calc-row">
+                                <div class="col-6">
+                                    <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Science" value="Science">
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select bg-transparent text-current credit-select">
+                                        <option value="4">4 Cr.</option>
+                                        <option value="3" selected>3 Cr.</option>
+                                        <option value="2">2 Cr.</option>
+                                        <option value="1">1 Cr.</option>
+                                    </select>
+                                </div>
+                                <div class="col-3">
+                                    <select class="form-select bg-transparent text-current grade-select">
+                                        <option value="4.0">A</option>
+                                        <option value="3.6" selected>A-</option>
+                                        <option value="3.2">B+</option>
+                                        <option value="2.8">B</option>
+                                        <option value="2.4">C+</option>
+                                        <option value="2.0">C</option>
+                                        <option value="0.0">F</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-4">
+                            <button id="add-row-btn" class="btn-modern btn-outline-glass btn-sm py-1 px-2"><i class="bi bi-plus-circle"></i> Add Course</button>
+                        </div>
+                        <div class="calculator-result-box p-3 rounded text-center">
+                            <div class="fs-6 text-muted uppercase tracking-wider mb-1">Simulated Term GPA</div>
+                            <div id="simulated-gpa" class="fs-1 fw-bold text-primary">3.83</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-6 faq-section">
+        <div class="container" style="max-width: 800px;">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="accordion mt-5" id="faqAccordion">
+                <div class="accordion-item faq-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed faq-btn bg-transparent text-current" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            Is student data secure and private?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body faq-answer text-muted">
+                            Yes. Data isolation is strictly enforced at the database level. Each school has its isolated tenant container. We also implement secure JWT verification, HTTPS protocols, and server-side audit logs tracking all grade changes.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item faq-item mt-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed faq-btn bg-transparent text-current" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Can we customize the grading scale and subject marks weights?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body faq-answer text-muted">
+                            Absolutely. The system supports full customization of theory vs practical weightage, credit hours, passing score boundaries, and grading points configuration matching your school's local board standards.
+                        </div>
+                    </div>
+                </div>
+                <div class="accordion-item faq-item mt-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed faq-btn bg-transparent text-current" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            How do students/parents check their results?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body faq-answer text-muted">
+                            Students and parents can access the secure public portal where they simply input the student's Roll Number and Date of Birth. They do not need to register a user account, ensuring quick, hassle-free results lookups.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Call to action -->
     <section class="py-5 mb-5 text-center">
         <div class="container">
@@ -208,5 +423,126 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            
+            // Get current theme
+            let currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            
+            themeToggleBtn.addEventListener('click', () => {
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                currentTheme = newTheme;
+            });
+
+            // Scroll Shrink Navbar Script
+            const navbarElement = document.querySelector('.navbar-glass');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    navbarElement.classList.add('navbar-shrunk');
+                } else {
+                    navbarElement.classList.remove('navbar-shrunk');
+                }
+            });
+
+            // Typing Effect Script
+            const typedTextSpan = document.getElementById("typed-text");
+            const textArray = ["Result Management", "Academic Reporting", "Grade Distribution", "Parent Portals"];
+            const typingSpeed = 100;
+            const erasingSpeed = 60;
+            const newTextDelay = 2000; // Delay between current and next text
+            let textArrayIndex = 0;
+            let charIndex = typedTextSpan.textContent.length;
+
+            function type() {
+                if (charIndex < textArray[textArrayIndex].length) {
+                    typedTextSpan.textContent += textArray[textArrayIndex].charAt(charIndex);
+                    charIndex++;
+                    setTimeout(type, typingSpeed);
+                } else {
+                    setTimeout(erase, newTextDelay);
+                }
+            }
+
+            function erase() {
+                if (charIndex > 0) {
+                    typedTextSpan.textContent = textArray[textArrayIndex].substring(0, charIndex - 1);
+                    charIndex--;
+                    setTimeout(erase, erasingSpeed);
+                } else {
+                    textArrayIndex++;
+                    if (textArrayIndex >= textArray.length) textArrayIndex = 0;
+                    setTimeout(type, typingSpeed + 500);
+                }
+            }
+
+            // Start typing effect loop
+            setTimeout(erase, newTextDelay);
+
+            // GPA Calculator Logic
+            const calculatorRowsContainer = document.getElementById('calculator-rows');
+            const addRowBtn = document.getElementById('add-row-btn');
+            const simulatedGpaText = document.getElementById('simulated-gpa');
+
+            function calculateGPA() {
+                let totalCredits = 0;
+                let totalPoints = 0;
+
+                const creditSelects = document.querySelectorAll('.credit-select');
+                const gradeSelects = document.querySelectorAll('.grade-select');
+
+                for (let i = 0; i < creditSelects.length; i++) {
+                    const credit = parseFloat(creditSelects[i].value);
+                    const gradePoint = parseFloat(gradeSelects[i].value);
+                    
+                    totalCredits += credit;
+                    totalPoints += (gradePoint * credit);
+                }
+
+                const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
+                simulatedGpaText.textContent = gpa;
+            }
+
+            // Listen to changes in inputs
+            calculatorRowsContainer.addEventListener('change', calculateGPA);
+
+            // Add new row logic
+            addRowBtn.addEventListener('click', () => {
+                const newRow = document.createElement('div');
+                newRow.className = 'row g-2 mb-3 calc-row';
+                newRow.innerHTML = `
+                    <div class="col-6">
+                        <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Course name">
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select bg-transparent text-current credit-select">
+                            <option value="4">4 Cr.</option>
+                            <option value="3" selected>3 Cr.</option>
+                            <option value="2">2 Cr.</option>
+                            <option value="1">1 Cr.</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <select class="form-select bg-transparent text-current grade-select">
+                            <option value="4.0" selected>A</option>
+                            <option value="3.6">A-</option>
+                            <option value="3.2">B+</option>
+                            <option value="2.8">B</option>
+                            <option value="2.4">C+</option>
+                            <option value="2.0">C</option>
+                            <option value="0.0">F</option>
+                        </select>
+                    </div>
+                `;
+                calculatorRowsContainer.appendChild(newRow);
+                calculateGPA();
+            });
+
+            // Initial calculation
+            calculateGPA();
+        });
+    </script>
 </body>
 </html>

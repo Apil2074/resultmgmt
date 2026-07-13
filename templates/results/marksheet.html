@@ -167,6 +167,46 @@
   padding-top: 8px;
 }
 
+/* Force Light Mode on Marksheet Container */
+[data-theme="dark"] .marksheet-card {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+[data-theme="dark"] .marksheet-table,
+[data-theme="dark"] .legend-table {
+  --bs-table-bg: transparent !important;
+  --bs-table-color: #0f172a !important;
+  --bs-table-border-color: #0f172a !important;
+}
+[data-theme="dark"] .marksheet-table th,
+[data-theme="dark"] .legend-table th {
+  background-color: #f8fafc !important;
+  color: #1e3a8a !important;
+}
+[data-theme="dark"] .marksheet-table td,
+[data-theme="dark"] .legend-table td {
+  color: #0f172a !important;
+}
+[data-theme="dark"] .note-box {
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+[data-theme="dark"] .note-title {
+  color: #1e3a8a !important;
+}
+[data-theme="dark"] .info-value, 
+[data-theme="dark"] .signature-title, 
+[data-theme="dark"] .school-address {
+  color: #0f172a !important;
+}
+[data-theme="dark"] .school-estd {
+  color: #64748b !important;
+}
+[data-theme="dark"] .signature-line-box {
+  border-top-color: #0f172a !important;
+}
+
 @media print {
   body {
     background: #ffffff !important;
@@ -265,9 +305,7 @@
     <a href="{% url 'class_detail' student.class_obj.slug %}" class="btn btn-outline-secondary">
       <i class="bi bi-arrow-left me-1"></i>Back to Class
     </a>
-    <a href="{% url 'class_marksheets_pdf' exam.id student.class_obj.id %}" class="btn btn-success" target="_blank">
-      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download All (Merged)
-    </a>
+
     <a href="{% url 'marksheet_pdf' exam.id student.id %}" class="btn btn-primary" target="_blank">
       <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
     </a>

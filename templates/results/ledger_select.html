@@ -58,12 +58,24 @@
 }
 
 @media print {
-  body {
+  @page {
+    size: landscape;
+    margin: 5mm;
+  }
+  html, body {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
     background: #ffffff !important;
     color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
-  .app-wrapper {
+  .app-wrapper, .main-content, .page-content, .container-fluid {
     display: block !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
   }
   .sidebar, .topbar, .card, .ledger-controls, footer {
     display: none !important;
@@ -79,9 +91,23 @@
     box-shadow: none !important;
     border: none !important;
     margin-top: 0 !important;
+    overflow: visible !important; 
+    height: auto !important;
+    max-height: none !important;
+  }
+  .ledger-table {
+    font-size: 6pt !important; /* Extremely small to fit columns */
+    width: 100% !important;
+    zoom: 60%; /* Force browser to scale down table aggressively */
   }
   .ledger-table th, .ledger-table td {
     border: 1px solid #000000 !important;
+    padding: 1px !important; 
+    position: static !important; 
+    word-break: break-word !important;
+    white-space: normal !important;
+    min-width: 0 !important;
+    width: auto !important;
   }
 }
 </style>
@@ -134,7 +160,7 @@
     <!-- Loaded State Header -->
     <div class="page-header d-flex justify-content-between align-items-center mb-3">
       <div class="ledger-controls d-print-none">
-        <button class="btn btn-outline-secondary" onclick="window.print()">
+        <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
           <i class="bi bi-printer-fill"></i> Print
         </button>
         <a href="{% url 'ledger_excel' exam.id class_obj.id %}" class="btn btn-success">
@@ -160,8 +186,9 @@
     <div class="d-flex justify-content-end mb-2 d-print-none">
       <small class="text-muted fw-medium"><i class="bi bi-arrows-expand me-1"></i> Scroll horizontally to view all columns</small>
     </div>
-    <div class="ledger-wrap">
-      <table class="ledger-table" id="ledgerTable">
+    {% for page in ledger_pages %}
+    <div class="ledger-wrap mb-5" {% if not forloop.last %}style="page-break-after: always;"{% endif %}>
+      <table class="ledger-table" id="ledgerTable_{{ forloop.counter }}">
         <thead>
           <!-- Row 1: Subject names and main spans -->
           <tr>
@@ -170,25 +197,27 @@
             <th rowspan="4" class="sticky-col-3" style="min-width:85px;">REG NO</th>
             <th rowspan="4" class="sticky-col-4" style="min-width:180px; text-align:left;">Student Name</th>
             <th rowspan="1" style="min-width:90px;">Date of Birth</th>
-            {% for subject in subjects %}
+            {% for subject in page.subjects %}
               {% if subject.has_practical %}
               <th colspan="6" class="subject-header">{{ subject.name }}</th>
               {% else %}
               <th colspan="4" class="subject-header">{{ subject.name }}</th>
               {% endif %}
             {% endfor %}
+            {% if page.is_last_page %}
             <th rowspan="4" style="min-width:55px;">Total Credit Hour</th>
             <th rowspan="4" style="min-width:50px;">GPA</th>
             <th rowspan="4" style="min-width:50px;">Grade</th>
             <th rowspan="4" style="min-width:45px;">Rank</th>
             <th rowspan="4" style="min-width:50px;">Attendance</th>
             <th rowspan="4" style="min-width:50px;">Result</th>
+            {% endif %}
           </tr>
           
           <!-- Row 2: Credit Hour values -->
           <tr>
             <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Credit Hour</th>
-            {% for subject in subjects %}
+            {% for subject in page.subjects %}
               {% if subject.has_practical %}
               <th style="background-color:#f1f5f9; font-weight:bold;">{{ subject.theory_credit_hour|floatformat:2 }}</th>
               <th style="background-color:#f1f5f9; font-weight:bold;">{{ subject.practical_credit_hour|floatformat:2 }}</th>
@@ -203,7 +232,7 @@
           <!-- Row 3: Full Marks values -->
           <tr>
             <th colspan="1" style="background-color:#f1f5f9; font-weight:700; color:#475569; font-size:0.72rem;">Full Marks</th>
-            {% for subject in subjects %}
+            {% for subject in page.subjects %}
               {% if subject.has_practical %}
               <th>{{ subject.marking_structure.theory_full_marks }}</th>
               <th>{{ subject.marking_structure.internal_full_marks }}</th>
@@ -218,7 +247,7 @@
           <!-- Row 4: Component headers -->
           <tr>
             <th style="background-color:#f8fafc; font-weight:bold; color:#475569;">DOB</th>
-            {% for subject in subjects %}
+            {% for subject in page.subjects %}
               {% if subject.has_practical %}
               <th>Th</th>
               <th>In</th>
@@ -235,16 +264,16 @@
             {% endfor %}
           </tr>
         </thead>
-        <tbody id="ledgerBody">
-          {% for sr in student_results %}
-          <tr class="ledger-row" data-name="{{ sr.student.name|lower }}">
+        <tbody id="ledgerBody_{{ forloop.counter }}">
+          {% for item in page.students %}
+          <tr class="ledger-row" data-name="{{ item.sr.student.name|lower }}">
             <td class="sticky-col-1">{{ forloop.counter }}</td>
-            <td class="sticky-col-2">{{ sr.student.symbol_number|default:"—" }}</td>
-            <td class="sticky-col-3">{{ sr.student.registration_number|default:"—" }}</td>
-            <td class="sticky-col-4" style="text-align:left; font-weight:600;">{{ sr.student.name }}</td>
-            <td>{{ sr.student.dob_full|default:"—" }}</td>
+            <td class="sticky-col-2">{{ item.sr.student.symbol_number|default:"—" }}</td>
+            <td class="sticky-col-3">{{ item.sr.student.registration_number|default:"—" }}</td>
+            <td class="sticky-col-4" style="text-align:left; font-weight:600;">{{ item.sr.student.name }}</td>
+            <td>{{ item.sr.student.dob_full|default:"—" }}</td>
 
-            {% for score in sr.subject_scores %}
+            {% for score in item.scores %}
               {% if score.has_internal %}
                 <td>{{ score.theory_obtained }}</td>
                 <td>{{ score.internal_obtained }}</td>
@@ -260,25 +289,29 @@
               {% endif %}
             {% endfor %}
 
-            <td>{{ sr.total_credit_hours }}</td>
-            <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.overall_gpa|default:'NG' }}</td>
-            <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.final_grade|default:'—' }}</td>
-            <td>{% if sr.class_rank %}{{ sr.class_rank }}{% else %}NG{% endif %}</td>
-            <td>{{ sr.attendance_pct|default:'—' }}%</td>
-            <td class="{% if sr.is_pass %}pass-status{% else %}fail-status{% endif %}">
-              {% if sr.is_pass %}P{% else %}F{% endif %}
+            {% if page.is_last_page %}
+            <td>{{ item.sr.total_credit_hours }}</td>
+            <td class="grade-{{ item.sr.final_grade|default:'NG' }}">{{ item.sr.overall_gpa|default:'NG' }}</td>
+            <td class="grade-{{ item.sr.final_grade|default:'NG' }}">{{ item.sr.final_grade|default:'—' }}</td>
+            <td>{% if item.sr.class_rank %}{{ item.sr.class_rank }}{% else %}NG{% endif %}</td>
+            <td>{{ item.sr.attendance_pct|default:'—' }}%</td>
+            <td class="{% if item.sr.is_pass %}pass-status{% else %}fail-status{% endif %}">
+              {% if item.sr.is_pass %}P{% else %}F{% endif %}
             </td>
+            {% endif %}
           </tr>
           {% empty %}
           <tr>
             <td colspan="99" class="text-center" style="padding:40px; color:var(--color-text-muted);">
-              No results processed yet for this class in this exam.
+              <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
+              No students found for this class in this examination.
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% endfor %}
 
     <!-- Legend -->
     <div class="d-flex gap-3 flex-wrap mt-3" style="font-size:0.72rem; color:var(--color-text-muted);">

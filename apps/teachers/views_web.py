@@ -22,11 +22,16 @@ def teacher_list(request):
     """List all teachers in the school."""
     school = request.user.school
     
-    if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
-        messages.error(request, 'Access denied.')
-        return redirect('dashboard')
-        
+    if request.method == 'POST':
+        if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
+            messages.error(request, 'Access denied.')
+            return redirect('teacher_list')
+
+    active_session = school.get_active_session()
+    
     teachers_qs = Teacher.objects.filter(school=school).select_related('user').prefetch_related('subject_assignments')
+    if active_session:
+        teachers_qs = teachers_qs.filter(sessions=active_session)
     
     def get_sort_key(t):
         try:
@@ -69,7 +74,7 @@ def teacher_create(request):
                 messages.error(request, str(e.message))
                 return render(request, 'teachers/form.html')
 
-        Teacher.objects.create(
+        teacher = Teacher.objects.create(
             school=school,
             sn=sn,
             name=name,
@@ -77,6 +82,10 @@ def teacher_create(request):
             date_of_birth=dob,
             photo=photo
         )
+        active_session = school.get_active_session()
+        if active_session:
+            teacher.sessions.add(active_session)
+            
         messages.success(request, f'Teacher {name} added successfully.')
         return redirect('teacher_list')
 
@@ -181,48 +190,60 @@ def teacher_import(request):
             ws = wb.active
             created = 0
             errors = []
-
-            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
-                if not row[0] and not row[1]:
-                    continue
-                try:
-                    sn = str(row[0]).strip() if len(row) > 0 and row[0] is not None else ''
-                    name = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ''
-                    if not name:
+            
+            from django.db import transaction
+            
+            with transaction.atomic():
+                for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                    if not row[0] and not row[1]:
                         continue
+                    try:
+                        sn = str(row[0]).strip() if len(row) > 0 and row[0] is not None else ''
+                        name = str(row[1]).strip() if len(row) > 1 and row[1] is not None else ''
+                        if not name:
+                            continue
+                            
+                        contact = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ''
                         
-                    contact = str(row[2]).strip() if len(row) > 2 and row[2] is not None else ''
-                    
-                    dob = None
-                    dob_val = row[3] if len(row) > 3 else None
-                    if dob_val is not None:
-                        if isinstance(dob_val, (datetime.date, datetime.datetime)):
-                            dob = dob_val if isinstance(dob_val, datetime.date) else dob_val.date()
-                        else:
-                            dob_str = str(dob_val).strip()
-                            if dob_str:
-                                for fmt in ('%Y-%m-%d',):
-                                    try:
-                                        dob = datetime.datetime.strptime(dob_str, fmt).date()
-                                        break
-                                    except ValueError:
-                                        continue
+                        dob = None
+                        dob_val = row[3] if len(row) > 3 else None
+                        if dob_val is not None:
+                            if isinstance(dob_val, (datetime.date, datetime.datetime)):
+                                dob = dob_val if isinstance(dob_val, datetime.date) else dob_val.date()
+                            else:
+                                dob_str = str(dob_val).strip()
+                                if dob_str:
+                                    date_formats = ('%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d')
+                                    for fmt in date_formats:
+                                        try:
+                                            dob = datetime.datetime.strptime(dob_str, fmt).date()
+                                            break
+                                        except ValueError:
+                                            continue
 
-                    Teacher.objects.create(
-                        school=school,
-                        sn=sn,
-                        name=name,
-                        contact_number=contact,
-                        date_of_birth=dob
-                    )
-                    created += 1
-                except Exception as e:
-                    errors.append(f'Row {row_num}: {str(e)}')
-
-            messages.success(request, f'{created} teachers imported successfully.')
-            if errors:
-                for err in errors[:5]:
-                    messages.warning(request, err)
+                        teacher = Teacher.objects.create(
+                            school=school,
+                            sn=sn,
+                            name=name,
+                            contact_number=contact,
+                            date_of_birth=dob
+                        )
+                        active_session = school.get_active_session()
+                        if active_session:
+                            teacher.sessions.add(active_session)
+                        created += 1
+                    except Exception as e:
+                        errors.append(f'Row {row_num}: {str(e)}')
+                        
+                if errors:
+                    transaction.set_rollback(True)
+                    messages.error(request, f'Import failed due to errors. No teachers were imported.')
+                    for err in errors[:5]:
+                        messages.error(request, err)
+                    if len(errors) > 5:
+                        messages.error(request, f'...and {len(errors) - 5} more errors.')
+                else:
+                    messages.success(request, f'{created} teachers imported successfully.')
 
         except Exception as e:
             messages.error(request, f'Failed to read Excel file: {str(e)}')
@@ -290,8 +311,8 @@ def teacher_create_user(request, pk):
             username = f"{original_username}{counter}"
             counter += 1
         import secrets
-        # SECURITY: Generate a stronger 16-character password instead of 8
-        password = secrets.token_urlsafe(16)
+        # Generate an 8-character password
+        password = secrets.token_urlsafe(6)
 
         try:
             with transaction.atomic():
@@ -305,8 +326,7 @@ def teacher_create_user(request, pk):
                 teacher.user = user
                 teacher.save()
 
-            # SECURITY: Remove raw password from flash message!
-            messages.success(request, f'Account created for {teacher.name}. Username: {username}. Provide the temporary password securely.')
+            messages.success(request, f'Account created for {teacher.name}. Username: {username}. Temporary Password: {password} (Please copy this password now, it will not be shown again!)')
             # In a real system, you'd likely email it or show it ONCE on a dedicated screen, not in the session flash messages.
         except Exception as e:
             messages.error(request, f'Error creating account: {str(e)}')
@@ -331,14 +351,13 @@ def teacher_reset_password(request, pk):
             messages.error(request, 'This teacher does not have an account.')
             return redirect('teacher_list')
         import secrets
-        # SECURITY: Generate a stronger 16-character password instead of 8
-        password = secrets.token_urlsafe(16)
+        # Generate an 8-character password
+        password = secrets.token_urlsafe(6)
 
         teacher.user.set_password(password)
         teacher.user.save()
 
-        # SECURITY: Remove raw password from flash message!
-        messages.success(request, f'Password reset for {teacher.name}. Provide the new temporary password securely.')
+        messages.success(request, f'Password reset for {teacher.name}. New Temporary Password: {password} (Please copy this password now, it will not be shown again!)')
         # In a real system, you'd likely email it or show it ONCE on a dedicated screen, not in the session flash messages.
 
     return redirect('teacher_list')
@@ -421,13 +440,102 @@ def teacher_dashboard(request):
     
     # Group by class
     classes_dict = {}
+    class_ids = set()
     for assignment in assignments:
         cls = assignment.subject.class_obj
         if cls not in classes_dict:
             classes_dict[cls] = []
         classes_dict[cls].append(assignment.subject)
+        class_ids.add(cls.id)
+        
+    # Calculate KPIs
+    from apps.students.models import Student
+    from apps.exams.models import Exam
+    from apps.results.models import StudentResult
+    from django.db.models import Avg
+
+    total_classes = len(classes_dict)
+    total_subjects = assignments.count()
+    primary_subject = assignments.first().subject.name if assignments.exists() else "None"
+    
+    total_students = Student.objects.filter(class_obj__id__in=class_ids, is_active=True).count()
+    
+    # Exams related to the active session for these classes
+    related_exams = Exam.objects.filter(session=active_session, exam_classes__class_obj__id__in=class_ids).distinct()
+    
+    # Published vs Pending logic
+    published_exams = related_exams.filter(status='PUBLISHED').count()
+    total_exams = related_exams.count()
+    published_percentage = int((published_exams / total_exams * 100)) if total_exams > 0 else 0
+    
+    pending_marks = total_exams - published_exams  # Simplified pending logic
+    
+    # Average GPA
+    avg_gpa_dict = StudentResult.objects.filter(student__class_obj__id__in=class_ids).aggregate(Avg('overall_gpa'))
+    avg_gpa = round(avg_gpa_dict['overall_gpa__avg'] or 0.0, 2)
+    
+    # Grade Distribution
+    from django.db.models import Count
+    import json
+    grade_counts = StudentResult.objects.filter(student__class_obj__id__in=class_ids).values('final_grade').annotate(count=Count('id')).order_by('final_grade')
+    
+    grades = []
+    counts = []
+    for gc in grade_counts:
+        grade = gc['final_grade']
+        if grade == '':
+            continue
+        grades.append(grade)
+        counts.append(gc['count'])
+        
+    grade_labels_json = json.dumps(grades)
+    grade_data_json = json.dumps(counts)
+
+    # Top Performers per Class and Subject
+    from django.db.models.functions import Coalesce
+    from django.db.models import DecimalField
+    from apps.marks.models import MarkEntry
+    
+    top_performers = []
+    for cls_obj, subjects in classes_dict.items():
+        for subject in subjects:
+            top_marks = MarkEntry.objects.filter(
+                student__class_obj=cls_obj, 
+                subject=subject,
+                session=active_session
+            ).annotate(
+                total_marks=Coalesce('theory_obtained', 0.0, output_field=DecimalField()) + Coalesce('internal_obtained', 0.0, output_field=DecimalField())
+            ).order_by('-total_marks')[:3]
+
+            leaders = []
+            for idx, mark in enumerate(top_marks):
+                leaders.append({
+                    'rank': idx + 1,
+                    'student': mark.student,
+                    'score': float(mark.total_marks) if mark.total_marks else 0.0
+                })
+            
+            if leaders:
+                top_performers.append({
+                    'class': cls_obj,
+                    'subject': subject,
+                    'leaders': leaders
+                })
+    
+    # Sort top performers by class level, then subject
+    top_performers.sort(key=lambda x: (x['class'].numeric_level, x['class'].name, x['subject'].name))
         
     return render(request, 'teachers/teacher_portal/dashboard.html', {
         'teacher': teacher,
-        'classes_dict': classes_dict
+        'classes_dict': classes_dict,
+        'total_classes': total_classes,
+        'total_students': total_students,
+        'total_subjects': total_subjects,
+        'primary_subject': primary_subject,
+        'pending_marks': pending_marks,
+        'published_percentage': published_percentage,
+        'avg_gpa': avg_gpa,
+        'grade_labels_json': grade_labels_json,
+        'grade_data_json': grade_data_json,
+        'top_performers': top_performers,
     })

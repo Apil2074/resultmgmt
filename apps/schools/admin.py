@@ -3,9 +3,9 @@ from .models import School, AcademicSession
 
 @admin.register(School)
 class SchoolAdmin(admin.ModelAdmin):
-    list_display = ['name', 'phone', 'email', 'principal_name', 'grading_system', 'establishment_year']
+    list_display = ['name', 'phone', 'email', 'principal_name','establishment_year']
     search_fields = ['name', 'principal_name']
-    list_filter = ['grading_system']
+    
 
 @admin.register(AcademicSession)
 class AcademicSessionAdmin(admin.ModelAdmin):

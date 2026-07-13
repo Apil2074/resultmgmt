@@ -3,8 +3,18 @@
 {% block page_title %}👨‍🏫 Teachers{% endblock %}
 
 {% block content %}
+{% if not active_session %}
+<div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+  <div>
+    <strong>No Active Academic Session!</strong>
+    You must <a href="{% url 'session_list' %}" class="alert-link text-decoration-underline">start an academic session</a> before managing this section.
+  </div>
+</div>
+{% endif %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div></div>
+    {% if user.is_school_admin or user.is_super_admin %}
     <div class="d-flex gap-2">
         <a href="{% url 'teacher_import' %}" class="btn btn-outline-success">
             <i class="bi bi-file-earmark-excel-fill me-1"></i> Import
@@ -13,6 +23,7 @@
             <i class="bi bi-person-plus-fill me-1"></i> Add Teacher
         </a>
     </div>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm">
@@ -37,6 +48,8 @@
                                 <a href="{% url 'teacher_detail' teacher.pk %}" class="text-decoration-none text-dark d-flex align-items-center gap-2">
                                     {% if teacher.photo %}
                                     <img src="{{ teacher.photo.url }}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
+                                    {% elif teacher.user and teacher.user.profile_picture %}
+                                    <img src="{{ teacher.user.profile_picture.url }}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
                                     {% else %}
                                     <div class="rounded-circle bg-light text-secondary d-flex align-items-center justify-content-center"
                                          style="width: 32px; height: 32px; font-weight: bold; font-size: 0.85rem;">
@@ -51,28 +64,36 @@
                             {% if teacher.user %}
                                 <span class="badge bg-success">Active</span>
                                 <div class="small text-muted mb-1">{{ teacher.user.username }}</div>
+                                {% if user.is_school_admin or user.is_super_admin %}
                                 <form method="POST" action="{% url 'teacher_reset_password' teacher.pk %}" class="d-inline" onsubmit="return confirm('Reset password for {{ teacher.name }}?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-1" style="font-size: 0.75rem;" title="Reset Password"><i class="bi bi-key-fill"></i> Reset</button>
                                 </form>
+                                {% endif %}
                             {% else %}
+                                {% if user.is_school_admin or user.is_super_admin %}
                                 <form method="POST" action="{% url 'teacher_create_user' teacher.pk %}" class="d-inline" onsubmit="return confirm('Generate user account for {{ teacher.name }}?');">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-primary">Create Account</button>
                                 </form>
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td>
                             <span class="badge bg-secondary">{{ teacher.subject_assignments.count }} Subjects</span>
+                            {% if user.is_school_admin or user.is_super_admin %}
                             <a href="{% url 'teacher_subject_map' teacher.pk %}" class="btn btn-sm btn-link text-decoration-none">Edit Map</a>
+                            {% endif %}
                         </td>
                         <td class="text-end">
                             <a href="{% url 'teacher_detail' teacher.pk %}" class="btn btn-sm btn-outline-info" title="View Profile"><i class="bi bi-person-lines-fill"></i></a>
+                            {% if user.is_school_admin or user.is_super_admin %}
                             <a href="{% url 'teacher_edit' teacher.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
                             <form method="POST" action="{% url 'teacher_delete' teacher.pk %}" class="d-inline" onsubmit="return confirm('Permanently delete {{ teacher.name }}?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
                             </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

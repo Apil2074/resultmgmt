@@ -52,6 +52,7 @@
           </div>
         </div>
       </div>
+      {% if user.is_school_admin or user.is_super_admin %}
       <div class="card-footer bg-light-subtle d-flex justify-content-center gap-2 border-top py-3">
         <a href="{% url 'student_edit' student.pk %}" class="btn btn-sm btn-outline-primary">
           <i class="bi bi-pencil-fill me-1"></i>Edit Profile
@@ -60,6 +61,7 @@
           <i class="bi bi-trash-fill"></i> Delete
         </a>
       </div>
+      {% endif %}
     </div>
   </div>
 

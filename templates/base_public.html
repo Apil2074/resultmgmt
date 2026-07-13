@@ -16,10 +16,11 @@
   <!-- Custom CSS -->
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  <script src="{% static 'js/main.js' %}" defer></script>
   
   <style>
     body {
-        background-color: #f8fafc;
+        background-color: var(--color-bg);
         font-family: var(--font-primary);
         color: var(--color-text);
         display: flex;
@@ -95,6 +96,23 @@
         border: 1px solid rgba(148, 163, 184, 0.15) !important;
         box-shadow: 0 20px 50px rgba(15, 23, 42, 0.05);
     }
+    
+    [data-theme="dark"] .public-navbar,
+    [data-theme="dark"] .public-footer,
+    [data-theme="dark"] .public-card {
+        background: rgba(30, 41, 59, 0.85);
+        border-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    [data-theme="dark"] body::before {
+        background-image: 
+            radial-gradient(circle at 50% -20%, rgba(37, 99, 235, 0.05) 0%, transparent 60%),
+            radial-gradient(circle at 10% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 40%);
+    }
+    [data-theme="dark"] .background-grid {
+        background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    }
   </style>
 
   {% block extra_css %}{% endblock %}
@@ -108,12 +126,20 @@
         <div style="background: linear-gradient(135deg, var(--color-gold), var(--color-gold-dark)); color: white; width: 36px; height: 36px; font-weight: bold;" class="rounded-circle d-flex align-items-center justify-content-center">R</div>
         <div class="brand-name">RMS Parent Portal</div>
     </div>
-    {% if student and student.school %}
-    <div class="d-none d-md-block text-end">
-        <div class="fw-bold" style="font-size: 0.9rem;">{{ student.school.name }}</div>
-        {% if student.school.phone %}<div class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-telephone"></i> {{ student.school.phone }}</div>{% endif %}
+    
+    <div class="d-flex align-items-center gap-3">
+        <!-- Theme Toggle -->
+        <button class="btn btn-theme-toggle border-0 bg-transparent text-secondary" title="Toggle Theme" aria-label="Toggle Theme">
+          <i class="bi bi-moon-fill theme-toggle-icon"></i>
+        </button>
+
+        {% if student and student.school %}
+        <div class="d-none d-md-block text-end">
+            <div class="fw-bold" style="font-size: 0.9rem;">{{ student.school.name }}</div>
+            {% if student.school.phone %}<div class="text-muted" style="font-size: 0.8rem;"><i class="bi bi-telephone"></i> {{ student.school.phone }}</div>{% endif %}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </nav>
 
 <!-- Main Content -->

@@ -82,7 +82,7 @@
         <i class="bi bi-grid-1x2-fill nav-icon"></i> <span class="nav-text">Dashboard</span>
       </a>
 
-      {% if user.is_school_admin or user.is_super_admin %}
+      {% if not user.is_super_admin %}
       <!-- Academic -->
       <div class="nav-section-title">Academic</div>
       <a href="{% url 'class_list' %}" class="nav-item {% if 'class' in request.resolver_match.url_name %}active{% endif %}">
@@ -110,32 +110,56 @@
         <i class="bi bi-bar-chart-fill nav-icon"></i> <span class="nav-text">Reports</span>
       </a>
       <a href="{% url 'grade_ledger_select' %}" class="nav-item {% if 'grade_ledger' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-table nav-icon"></i> <span class="nav-text">Grade Ledger</span>
+        <i class="bi bi-table nav-icon"></i> <span class="nav-text">Master Grade Sheet</span>
       </a>
       <a href="{% url 'marksheet_select' %}" class="nav-item {% if 'marksheet' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-file-earmark-text-fill nav-icon"></i> <span class="nav-text">Marksheet</span>
+        <i class="bi bi-file-earmark-text-fill nav-icon"></i> <span class="nav-text">Print Marksheets</span>
       </a>
-      {% endif %}
 
       <!-- Administration -->
       {% if user.can_manage_school %}
       <div class="nav-section-title">Administration</div>
       <a href="{% url 'school_profile' %}" class="nav-item {% if request.resolver_match.url_name == 'school_profile' %}active{% endif %}">
-        <i class="bi bi-bank2 nav-icon"></i> <span class="nav-text">School Profile</span>
+        <i class="bi bi-bank2 nav-icon"></i> <span class="nav-text">School Settings</span>
       </a>
       <a href="{% url 'session_list' %}" class="nav-item {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}">
-        <i class="bi bi-calendar3 nav-icon"></i> <span class="nav-text">Sessions</span>
+        <i class="bi bi-calendar3 nav-icon"></i> <span class="nav-text">Academic Years</span>
       </a>
       <a href="{% url 'audit_log' %}" class="nav-item {% if 'audit' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-shield-check nav-icon"></i> <span class="nav-text">Audit Log</span>
       </a>
+      <a href="{% url 'teacher_notifications' %}" class="nav-item {% if 'teacher_notifications' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bell-fill nav-icon"></i> <span class="nav-text">Notifications</span>
+      </a>
+      <a href="{% url 'support_ticket_list' %}" class="nav-item {% if 'support' in request.resolver_match.url_name and not user.is_super_admin %}active{% endif %}">
+        <i class="bi bi-headset nav-icon"></i> <span class="nav-text">Support Tickets</span>
+      </a>
+      {% endif %}
       {% endif %}
 
       <!-- Super Admin -->
       {% if user.is_super_admin %}
       <div class="nav-section-title">Super Admin</div>
-      <a href="{% url 'super_schools' %}" class="nav-item {% if 'super_schools' in request.resolver_match.url_name or 'create_school_and_admin' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-building-fill nav-icon"></i> <span class="nav-text">Manage Schools</span>
+      <a href="{% url 'super_schools' %}" class="nav-item {% if 'super_schools' in request.resolver_match.url_name or 'create_school_and_admin' in request.resolver_match.url_name or 'edit_school' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-building-fill nav-icon"></i> <span class="nav-text">Schools</span>
+      </a>
+      <a href="{% url 'super_notifications' %}" class="nav-item {% if 'super_notifications' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-bell-fill nav-icon"></i> <span class="nav-text">Notifications</span>
+      </a>
+      <a href="{% url 'super_subscriptions' %}" class="nav-item {% if 'super_subscriptions' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-card-checklist nav-icon"></i> <span class="nav-text">Subscriptions</span>
+      </a>
+      <a href="{% url 'super_analytics' %}" class="nav-item {% if 'super_analytics' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-graph-up nav-icon"></i> <span class="nav-text">Analytics</span>
+      </a>
+      <a href="{% url 'super_reports' %}" class="nav-item {% if 'super_reports' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-file-earmark-bar-graph-fill nav-icon"></i> <span class="nav-text">Report</span>
+      </a>
+      <a href="{% url 'super_settings' %}" class="nav-item {% if 'super_settings' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-gear-fill nav-icon"></i> <span class="nav-text">Settings</span>
+      </a>
+      <a href="{% url 'super_ticket_list' %}" class="nav-item {% if 'super_ticket' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-headset nav-icon"></i> <span class="nav-text">Support Tickets</span>
       </a>
       {% endif %}
 
@@ -174,7 +198,63 @@
         </div>
       </div>
 
+      <!-- Universal Search Bar (#6) -->
+      <form action="{% url 'student_list' %}" method="get" class="d-none d-md-flex mx-auto" style="max-width: 400px; width: 100%;">
+        <div class="input-group">
+          <input type="text" name="q" class="form-control bg-light border-0" placeholder="Search students by name or roll..." style="border-radius: 20px 0 0 20px; padding-left: 1rem;">
+          <button class="btn btn-light border-0" type="submit" style="border-radius: 0 20px 20px 0; background: var(--color-bg-light);">
+            <i class="bi bi-search text-muted"></i>
+          </button>
+        </div>
+      </form>
+
       <div class="topbar-actions">
+        <!-- Notifications Dropdown (for School Admins and Teachers) -->
+        {% if user.is_school_admin or user.is_teacher %}
+        <div class="dropdown me-2">
+          <button class="btn btn-link border-0 p-0 text-secondary position-relative" type="button" data-bs-toggle="dropdown" id="notificationDropdown" aria-expanded="false" title="Notifications">
+            <i class="bi bi-bell-fill fs-5" style="color: var(--color-text-dim);"></i>
+            {% if unread_notifications_count > 0 %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="font-size: 0.6rem; padding: 0.2em 0.4em;">
+              {{ unread_notifications_count }}
+            </span>
+            {% endif %}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end p-2 shadow-sm border-0" aria-labelledby="notificationDropdown" style="width: 320px; background: var(--color-bg-light); max-height: 400px; overflow-y: auto; border-radius: var(--radius-md);">
+            <li class="dropdown-header fw-bold text-slate-800 border-bottom pb-2 mb-2 d-flex justify-content-between align-items-center" style="font-size: 0.85rem; color: var(--color-text);">
+              <span>Announcements</span>
+              {% if unread_notifications_count > 0 %}
+              <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill">{{ unread_notifications_count }} New</span>
+              {% endif %}
+            </li>
+            
+            {% for notif in user_notifications %}
+            <li class="p-2 mb-1 rounded position-relative notification-item {% if notif in unread_notifications %}bg-light fw-semibold{% endif %}" id="notif-{{ notif.id }}" style="transition: background 0.2s;">
+              <div class="d-flex justify-content-between align-items-start">
+                <span class="text-slate-800 small d-block" style="color: var(--color-text);">{{ notif.title }}</span>
+                <span class="text-muted" style="font-size: 0.65rem;">{{ notif.created_at|timesince }} ago</span>
+              </div>
+              <div class="text-muted small my-1" style="font-size: 0.75rem; font-weight: normal; line-height: 1.3; color: var(--color-text-muted);">{{ notif.message|safe }}</div>
+              
+              {% if notif in unread_notifications %}
+              <button class="btn btn-link p-0 text-decoration-none text-primary small float-end" style="font-size: 0.7rem;" onclick="markAsRead(event, {{ notif.id }})">
+                Mark as read
+              </button>
+              <div class="clearfix"></div>
+              {% endif %}
+            </li>
+            {% empty %}
+            <li class="text-center text-muted py-3 small" style="color: var(--color-text-dim);">No notifications yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Theme Toggle -->
+        <button class="btn btn-theme-toggle border-0 bg-transparent text-secondary" title="Toggle Theme" aria-label="Toggle Theme">
+          <i class="bi bi-moon-fill theme-toggle-icon"></i>
+        </button>
+
         <!-- School Selector for Super Admin -->
         {% if user.is_super_admin %}
         <span class="badge badge-purple">
@@ -185,7 +265,13 @@
         <!-- User Menu -->
         <div class="dropdown">
           <div class="user-menu dropdown-toggle" data-bs-toggle="dropdown" id="userMenuToggle">
-            <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+            {% if user.profile_picture %}
+              <img src="{{ user.profile_picture.url }}" alt="Profile" class="user-avatar" style="object-fit: cover; padding: 0; border: none;">
+            {% elif user.is_teacher and user.teacher_profile.photo %}
+              <img src="{{ user.teacher_profile.photo.url }}" alt="Profile" class="user-avatar" style="object-fit: cover; padding: 0; border: none;">
+            {% else %}
+              <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
+            {% endif %}
             <div>
               <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
               <div class="user-role">{{ user.get_role_display }}</div>
@@ -291,12 +377,50 @@
       ?.split('=')[1] || '';
   }
 
-  // Highlight active nav based on path
-  document.querySelectorAll('.nav-item').forEach(item => {
-    if (item.href && window.location.pathname.startsWith(new URL(item.href).pathname) && item.href !== window.location.origin + '/dashboard/') {
-      item.classList.add('active');
+  function markAsRead(event, notifId) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
     }
-  });
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || getCsrfToken();
+    
+    fetch(`/auth/notifications/read/${notifId}/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const notifItem = document.getElementById(`notif-${notifId}`);
+        if (notifItem) {
+          notifItem.classList.remove('bg-light', 'fw-semibold');
+          const btn = notifItem.querySelector('button');
+          if (btn) btn.remove();
+        }
+        const badge = document.getElementById('notificationBadge');
+        if (badge) {
+          let count = parseInt(badge.textContent.trim());
+          count = isNaN(count) ? 0 : count - 1;
+          if (count <= 0) {
+            badge.remove();
+            const headerBadge = document.querySelector('.dropdown-header .badge');
+            if (headerBadge) headerBadge.remove();
+          } else {
+            badge.textContent = count;
+            const headerBadge = document.querySelector('.dropdown-header .badge');
+            if (headerBadge) headerBadge.textContent = count + ' New';
+          }
+        }
+      }
+    })
+    .catch(err => console.error("Error marking read:", err));
+  }
+
+
+
 
   // Client-side image upload size limit (200 KB)
   document.addEventListener('change', function(e) {

@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Manage Aggregation Rules: {{ exam.name }}{% endblock %}
+{% block page_title %}Manage Aggregation Rules: {{ exam.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4 d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">
+      <i class="bi bi-diagram-3 text-primary me-2"></i>Aggregation Rules
+    </h1>
+    <div class="page-subtitle text-muted">Define how marks are calculated for <strong>{{ exam.name }}</strong></div>
+  </div>
+  <a href="{% url 'exam_detail' exam.id %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back to Exam
+  </a>
+</div>
+
+<div class="row">
+  {% if user.is_school_admin or user.is_super_admin %}
+  <div class="col-lg-5 mb-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white py-3">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-plus-circle-fill text-success me-2"></i>Add Rule
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if not available_exams %}
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>No other exams are available in this session to add as a source.
+          </div>
+        {% else %}
+          <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_rule">
+            <div class="mb-3">
+              <label class="form-label">Source Exam</label>
+              <select name="source_exam_id" class="form-select" required>
+                <option value="">-- Select Exam --</option>
+                {% for e in available_exams %}
+                  <option value="{{ e.id }}">{{ e.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Select the exam whose marks will contribute to this aggregate exam.</div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label">Weightage (%)</label>
+              <div class="input-group">
+                <input type="number" step="0.01" min="0" max="100" name="weight_percentage" class="form-control" required placeholder="e.g. 20">
+                <span class="input-group-text">%</span>
+              </div>
+              <div class="form-text">Percentage of marks from the source exam to be added.</div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-check2 me-2"></i>Add Source Exam
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="{% if user.is_school_admin or user.is_super_admin %}col-lg-7{% else %}col-lg-12{% endif %} mb-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0 fw-semibold text-slate-800">
+          <i class="bi bi-list-check text-primary me-2"></i>Current Rules
+        </h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Source Exam</th>
+              <th>Weight</th>
+              {% if user.is_school_admin or user.is_super_admin %}
+              <th class="text-end">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for rule in rules %}
+            <tr>
+              <td>
+                <div class="fw-medium text-slate-800">{{ rule.source_exam.name }}</div>
+                <div class="small text-muted">{{ rule.source_exam.start_date|date:'Y-m-d'|default:'No Date' }}</div>
+              </td>
+              <td>
+                <span class="badge bg-primary px-2 py-1 fs-6">{{ rule.weight_percentage }}%</span>
+              </td>
+              {% if user.is_school_admin or user.is_super_admin %}
+              <td class="text-end">
+                <form method="POST" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_rule">
+                  <input type="hidden" name="rule_id" value="{{ rule.id }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this source exam?');">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+              {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="text-center py-5 text-muted">
+                <i class="bi bi-diagram-3 fs-3 d-block mb-2"></i>
+                No rules defined yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

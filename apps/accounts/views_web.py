@@ -14,6 +14,9 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.core.mail import send_mail
 from django.conf import settings as django_settings
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 
 from apps.audit.models import AuditLog
 from apps.schools.models import School
@@ -161,7 +164,7 @@ class ForgotPasswordView(View):
 
         # SECURITY: Always return the same success message regardless of whether the
         # email is found. This prevents email enumeration attacks.
-        SAFE_SUCCESS_MSG = "If this email is registered, a temporary password has been sent to it."
+        SAFE_SUCCESS_MSG = "If this email is registered, a password reset link has been sent to it."
 
         user_to_reset = None
         email_to_send_to = email
@@ -177,22 +180,24 @@ class ForgotPasswordView(View):
             ).first()
 
         if user_to_reset:
-            # Generate a secure 16-character temporary password
-            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-            temp_password = "".join(secrets.choice(alphabet) for _ in range(16))
+            # Generate token and base64 encoded user ID
+            token = default_token_generator.make_token(user_to_reset)
+            uid = urlsafe_base64_encode(force_bytes(user_to_reset.pk))
+            
+            # Build absolute reset confirmation link
+            scheme = 'https' if request.is_secure() else 'http'
+            domain = request.get_host()
+            reset_link = f"{scheme}://{domain}/auth/reset-password/confirm/{uid}/{token}/"
 
-            user_to_reset.set_password(temp_password)
-            user_to_reset.save(update_fields=['password'])
-
-            subject = "Your Temporary Password — Multi-School RMS"
+            subject = "Reset Your Password — Multi-School RMS"
             body = (
                 f"Hello {user_to_reset.get_full_name() or user_to_reset.username},\n\n"
-                f"A temporary password has been generated for your admin account "
+                f"A password reset request was received for your admin account "
                 f"on Multi-School Result Management System.\n\n"
-                f"  Username      : {user_to_reset.username}\n"
-                f"  New Password  : {temp_password}\n\n"
-                f"Please log in and change your password immediately from your profile.\n\n"
-                f"If you did not request this, please contact support.\n\n"
+                f"Please click the secure link below to reset your password:\n"
+                f"  {reset_link}\n\n"
+                f"This link is valid for a limited time and can only be used once.\n"
+                f"If you did not request this, please ignore this email; your password will remain unchanged.\n\n"
                 f"— Multi-School RMS"
             )
             try:
@@ -214,8 +219,289 @@ class ForgotPasswordView(View):
         return render(request, self.template_name)
 
 
+class ResetPasswordConfirmView(View):
+    template_name = "auth/reset_password_confirm.html"
+
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.filter(pk=uid, is_active=True).first()
+        except (TypeError, ValueError, OverflowError):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            return render(request, self.template_name, {"validlink": True})
+        else:
+            return render(request, self.template_name, {"validlink": False})
+
+    def post(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.filter(pk=uid, is_active=True).first()
+        except (TypeError, ValueError, OverflowError):
+            user = None
+
+        if user is None or not default_token_generator.check_token(user, token):
+            messages.error(request, "This password reset link is invalid or has expired.")
+            return redirect("login")
+
+        new_password = request.POST.get("password", "")
+        confirm_password = request.POST.get("confirm_password", "")
+
+        if len(new_password) < 8:
+            messages.error(request, "Password must be at least 8 characters long.")
+            return render(request, self.template_name, {"validlink": True})
+
+        if new_password != confirm_password:
+            messages.error(request, "Passwords do not match.")
+            return render(request, self.template_name, {"validlink": True})
+
+        # Set the new password and save
+        user.set_password(new_password)
+        user.save()
+        
+        # Log the audit action
+        AuditLog.objects.create(
+            action=AuditLog.Action.UPDATE,
+            user=user,
+            model_name="User",
+            object_id=str(user.pk),
+            object_repr=user.username,
+            new_value={"action": "PASSWORD_RESET_VIA_TOKEN"},
+            ip_address=get_trusted_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:300],
+        )
+
+        messages.success(request, "Your password has been reset successfully. You can now log in.")
+        return redirect("login")
+
+
+
+class RegisterDemoView(View):
+    template_name = 'auth/register_demo.html'
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+        return render(request, self.template_name)
+
+    def post(self, request):
+        school_name = request.POST.get('school_name', '').strip()
+        admin_name = request.POST.get('admin_name', '').strip()
+        email = request.POST.get('email', '').strip().lower()
+        phone = request.POST.get('phone', '').strip()
+        password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
+
+        # Basic validation
+        if not all([school_name, admin_name, email, phone, password, confirm_password]):
+            messages.error(request, 'All fields are required.')
+            return render(request, self.template_name, request.POST)
+
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, self.template_name, request.POST)
+            
+        if len(password) < 8:
+            messages.error(request, 'Password must be at least 8 characters.')
+            return render(request, self.template_name, request.POST)
+
+        # Check if email is already taken
+        if User.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'This email is already registered.')
+            return render(request, self.template_name, request.POST)
+
+        try:
+            from django.db import transaction
+            from datetime import timedelta
+            from django.utils import timezone
+            
+            with transaction.atomic():
+                # Create School (1 day subscription)
+                today = timezone.now().date()
+                school = School.objects.create(
+                    name=school_name,
+                    email=email,
+                    phone=phone,
+                    address='Demo Address',
+                    principal_name=admin_name,
+                    subscription_start_date=today,
+                    subscription_end_date=today + timedelta(days=1)
+                )
+
+                # Create Admin User
+                first_name = admin_name.split()[0]
+                last_name = ' '.join(admin_name.split()[1:]) if len(admin_name.split()) > 1 else ''
+                
+                # Use email as username if not provided
+                base_username = email.split('@')[0]
+                username = base_username
+                counter = 1
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    role=User.Role.SCHOOL_ADMIN,
+                    school=school,
+                    phone=phone,
+                    is_active=True
+                )
+                
+                # Auto login
+                user = authenticate(request, username=username, password=password)
+                if user:
+                    login(request, user)
+                    AuditLog.objects.create(
+                        school=user.school,
+                        user=user,
+                        action=AuditLog.Action.LOGIN,
+                        model_name='User',
+                        object_id=str(user.pk),
+                        object_repr=str(user),
+                        ip_address=get_trusted_client_ip(request),
+                    )
+                    messages.success(request, f'Welcome! Your 1-day demo for {school.name} is active.')
+                    return redirect('dashboard')
+                    
+        except Exception as e:
+            logger.exception("Error during demo registration: %s", e)
+            messages.error(request, 'An error occurred during registration. Please try again.')
+            return render(request, self.template_name, request.POST)
+            
+        return redirect('login')
+
 class LandingPageView(View):
     template_name = "landing.html"
 
     def get(self, request):
-        return render(request, self.template_name)
+        schools = School.objects.filter(is_active=True).exclude(logo='')
+        return render(request, self.template_name, {"schools": schools})
+
+
+@login_required
+@require_POST
+def send_notification(request):
+    """View for Super Admin to send notifications to all School Admins."""
+    if not request.user.is_super_admin:
+        messages.error(request, "Access denied. Only Super Admins can send notifications.")
+        return redirect('dashboard')
+        
+    title = request.POST.get('title', '').strip()
+    message = request.POST.get('message', '').strip()
+    
+    if not title or not message:
+        messages.error(request, "Both title and message are required.")
+        return redirect('dashboard')
+        
+    from apps.accounts.models import Notification
+    notification = Notification.objects.create(
+        title=title,
+        message=message,
+        sender=request.user
+    )
+    
+    # Get all school admins
+    school_admins = User.objects.filter(role=User.Role.SCHOOL_ADMIN)
+    notification.recipients.add(*school_admins)
+    
+    # Audit log
+    AuditLog.objects.create(
+        action=AuditLog.Action.CREATE,
+        user=request.user,
+        model_name="Notification",
+        object_id=str(notification.pk),
+        object_repr=notification.title,
+        new_value={"title": title},
+        ip_address=get_trusted_client_ip(request),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:300],
+    )
+    
+    messages.success(request, "Notification broadcast successfully to all School Admins!")
+    return redirect('dashboard')
+
+
+@login_required
+@require_POST
+def send_teacher_notification(request):
+    """View for School Admin to send notifications to all Teachers in their school."""
+    if not request.user.can_manage_school():
+        messages.error(request, "Access denied. Only School Admins can send notifications.")
+        return redirect('dashboard')
+        
+    title = request.POST.get('title', '').strip()
+    message = request.POST.get('message', '').strip()
+    
+    if not title or not message:
+        messages.error(request, "Both title and message are required.")
+        return redirect('dashboard')
+        
+    from apps.accounts.models import Notification
+    notification = Notification.objects.create(
+        title=title,
+        message=message,
+        sender=request.user
+    )
+    
+    # Get all active teachers in this school
+    teachers = User.objects.filter(role=User.Role.TEACHER, school=request.user.school, is_active=True)
+    notification.recipients.add(*teachers)
+    
+    # Audit log
+    AuditLog.objects.create(
+        action=AuditLog.Action.CREATE,
+        user=request.user,
+        model_name="Notification",
+        object_id=str(notification.pk),
+        object_repr=notification.title,
+        new_value={"title": title, "type": "teacher_notification"},
+        ip_address=get_trusted_client_ip(request),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')[:300],
+    )
+    
+    messages.success(request, "Notification broadcast successfully to all Teachers!")
+    return redirect('teacher_notifications')
+
+
+
+@login_required
+@require_POST
+def mark_notification_read(request, pk):
+    """Mark a specific notification as read for the logged-in user."""
+    from django.shortcuts import get_object_or_404
+    from django.http import JsonResponse
+    from apps.accounts.models import Notification
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    
+    # Ensure user is a recipient
+    if request.user in notification.recipients.all():
+        notification.read_by.add(request.user)
+        return JsonResponse({"status": "success", "message": "Notification marked as read."})
+        
+    return JsonResponse({"status": "error", "message": "Not a recipient."}, status=403)
+
+
+@login_required
+@require_POST
+def delete_notification(request, pk):
+    """Delete a notification sent by the current user."""
+    from django.shortcuts import get_object_or_404
+    from apps.accounts.models import Notification
+    
+    notification = get_object_or_404(Notification, pk=pk)
+    
+    # Only the sender can delete their notification
+    if notification.sender_id == request.user.id or request.user.is_super_admin:
+        notification.delete()
+        messages.success(request, "Notification deleted successfully.")
+    else:
+        messages.error(request, "You don't have permission to delete this notification.")
+        
+    # Redirect back to the referrer or dashboard
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
