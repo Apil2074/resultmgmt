@@ -121,6 +121,16 @@ input[type=number]::-webkit-outer-spin-button {
 .inline-save-indicator.show {
   opacity: 1;
 }
+@media (max-width: 768px) {
+  .sticky-roll, .sticky-name {
+    position: static !important;
+    left: auto !important;
+  }
+  th.sticky-roll, th.sticky-name {
+    position: static !important;
+    z-index: auto !important;
+  }
+}
 </style>
 {% endblock %}
 
