@@ -212,7 +212,7 @@ input[type=number]::-webkit-outer-spin-button {
           <th class="sticky-roll" rowspan="2">#</th>
           <th class="sticky-name" rowspan="2">Student Name</th>
           {% for subject in subjects %}
-          <th colspan="{% if subject.marking_structure.has_internal %}3{% else %}2{% endif %}"
+          <th id="subject-col-{{ subject.id }}" colspan="{% if subject.marking_structure.has_internal %}3{% else %}2{% endif %}"
               style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center;">
             {{ subject.name }}
             <span class="badge badge-gray ms-1" style="font-size:0.6rem;">{{ subject.get_subject_type_display }}</span>
@@ -355,6 +355,27 @@ input[type=number]::-webkit-outer-spin-button {
 
 {% block extra_js %}
 <script>
+window.addEventListener('load', function() {
+  if (window.location.hash) {
+    var el = document.querySelector(window.location.hash);
+    if (el) {
+      var container = document.querySelector('.table-responsive');
+      if (container) {
+        // Adjust for sticky column and add a little padding
+        container.scrollLeft = el.offsetLeft - 150;
+        
+        // Highlight effect
+        var originalBg = el.style.backgroundColor || '';
+        el.style.backgroundColor = '#eef2ff';
+        el.style.transition = 'background-color 2s';
+        setTimeout(function() {
+          el.style.backgroundColor = originalBg;
+        }, 2000);
+      }
+    }
+  }
+});
+
 const EXAM_ID = {{ exam.id }};
 const SAVE_URL = "{% url 'save_mark' %}";
 const CSRF = "{{ csrf_token }}";

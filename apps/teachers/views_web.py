@@ -447,6 +447,24 @@ def teacher_dashboard(request):
             classes_dict[cls] = []
         classes_dict[cls].append(assignment.subject)
         class_ids.add(cls.id)
+
+    classes_info = []
+    from apps.exams.models import ExamClass
+    for cls, subjects in classes_dict.items():
+        latest_ec = ExamClass.objects.filter(
+            class_obj=cls, 
+            exam__status='DRAFT'
+        )
+        if active_session:
+            latest_ec = latest_ec.filter(exam__session=active_session)
+        latest_ec = latest_ec.order_by('-exam__created_at').first()
+        
+        classes_info.append({
+            'class_obj': cls,
+            'subjects': subjects,
+            'latest_exam_id': latest_ec.exam_id if latest_ec else None
+        })
+
         
     # Calculate KPIs
     from apps.students.models import Student
@@ -528,6 +546,7 @@ def teacher_dashboard(request):
     return render(request, 'teachers/teacher_portal/dashboard.html', {
         'teacher': teacher,
         'classes_dict': classes_dict,
+        'classes_info': classes_info,
         'total_classes': total_classes,
         'total_students': total_students,
         'total_subjects': total_subjects,

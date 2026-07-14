@@ -280,6 +280,7 @@
         
         <div class="tab-content border-top" id="nav-tabContent-performers" style="max-height:264px;overflow-y:auto;">
           {% for cls_group in classes_list %}
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
                id="nav-perf-{{ cls_group.grouper.id }}" 
                role="tabpanel" 
                aria-labelledby="nav-perf-{{ cls_group.grouper.id }}-tab">
@@ -333,7 +334,8 @@
 <!-- ── MY CLASSES & SUBJECTS ── -->
 <div class="td-section-label"><i class="bi bi-journal-bookmark-fill text-primary"></i> My Classes & Subjects</div>
 <div class="row g-3">
-  {% for cls, subjects in classes_dict.items %}
+{% for info in classes_info %}
+  {% with cls=info.class_obj subjects=info.subjects latest_exam_id=info.latest_exam_id %}
   <div class="col-md-6 col-lg-4">
     <div class="td-class-card">
       <div class="td-class-header">
@@ -350,9 +352,15 @@
             <div class="fw-medium text-slate-800" style="font-size:.9rem;">{{ sub.name }}</div>
             <div class="td-subj-code">{{ sub.code }}</div>
           </div>
+          {% if latest_exam_id %}
+          <a href="{% url 'mark_entry' latest_exam_id cls.id %}#subject-col-{{ sub.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.78rem;background:#eef2ff;color:#4f46e5;border:none;white-space:nowrap;">
+            <i class="bi bi-pencil-square me-1" style="font-size:.7rem;"></i>Marks
+          </a>
+          {% else %}
           <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.78rem;background:#eef2ff;color:#4f46e5;border:none;white-space:nowrap;">
             <i class="bi bi-pencil-square me-1" style="font-size:.7rem;"></i>Marks
           </a>
+          {% endif %}
         </div>
         {% empty %}
         <div class="text-muted small py-3 text-center">No subjects assigned.</div>
@@ -360,6 +368,7 @@
       </div>
     </div>
   </div>
+  {% endwith %}
   {% empty %}
   <div class="col-12">
     <div class="text-center py-5 text-muted rounded-3 border" style="background:#f8fafc;">
