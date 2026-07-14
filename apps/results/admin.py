@@ -4,13 +4,14 @@ from .models import SubjectResult, StudentResult, GradeScale, GradeScaleEntry
 @admin.register(SubjectResult)
 class SubjectResultAdmin(admin.ModelAdmin):
     list_display = ['mark_entry', 'grade_point', 'grade', 'gpa', 'is_pass']
-    list_filter = ['is_pass']
+    list_filter = ['school', 'is_pass']
+    search_fields = ['school__name']
 
 @admin.register(StudentResult)
 class StudentResultAdmin(admin.ModelAdmin):
     list_display = ['student', 'exam', 'overall_gpa', 'final_grade', 'class_rank', 'is_pass']
-    list_filter = ['exam', 'final_grade', 'is_pass']
-    search_fields = ['student__name']
+    list_filter = ['school', 'exam', 'final_grade', 'is_pass']
+    search_fields = ['student__name', 'school__name']
 
 @admin.register(GradeScale)
 class GradeScaleAdmin(admin.ModelAdmin):

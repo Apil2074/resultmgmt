@@ -204,6 +204,7 @@ input[type=number]::-webkit-outer-spin-button {
     <a href="{% url 'subject_list' %}?class_id={{ class_obj.id }}" class="btn btn-primary btn-sm">Add Subjects</a>
   </div>
 {% endif %}
+<div class="table-responsive border-0 w-100">
 <table class="marks-entry-table data-table" id="marksTable">
   <thead>
         <!-- Row 1: Subject names spanning columns -->
@@ -346,7 +347,8 @@ input[type=number]::-webkit-outer-spin-button {
         </tr>
         {% endfor %}
       </tbody>
-    </table>
+  </table>
+</div>
   </div>
 </div>
 {% endblock %}

@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import re_path
+from django.views.static import serve
 from django.views.generic.base import TemplateView
 from apps.accounts.views_web import LandingPageView
 
@@ -13,7 +15,23 @@ from apps.accounts.views_web import LandingPageView
 # we rely on the built-in is_staff/is_superuser flags on the User model.
 # The User model's save/create methods should enforce that ONLY SUPER_ADMIN gets is_staff=True.
 
+from django.core.management import call_command
+from django.http import HttpResponse
+
+def trigger_migration(request):
+    import traceback
+    try:
+        call_command('migrate')
+        with open('migrate_log.txt', 'w') as f:
+            f.write("Migration was successful!")
+        return HttpResponse("Migration triggered! Check migrate_log.txt in your file manager.")
+    except Exception as e:
+        with open('migrate_log.txt', 'w') as f:
+            f.write(traceback.format_exc())
+        return HttpResponse("Migration failed! Check migrate_log.txt in your file manager.")
+
 urlpatterns = [
+    path('setup-database/', trigger_migration, name='trigger_migration'),
     # Admin
     path('admin/', admin.site.urls),
 
@@ -47,8 +65,12 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Force Django to serve media files in production for cPanel hosting
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
 
 # Custom error handlers
 handler404 = TemplateView.as_view(template_name='404.html')

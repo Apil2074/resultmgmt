@@ -156,7 +156,7 @@
           {% if active_session %}&nbsp;·&nbsp;<i class="bi bi-calendar3 me-1"></i>{{ active_session.name }}{% endif %}
         </div>
       </div>
-      <div class="d-flex gap-2 mt-1">
+      <div class="d-flex gap-2 mt-3 mt-md-1">
         <a href="{% url 'exam_list' %}" class="btn-modern-ripple">
           <i class="bi bi-clipboard2-check me-2"></i>Enter Marks
         </a>
@@ -280,12 +280,12 @@
         
         <div class="tab-content border-top" id="nav-tabContent-performers" style="max-height:264px;overflow-y:auto;">
           {% for cls_group in classes_list %}
-          <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
                id="nav-perf-{{ cls_group.grouper.id }}" 
                role="tabpanel" 
                aria-labelledby="nav-perf-{{ cls_group.grouper.id }}-tab">
                
-            <table class="table table-hover align-middle mb-0 small">
+            <div class="table-responsive border-0">
+            <table class="table table-hover align-middle mb-0 small" style="min-width: 400px;">
               <thead class="table-light sticky-top" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
                 <tr>
                   <th class="ps-3" style="width:50px;">Rank</th>
@@ -313,6 +313,7 @@
                 {% endfor %}
               </tbody>
             </table>
+            </div>
             
           </div>
           {% endfor %}
