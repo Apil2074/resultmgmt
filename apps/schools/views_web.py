@@ -171,7 +171,9 @@ def school_profile(request):
         school.website = request.POST.get('website', school.website)
         school.principal_name = request.POST.get('principal_name', school.principal_name)
 
-        if 'logo' in request.FILES:
+        if request.POST.get('remove_logo') == 'on':
+            school.logo = None
+        elif 'logo' in request.FILES:
             school.logo = request.FILES['logo']
 
         school.save()
@@ -397,7 +399,9 @@ def edit_school(request, school_id):
         school.subscription_start_date = request.POST.get('subscription_start_date') or None
         school.subscription_end_date = request.POST.get('subscription_end_date') or None
 
-        if 'logo' in request.FILES:
+        if request.POST.get('remove_logo') == 'on':
+            school.logo = None
+        elif 'logo' in request.FILES:
             school.logo = request.FILES['logo']
 
         school.save()

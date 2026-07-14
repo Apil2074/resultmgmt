@@ -423,6 +423,36 @@
 
 
   // Client-side image upload size limit (200 KB)
+  document.addEventListener('DOMContentLoaded', () => {
+    const imageInputs = document.querySelectorAll('input[type="file"][accept*="image"]');
+    imageInputs.forEach(input => {
+      // Add Max Size text
+      const helpText = document.createElement('div');
+      helpText.className = 'form-text text-muted small mt-1';
+      helpText.innerHTML = '<i class="bi bi-info-circle"></i> Max allowed file size: 200 KB';
+      input.parentNode.insertBefore(helpText, input.nextSibling);
+
+      // Add Clear Selection button
+      const clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'btn btn-sm btn-outline-secondary mt-2 d-none';
+      clearBtn.innerHTML = '<i class="bi bi-x-circle"></i> Clear Selection';
+      clearBtn.onclick = function() {
+        input.value = '';
+        clearBtn.classList.add('d-none');
+      };
+      helpText.parentNode.insertBefore(clearBtn, helpText.nextSibling);
+
+      input.addEventListener('change', function() {
+        if (input.files.length > 0) {
+          clearBtn.classList.remove('d-none');
+        } else {
+          clearBtn.classList.add('d-none');
+        }
+      });
+    });
+  });
+
   document.addEventListener('change', function(e) {
     if (e.target && e.target.type === 'file' && e.target.accept && e.target.accept.includes('image')) {
       const file = e.target.files[0];
@@ -431,6 +461,9 @@
         if (file.size > maxSize) {
           showToast('Image file is too large. Maximum allowed size is 200 KB.', 'danger');
           e.target.value = ''; // Clear the file input
+          // also hide the clear button if it was shown
+          const clearBtn = e.target.parentNode.querySelector('button.btn-outline-secondary');
+          if (clearBtn) clearBtn.classList.add('d-none');
         }
       }
     }

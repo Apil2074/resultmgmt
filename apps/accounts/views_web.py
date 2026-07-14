@@ -131,7 +131,9 @@ def profile_view(request):
         user.email = request.POST.get('email', user.email).strip()
         user.phone = request.POST.get('phone', user.phone).strip()
 
-        if 'profile_picture' in request.FILES:
+        if request.POST.get('remove_profile_picture') == 'on':
+            user.profile_picture = None
+        elif 'profile_picture' in request.FILES:
             from django.core.exceptions import ValidationError
             try:
                 validate_image_upload(request.FILES['profile_picture'])

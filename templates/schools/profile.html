@@ -22,7 +22,13 @@
           <div class="px-3">
             <label for="logo" class="form-label small fw-medium text-slate-700">Update Logo</label>
             <input type="file" class="form-control form-control-sm" id="logo" name="logo" accept="image/*">
-            <div class="form-text text-muted" style="font-size: 0.75rem;">Recommended size: 200x200 pixels. Max file size: 200 KB.</div>
+            <div class="form-text text-muted" style="font-size: 0.75rem;">Recommended size: 200x200 pixels.</div>
+            {% if school.logo %}
+            <div class="form-check mt-2 text-start">
+              <input class="form-check-input" type="checkbox" name="remove_logo" id="remove_logo">
+              <label class="form-check-label text-danger small" for="remove_logo">Remove current logo</label>
+            </div>
+            {% endif %}
           </div>
           {% endif %}
         </div>

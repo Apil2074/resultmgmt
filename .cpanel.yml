@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - touch /home/tvfcoijb/test/passenger_wsgi.py
