@@ -13,12 +13,9 @@
         </h5>
         <div>
           {% if user.is_school_admin or user.is_super_admin %}
-          {% if exam.is_editable %}
-          <a href="{% url 'exam_edit' exam.id %}" class="btn btn-sm btn-outline-primary" title="Edit Exam"><i class="bi bi-pencil"></i></a>
-          {% endif %}
-          {% if exam.is_editable or user.can_manage_school %}
-          <a href="{% url 'exam_delete' exam.id %}" class="btn btn-sm btn-outline-danger" title="Delete Exam"><i class="bi bi-trash"></i></a>
-          {% endif %}
+            {% if exam.is_editable or user.can_manage_school %}
+            <a href="{% url 'exam_delete' exam.id %}" class="btn btn-sm btn-outline-danger" title="Delete Exam"><i class="bi bi-trash"></i></a>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -82,9 +79,15 @@
                   <i class="bi bi-patch-check-fill me-2"></i>Publish Results
                 </button>
               {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
-                <button type="submit" name="action" value="unlock" class="btn btn-outline-danger w-100">
-                  <i class="bi bi-unlock-fill me-2"></i>Unlock Exam
+                <button type="submit" name="action" value="unpublish" class="btn btn-outline-danger w-100">
+                  <i class="bi bi-x-circle-fill me-2"></i>Unpublish Exam
                 </button>
+              {% endif %}
+
+              {% if exam.is_editable %}
+                <a href="{% url 'exam_edit' exam.id %}" class="btn btn-outline-primary w-100 mt-2">
+                  <i class="bi bi-pencil me-2"></i>Edit Details
+                </a>
               {% endif %}
             </form>
           </div>

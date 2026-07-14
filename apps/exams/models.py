@@ -50,7 +50,8 @@ class Exam(models.Model):
         self.published_by = user
         self.save()
 
-    def unlock(self):
+    def unpublish(self):
+        self.status = self.Status.DRAFT
         self.is_locked = False
         self.save()
 

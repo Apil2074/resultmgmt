@@ -103,17 +103,8 @@
       <a href="{% url 'exam_list' %}" class="nav-item {% if 'exam' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-clipboard2-check-fill nav-icon"></i> <span class="nav-text">Exams</span>
       </a>
-
-      <!-- Results -->
-      <div class="nav-section-title">Results</div>
       <a href="{% url 'reports_index' %}" class="nav-item {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-bar-chart-fill nav-icon"></i> <span class="nav-text">Reports</span>
-      </a>
-      <a href="{% url 'grade_ledger_select' %}" class="nav-item {% if 'grade_ledger' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-table nav-icon"></i> <span class="nav-text">Master Grade Sheet</span>
-      </a>
-      <a href="{% url 'marksheet_select' %}" class="nav-item {% if 'marksheet' in request.resolver_match.url_name %}active{% endif %}">
-        <i class="bi bi-file-earmark-text-fill nav-icon"></i> <span class="nav-text">Print Marksheets</span>
       </a>
 
       <!-- Administration -->
@@ -193,8 +184,9 @@
         <button class="topbar-btn d-none d-md-flex" id="desktopSidebarToggle" title="Collapse Sidebar">
           <i class="bi bi-chevron-left" id="desktopToggleIcon"></i>
         </button>
-        <div>
-          <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+        <div class="d-flex align-items-center gap-2" style="min-width: 0;">
+          <div class="d-md-none fw-bold text-primary" style="font-size: 1.2rem; font-family: 'Outfit', sans-serif;">RMS</div>
+          <div class="topbar-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.9rem, 3vw, 1.25rem);">{% block page_title %}Dashboard{% endblock %}</div>
         </div>
       </div>
 
@@ -272,7 +264,7 @@
             {% else %}
               <div class="user-avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</div>
             {% endif %}
-            <div>
+            <div class="d-none d-md-block">
               <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
               <div class="user-role">{{ user.get_role_display }}</div>
             </div>

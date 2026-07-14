@@ -129,14 +129,14 @@ def exam_workflow(request, pk):
 
     workflow_map = {
         'publish': (Exam.Status.DRAFT, Exam.Status.PUBLISHED, 'Results published successfully!'),
-        'unlock': (None, None, 'Exam unlocked for editing.'),
+        'unpublish': (None, None, 'Exam unpublished and editable.'),
     }
 
     if action in workflow_map:
         from_status, to_status, msg = workflow_map[action]
-        if action == 'unlock':
+        if action == 'unpublish':
             if user.can_manage_school():
-                exam.unlock()
+                exam.unpublish()
                 messages.success(request, msg)
             else:
                 messages.error(request, 'Permission denied.')

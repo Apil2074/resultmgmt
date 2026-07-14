@@ -38,7 +38,7 @@
                                 {% else %}
                                     <span class="badge bg-danger mb-1">Failed</span>
                                 {% endif %}
-                                <div class="small fw-bold text-dark">GPA: {{ res.gpa|default:"-" }}</div>
+                                <div class="small fw-bold text-dark">GPA: {{ res.overall_gpa|default:"-" }}</div>
                             </div>
                         </a>
                     {% endfor %}

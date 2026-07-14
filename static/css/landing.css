@@ -576,7 +576,9 @@ h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
 }
 
 .logo-carousel-track {
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    width: max-content;
     animation: scroll-logos 40s linear infinite;
 }
 
