@@ -3,18 +3,29 @@
 {% block page_title %}👤 My Profile{% endblock %}
 
 {% block content %}
-<div class="row">
+<form method="POST" enctype="multipart/form-data" class="row">
+  {% csrf_token %}
   <div class="col-lg-4 mb-4">
     <div class="card text-center shadow-sm">
       <div class="card-body py-5">
         <div class="mb-4">
           {% if user.profile_picture %}
-            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="rounded-circle border p-1" style="width: 140px; height: 140px; object-fit: cover;">
+            <img src="{{ user.profile_picture.url }}" alt="{{ user.username }}" class="rounded-circle border p-1 mb-3" style="width: 140px; height: 140px; object-fit: cover;">
           {% else %}
-            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto" style="width: 140px; height: 140px; font-size: 3rem;">
+            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 140px; height: 140px; font-size: 3rem;">
               {{ user.username|first|upper }}
             </div>
           {% endif %}
+          <div class="px-3 text-start">
+            <label for="profile_picture" class="form-label small fw-medium text-slate-700">Update Profile Picture</label>
+            <input type="file" class="form-control form-control-sm" id="profile_picture" name="profile_picture" accept="image/*">
+            {% if user.profile_picture %}
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="remove_profile_picture" id="remove_profile_picture">
+              <label class="form-check-label text-danger small" for="remove_profile_picture">Remove current profile picture</label>
+            </div>
+            {% endif %}
+          </div>
         </div>
         <h4 class="card-title fw-bold text-slate-800">{{ user.get_full_name|default:user.username }}</h4>
         <p class="text-muted"><i class="bi bi-shield-lock me-1"></i>Role: {{ user.get_role_display }}</p>
@@ -42,9 +53,6 @@
         </a>
       </div>
       <div class="card-body p-4">
-        <form method="POST" enctype="multipart/form-data">
-          {% csrf_token %}
-          
           <div class="row mb-3">
             <div class="col-md-6 form-group">
               <label for="first_name" class="form-label fw-medium text-slate-700">First Name</label>
@@ -68,20 +76,10 @@
           </div>
 
           <div class="row mb-4">
-            <div class="col-md-6 form-group">
+            <div class="col-md-12 form-group">
               <label class="form-label fw-medium text-slate-700">Username</label>
               <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly>
               <div class="form-text">Username cannot be changed.</div>
-            </div>
-            <div class="col-md-6 form-group">
-              <label for="profile_picture" class="form-label fw-medium text-slate-700">Profile Picture</label>
-              <input type="file" class="form-control" id="profile_picture" name="profile_picture" accept="image/*">
-              {% if user.profile_picture %}
-              <div class="form-check mt-2">
-                <input class="form-check-input" type="checkbox" name="remove_profile_picture" id="remove_profile_picture">
-                <label class="form-check-label text-danger small" for="remove_profile_picture">Remove current profile picture</label>
-              </div>
-              {% endif %}
             </div>
           </div>
 
@@ -90,9 +88,8 @@
               <i class="bi bi-save me-2"></i>Update Profile
             </button>
           </div>
-        </form>
       </div>
     </div>
   </div>
-</div>
+</form>
 {% endblock %}
