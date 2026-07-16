@@ -26,9 +26,10 @@ def exam_list(request):
                 school=school,
                 session=session,
                 name=request.POST.get('name', '').strip(),
-                start_date=request.POST.get('start_date') or None,
-                end_date=request.POST.get('end_date') or None,
+                start_date=request.POST.get('start_date', '').strip() or None,
+                end_date=request.POST.get('end_date', '').strip() or None,
                 result_date=request.POST.get('result_date') or None,
+                result_date_is_bs=(request.POST.get('result_date_is_bs') == 'on'),
                 is_locked=(request.POST.get('is_locked') == 'on'),
                 is_aggregate=(request.POST.get('is_aggregate') == 'on'),
             )
@@ -166,9 +167,10 @@ def exam_edit(request, pk):
 
     if request.method == 'POST':
         exam.name = request.POST.get('name', '').strip()
-        exam.start_date = request.POST.get('start_date') or None
-        exam.end_date = request.POST.get('end_date') or None
+        exam.start_date = request.POST.get('start_date', '').strip() or None
+        exam.end_date = request.POST.get('end_date', '').strip() or None
         exam.result_date = request.POST.get('result_date') or None
+        exam.result_date_is_bs = (request.POST.get('result_date_is_bs') == 'on')
         exam.is_locked = (request.POST.get('is_locked') == 'on')
         exam.is_aggregate = (request.POST.get('is_aggregate') == 'on')
         

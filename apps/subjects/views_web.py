@@ -174,8 +174,12 @@ def subject_list(request):
     if active_session:
         all_classes = all_classes.filter(session=active_session)
 
+    from apps.schools.models import SystemSetting
+    system_settings = SystemSetting.get_settings()
+    
     return render(request, 'subjects/list.html', {
         'classes': classes,
         'all_classes': all_classes,
         'class_id': class_id,
+        'system_settings': system_settings,
     })

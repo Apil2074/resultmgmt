@@ -109,3 +109,18 @@ class TicketMessage(models.Model):
 
     def __str__(self):
         return f"Message by {self.sender} on {self.ticket}"
+
+
+class SystemSetting(models.Model):
+    """Global system settings, e.g., for super admins to upload global documents."""
+    subjects_guide_pdf = models.FileField(upload_to='system_docs/', null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'System Setting'
+        verbose_name_plural = 'System Settings'
+        
+    @classmethod
+    def get_settings(cls):
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings

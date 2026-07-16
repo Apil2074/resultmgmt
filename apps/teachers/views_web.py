@@ -62,6 +62,11 @@ def teacher_create(request):
         name = request.POST.get('name', '').strip()
         contact = request.POST.get('contact_number', '').strip()
         dob = request.POST.get('date_of_birth') or None
+        email = request.POST.get('email', '').strip() or None
+
+        if email and Teacher.objects.filter(email__iexact=email).exists():
+            messages.error(request, f'The email {email} is already in use by another teacher.')
+            return render(request, 'teachers/form.html')
 
         photo = None
         if 'photo' in request.FILES:
@@ -80,6 +85,7 @@ def teacher_create(request):
             name=name,
             contact_number=contact,
             date_of_birth=dob,
+            email=email,
             photo=photo
         )
         active_session = school.get_active_session()
@@ -131,6 +137,14 @@ def teacher_edit(request, pk):
         teacher.contact_number = request.POST.get('contact_number', teacher.contact_number).strip()
         dob = request.POST.get('date_of_birth')
         teacher.date_of_birth = dob if dob else None
+        
+        email = request.POST.get('email', '').strip() or None
+        if email and email != teacher.email:
+            if Teacher.objects.exclude(pk=teacher.pk).filter(email__iexact=email).exists():
+                messages.error(request, f'The email {email} is already in use by another teacher.')
+                return render(request, 'teachers/form.html', {'teacher': teacher})
+        teacher.email = email
+
         if 'photo' in request.FILES:
             from django.core.exceptions import ValidationError
             from core.security import validate_image_upload
@@ -171,6 +185,34 @@ def teacher_delete(request, pk):
         messages.success(request, f'Teacher {name} permanently deleted.')
         return redirect('teacher_list')
         
+    return redirect('teacher_list')
+
+
+@login_required
+def teacher_bulk_delete(request):
+    """Bulk delete teachers."""
+    school = request.user.school
+    if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        teacher_ids = request.POST.getlist('teacher_ids')
+        if teacher_ids:
+            teachers = Teacher.objects.filter(pk__in=teacher_ids, school=school)
+            deleted_count = 0
+            for teacher in teachers:
+                if teacher.user:
+                    teacher.user.delete()
+                teacher.delete()
+                deleted_count += 1
+            if deleted_count > 0:
+                messages.success(request, f'Successfully deleted {deleted_count} teacher(s).')
+            else:
+                messages.warning(request, 'No teachers were deleted.')
+        else:
+            messages.warning(request, 'No teachers were selected for deletion.')
+            
     return redirect('teacher_list')
 
 
@@ -356,11 +398,81 @@ def teacher_reset_password(request, pk):
 
         teacher.user.set_password(password)
         teacher.user.save()
-
-        messages.success(request, f'Password reset for {teacher.name}. New Temporary Password: {password} (Please copy this password now, it will not be shown again!)')
-        # In a real system, you'd likely email it or show it ONCE on a dedicated screen, not in the session flash messages.
-
+        messages.success(request, f'Password reset for {teacher.name}. New password: {password} (Please copy this password now!)')
     return redirect('teacher_list')
+
+
+@login_required
+def teacher_send_password_reset(request, pk):
+    """Send a password reset email to the teacher."""
+    school = request.user.school
+    if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('dashboard')
+
+    teacher = get_object_or_404(Teacher, pk=pk, school=school)
+    
+    if request.method == 'POST':
+        if not teacher.email:
+            messages.error(request, 'This teacher does not have an email address set.')
+            return redirect(request.META.get('HTTP_REFERER', 'teacher_list'))
+            
+        import secrets
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        from django.urls import reverse
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        try:
+            if not teacher.user:
+                # Auto-create user so they can receive the reset link and log in
+                username_base = teacher.email.split('@')[0]
+                user = User.objects.create_user(
+                    username=f"{username_base}_{teacher.pk}_{secrets.token_hex(2)}",
+                    email=teacher.email,
+                    password=secrets.token_urlsafe(16),
+                    first_name=teacher.name,
+                    role=User.Role.TEACHER,
+                    school=school
+                )
+                teacher.user = user
+                teacher.save()
+            else:
+                # Ensure email matches
+                if teacher.user.email != teacher.email:
+                    teacher.user.email = teacher.email
+                    teacher.user.save()
+                    
+            uid = urlsafe_base64_encode(force_bytes(teacher.user.pk))
+            token = default_token_generator.make_token(teacher.user)
+            reset_url = request.build_absolute_uri(
+                reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+            )
+            
+            send_mail(
+                subject='Password Reset Request',
+                message=f'Hello {teacher.name},\n\nPlease click the link below to set your new password:\n{reset_url}\n\nThis link is valid for a limited time.\n\nThank you.',
+                from_email=getattr(settings, 'EMAIL_HOST_USER', None) or "noreply@rms.local",
+                recipient_list=[teacher.email],
+                fail_silently=False,
+            )
+            messages.success(request, f'Password reset email sent to {teacher.email}.')
+            
+            # Log action
+            from apps.audit.models import AuditLog
+            AuditLog.log_action(
+                user=request.user,
+                action='PASSWORD_RESET_SENT',
+                model_name='Teacher',
+                object_id=teacher.pk,
+                details=f'Sent password reset email to {teacher.email}'
+            )
+        except Exception as e:
+            messages.error(request, f'Error sending password reset email: {str(e)}')
+
+    return redirect(request.META.get('HTTP_REFERER', 'teacher_list'))
 
 
 @login_required

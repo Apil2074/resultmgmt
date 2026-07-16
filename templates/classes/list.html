@@ -167,27 +167,7 @@
                 {% endfor %}
               </select>
             </div>
-            
-            <div class="mb-2"><span class="text-muted small fw-medium">OR Enter Manually:</span></div>
 
-            <div class="mb-3">
-              <label for="teacher_name" class="form-label fw-medium text-slate-700">Teacher Name</label>
-              <input type="text" class="form-control" id="teacher_name" name="teacher_name"
-                placeholder="e.g. Ram Bahadur">
-            </div>
-
-            <div class="mb-3">
-              <label for="teacher_phone" class="form-label fw-medium text-slate-700">Teacher Phone</label>
-              <input type="text" class="form-control" id="teacher_phone" name="teacher_phone"
-                placeholder="e.g. 98XXXXXXXX">
-            </div>
-
-            <div class="mb-3">
-              <label for="teacher_email" class="form-label fw-medium text-slate-700">Teacher Email</label>
-              <input type="email" class="form-control" id="teacher_email" name="teacher_email"
-                placeholder="e.g. teacher@school.edu.np">
-            </div>
-          </div>
 
           <button type="submit" class="btn btn-primary w-100 mt-3">
             <i class="bi bi-plus-lg me-2"></i>Create Class
@@ -334,26 +314,7 @@
                 <option value="{{ t.id }}">{{ t.name }}</option>
                 {% endfor %}
               </select>
-            </div>
-          </div>
-          <div class="mb-2"><span class="text-muted small fw-medium">OR Enter Manually:</span></div>
-          <div class="row mb-3">
-            <div class="col-md-12">
-              <label for="editTeacherName" class="form-label fw-medium">Teacher Name</label>
-              <input type="text" class="form-control" id="editTeacherName" name="teacher_name" placeholder="Full name">
-              <div class="form-text">Leave both blank to remove the assigned teacher.</div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-6">
-              <label for="editTeacherPhone" class="form-label fw-medium">Phone</label>
-              <input type="text" class="form-control" id="editTeacherPhone" name="teacher_phone"
-                placeholder="Phone number">
-            </div>
-            <div class="col-md-6">
-              <label for="editTeacherEmail" class="form-label fw-medium">Email</label>
-              <input type="email" class="form-control" id="editTeacherEmail" name="teacher_email"
-                placeholder="teacher@example.com">
+              <div class="form-text">Select none to remove the assigned teacher.</div>
             </div>
           </div>
 

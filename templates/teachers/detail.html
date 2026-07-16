@@ -34,6 +34,14 @@
                     <a href="{% url 'teacher_subject_map' teacher.id %}" class="btn btn-outline-secondary">
                         <i class="bi bi-diagram-3 me-1"></i> Manage Subjects
                     </a>
+                    {% if teacher.email %}
+                    <form method="POST" action="{% url 'teacher_send_password_reset' teacher.pk %}" id="send-reset-form-{{ teacher.pk }}">
+                        {% csrf_token %}
+                        <button type="button" class="btn btn-outline-info w-100" onclick="confirmAction('Send password reset email to {{ teacher.email|escapejs }}?', () => document.getElementById('send-reset-form-{{ teacher.pk }}').submit())">
+                            <i class="bi bi-envelope-arrow-up me-1"></i> Send Password Reset
+                        </button>
+                    </form>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -45,6 +53,10 @@
             </div>
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted"><i class="bi bi-envelope me-2"></i> Email</span>
+                        <span class="fw-medium">{{ teacher.email|default:"-" }}</span>
+                    </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center py-3">
                         <span class="text-muted"><i class="bi bi-telephone me-2"></i> Contact</span>
                         <span class="fw-medium">{{ teacher.contact_number|default:"-" }}</span>

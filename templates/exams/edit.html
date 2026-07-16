@@ -31,17 +31,24 @@
           </div>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Start Date</label>
-              <input type="text" placeholder="YYYY-MM-DD" name="start_date" class="form-control" value="{{ exam.start_date|date:'Y-m-d'|default:'' }}">
+              <label class="form-label">Year of Exam in BS</label>
+              <input type="text" placeholder="YYYY" name="start_date" class="form-control" value="{{ exam.start_date|default:'' }}" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">End Date</label>
-              <input type="text" placeholder="YYYY-MM-DD" name="end_date" class="form-control" value="{{ exam.end_date|date:'Y-m-d'|default:'' }}">
+              <label class="form-label">Year of Exam in AD</label>
+              <input type="text" placeholder="YYYY" name="end_date" class="form-control" value="{{ exam.end_date|default:'' }}" required>
             </div>
           </div>
           <div class="mb-3">
-            <label class="form-label">Result Date (Date of Issue)</label>
-            <input type="text" placeholder="YYYY-MM-DD" name="result_date" class="form-control" value="{{ exam.result_date|date:'Y-m-d'|default:'' }}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <label class="form-label mb-0">Result Date</label>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input mt-0" type="checkbox" id="is_bs_toggle_edit" name="result_date_is_bs" {% if exam.result_date_is_bs %}checked{% endif %} style="width: 1.8rem; height: 0.9rem;">
+                <label class="form-check-label small ms-1" for="is_bs_toggle_edit" style="font-size: 0.75rem;">BS</label>
+              </div>
+            </div>
+            <input type="text" placeholder="YYYY-MM-DD" name="result_date" id="result_date_input_edit" class="form-control" value="{{ exam.result_date|date:'Y-m-d'|default:'' }}" required>
+            <div class="form-text text-muted mt-1" style="font-size: 0.85rem;">The result date entered is displayed on the marksheet.</div>
           </div>
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" role="switch" id="is_locked" name="is_locked" {% if exam.is_locked %}checked{% endif %}>
@@ -77,4 +84,26 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // BS/AD Toggle logic for Result Date
+    const isBsToggleEdit = document.getElementById('is_bs_toggle_edit');
+    const resultDateInputEdit = document.getElementById('result_date_input_edit');
+    if (isBsToggleEdit && resultDateInputEdit) {
+      isBsToggleEdit.addEventListener('change', function() {
+        if (this.checked) {
+          resultDateInputEdit.placeholder = 'YYYY-MM-DD (BS)';
+          this.nextElementSibling.textContent = 'BS';
+        } else {
+          resultDateInputEdit.placeholder = 'YYYY-MM-DD (AD)';
+          this.nextElementSibling.textContent = 'AD';
+        }
+      });
+      isBsToggleEdit.dispatchEvent(new Event('change'));
+    }
+  });
+</script>
 {% endblock %}

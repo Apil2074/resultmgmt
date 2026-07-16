@@ -1,0 +1,127 @@
+    <form method="POST" enctype="multipart/form-data" id="studentModalForm">
+      {% csrf_token %}
+      
+      <div class="row mb-3">
+        <div class="col-md-8 form-group">
+          <label for="name" class="form-label fw-medium text-slate-700">Full Name *</label>
+          <input type="text" class="form-control" id="name" name="name" value="{{ student.name|default:'' }}" required>
+        </div>
+        <div class="col-md-4 form-group">
+          <label for="roll_number" class="form-label fw-medium text-slate-700">Roll Number *</label>
+          <input type="text" class="form-control" id="roll_number" name="roll_number" value="{{ student.roll_number|default:'' }}" required>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6 form-group">
+          <label for="class_id" class="form-label fw-medium text-slate-700">Class *</label>
+          <select class="form-select" id="class_id" name="class_id" required>
+            <option value="" disabled {% if not student %}selected{% endif %}>Select Class</option>
+            {% for cls in classes %}
+              <option value="{{ cls.id }}" {% if student.class_obj_id == cls.id %}selected{% endif %}>{{ cls.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="gender" class="form-label fw-medium text-slate-700">Gender *</label>
+          <select class="form-select" id="gender" name="gender" required>
+            <option value="M" {% if student.gender == 'M' %}selected{% endif %}>Male</option>
+            <option value="F" {% if student.gender == 'F' %}selected{% endif %}>Female</option>
+            <option value="O" {% if student.gender == 'O' %}selected{% endif %}>Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6 form-group">
+          <label for="registration_number" class="form-label fw-medium text-slate-700">Registration Number</label>
+          <input type="text" class="form-control" id="registration_number" name="registration_number" value="{{ student.registration_number|default:'' }}">
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="symbol_number" class="form-label fw-medium text-slate-700">Symbol Number</label>
+          <input type="text" class="form-control" id="symbol_number" name="symbol_number" value="{{ student.symbol_number|default:'' }}">
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6 form-group">
+          <label for="date_of_birth" class="form-label fw-medium text-slate-700">Date of Birth</label>
+          <input type="text" placeholder="YYYY-MM-DD" class="form-control" id="date_of_birth" name="date_of_birth" value="{% if student.dob_bs %}{{ student.dob_bs }}{% else %}{{ student.date_of_birth|date:'Y-m-d'|default:'' }}{% endif %}">
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="contact_number" class="form-label fw-medium text-slate-700">Contact Number</label>
+          <input type="text" class="form-control" id="contact_number" name="contact_number" value="{{ student.contact_number|default:'' }}">
+        </div>
+      </div>
+
+      <div class="row mb-3">
+        <div class="col-md-6 form-group">
+          <label for="parent_name" class="form-label fw-medium text-slate-700">Parent/Guardian Name</label>
+          <input type="text" class="form-control" id="parent_name" name="parent_name" value="{{ student.parent_name|default:'' }}">
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="photo" class="form-label fw-medium text-slate-700">Student Photo</label>
+          <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+          <div class="form-text text-muted small">Max file size: 200 KB</div>
+          {% if student.photo %}
+            <div class="form-text">Current photo: <a href="{{ student.photo.url }}" target="_blank">{{ student.photo.name }}</a></div>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="remove_photo" id="remove_photo" value="1">
+              <label class="form-check-label text-danger" for="remove_photo">
+                Remove current photo
+              </label>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mb-4 form-group">
+        <label for="address" class="form-label fw-medium text-slate-700">Address</label>
+        <textarea class="form-control" id="address" name="address" rows="2">{{ student.address|default:'' }}</textarea>
+      </div>
+      
+      <!-- Hidden buttons block to be replaced by the modal footer or shown on the standalone page -->
+      {% if not is_modal %}
+      <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+      <div class="d-flex justify-content-end border-top pt-3 gap-2">
+        <a href="{% if request.GET.next %}{{ request.GET.next }}{% else %}{% if student %}{% url 'student_detail' student.id %}{% else %}{% url 'student_list' %}{% endif %}{% endif %}" class="btn btn-outline-secondary px-4">Cancel</a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-save me-2"></i>{% if student %}Update Student{% else %}Add Student{% endif %}
+        </button>
+      </div>
+      {% endif %}
+    </form>
+    
+<script>
+if (typeof window.dobInputHandlerBound === 'undefined') {
+    window.dobInputHandlerBound = true;
+    document.addEventListener('DOMContentLoaded', function() {
+        bindDobInput();
+    });
+}
+
+function bindDobInput() {
+    const dobInput = document.getElementById('date_of_birth');
+    if (dobInput) {
+        dobInput.addEventListener('input', function(e) {
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            if (val.length > 8) {
+                val = val.substring(0, 8);
+            }
+            let formatted = '';
+            if (val.length > 0) {
+                formatted += val.substring(0, 4);
+                if (val.length > 4) {
+                    formatted += '-' + val.substring(4, 6);
+                    if (val.length > 6) {
+                        formatted += '-' + val.substring(6, 8);
+                    }
+                }
+            }
+            e.target.value = formatted;
+        });
+    }
+}
+// Run immediately in case it's injected via AJAX
+bindDobInput();
+</script>

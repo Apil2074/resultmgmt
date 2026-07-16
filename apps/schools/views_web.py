@@ -55,11 +55,16 @@ def dashboard(request):
             exams_qs = exams_qs.filter(session=active_session)
             results_qs = results_qs.filter(exam__session=active_session)
 
+        from apps.teachers.models import Teacher
+        teachers_qs = Teacher.objects.filter(school=school)
+        if active_session:
+            teachers_qs = teachers_qs.filter(sessions=active_session)
+
         ctx['total_classes'] = classes_qs.count()
         ctx['total_students'] = students_qs.count()
-        ctx['total_subjects'] = subjects_qs.count()
+        ctx['total_subjects'] = subjects_qs.values('name').distinct().count()
         ctx['total_exams'] = exams_qs.count()
-        ctx['total_teachers'] = User.objects.filter(school=school, role=User.Role.TEACHER, is_active=True).count()
+        ctx['total_teachers'] = teachers_qs.distinct().count()
         ctx['published_exams'] = exams_qs.filter(
             status=Exam.Status.PUBLISHED
         ).count()
@@ -739,4 +744,15 @@ def super_settings(request):
     if not request.user.is_super_admin:
         messages.error(request, "Access denied. Super Admin only.")
         return redirect('dashboard')
-    return render(request, 'schools/super_settings.html')
+        
+    from .models import SystemSetting
+    settings_obj = SystemSetting.get_settings()
+    
+    if request.method == 'POST':
+        if 'subjects_guide_pdf' in request.FILES:
+            settings_obj.subjects_guide_pdf = request.FILES['subjects_guide_pdf']
+            settings_obj.save()
+            messages.success(request, 'Subjects Guide PDF uploaded successfully.')
+            return redirect('super_settings')
+            
+    return render(request, 'schools/super_settings.html', {'settings': settings_obj})

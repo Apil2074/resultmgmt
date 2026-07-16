@@ -409,3 +409,22 @@ def bulk_map_subjects(request, slug):
         'optional_subjects': optional_subjects,
         'student_data': student_data,
     })
+
+
+@login_required
+def class_spreadsheet_edit(request, slug):
+    school = request.user.school
+    cls = get_object_or_404(Class, slug=slug, school=school)
+    
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('class_detail', slug=cls.slug)
+
+    # Get all active students for this class ordered by roll number
+    from django.db.models.functions import Length
+    students = cls.students.filter(is_active=True).order_by(Length('roll_number'), 'roll_number', 'name')
+    
+    return render(request, 'classes/spreadsheet_edit.html', {
+        'class_obj': cls,
+        'students': students,
+    })

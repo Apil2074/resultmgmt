@@ -32,6 +32,14 @@
                         </div>
                     </div>
 
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label fw-medium">Email Address</label>
+                            <input type="email" class="form-control" name="email" value="{{ teacher.email|default:'' }}">
+                            <div class="form-text text-muted small">Optional. Used for password reset and notifications. Must be unique.</div>
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label class="form-label fw-medium">Profile Photo</label>
                         {% if teacher.photo %}

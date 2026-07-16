@@ -137,16 +137,23 @@
 
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <label class="form-label fw-semibold fs-6 mb-1 small">Start Date</label>
-              <input type="date" name="start_date" class="form-control form-control-sm">
+              <label class="form-label fw-semibold fs-6 mb-1 small">Year of Exam in BS</label>
+              <input type="text" placeholder="YYYY" name="start_date" class="form-control form-control-sm" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold fs-6 mb-1 small">End Date</label>
-              <input type="date" name="end_date" class="form-control form-control-sm">
+              <label class="form-label fw-semibold fs-6 mb-1 small">Year of Exam in AD</label>
+              <input type="text" placeholder="YYYY" name="end_date" class="form-control form-control-sm" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold fs-6 mb-1 small">Result Date</label>
-              <input type="date" name="result_date" class="form-control form-control-sm">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-semibold fs-6 mb-0 small">Result Date</label>
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input mt-0" type="checkbox" id="is_bs_toggle_create" name="result_date_is_bs" checked style="width: 1.8rem; height: 0.9rem;">
+                  <label class="form-check-label small ms-1" for="is_bs_toggle_create" style="font-size: 0.75rem;">BS</label>
+                </div>
+              </div>
+              <input type="text" placeholder="YYYY-MM-DD" name="result_date" id="result_date_input_create" class="form-control form-control-sm" required>
+              <div class="form-text text-muted mt-1" style="font-size: 0.75rem;">The result date entered is displayed on the marksheet.</div>
             </div>
           </div>
 
@@ -227,6 +234,21 @@
           selectAllCheckbox.indeterminate = someChecked && !allChecked;
         });
       });
+      // BS/AD Toggle logic for Result Date
+      const isBsToggleCreate = document.getElementById('is_bs_toggle_create');
+      const resultDateInputCreate = document.getElementById('result_date_input_create');
+      if (isBsToggleCreate && resultDateInputCreate) {
+        isBsToggleCreate.addEventListener('change', function() {
+          if (this.checked) {
+            resultDateInputCreate.placeholder = 'YYYY-MM-DD (BS)';
+            this.nextElementSibling.textContent = 'BS';
+          } else {
+            resultDateInputCreate.placeholder = 'YYYY-MM-DD (AD)';
+            this.nextElementSibling.textContent = 'AD';
+          }
+        });
+        isBsToggleCreate.dispatchEvent(new Event('change'));
+      }
     }
   });
 </script>

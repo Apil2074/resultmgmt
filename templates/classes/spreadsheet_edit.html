@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Spreadsheet Editor - {{ class_obj.full_name }} | {{ request.user.school.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-1 fw-bold text-slate-800">
+      <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i>Spreadsheet Editor
+    </h4>
+    <p class="text-slate-500 mb-0">Class: <strong>{{ class_obj.full_name }}</strong></p>
+  </div>
+  <div>
+    <a href="{% url 'class_detail' class_obj.slug %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Back to Class
+    </a>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-bottom p-3">
+    <div class="d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-bold">Live Data Editor</h6>
+      <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+        <i class="bi bi-cloud-check me-1"></i>Auto-saves on edit
+      </span>
+    </div>
+  </div>
+  <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+    <table class="table table-bordered table-hover align-middle mb-0" id="spreadsheetTable">
+      <thead class="table-light position-sticky top-0 shadow-sm" style="z-index: 10;">
+        <tr>
+          <th class="text-center" style="width: 60px;">#</th>
+          <th style="min-width: 150px;">Student Name</th>
+          <th style="min-width: 100px;">Roll No.</th>
+          <th style="min-width: 120px;">Reg No.</th>
+          <th style="min-width: 120px;">Symbol No.</th>
+          <th style="min-width: 100px;">Gender</th>
+          <th style="min-width: 120px;">DOB (BS)</th>
+          <th style="min-width: 150px;">Parent Name</th>
+          <th style="min-width: 120px;">Contact</th>
+          <th style="min-width: 150px;">Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr data-student-id="{{ s.id }}">
+          <td class="text-center text-slate-500 fw-medium bg-light">{{ forloop.counter }}</td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="name" value="{{ s.name }}" placeholder="Name">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="roll_number" value="{{ s.roll_number }}" placeholder="Roll">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="registration_number" value="{{ s.registration_number|default_if_none:'' }}" placeholder="Reg No">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="symbol_number" value="{{ s.symbol_number|default_if_none:'' }}" placeholder="Symbol No">
+          </td>
+          <td class="p-0">
+            <select class="form-select border-0 rounded-0 shadow-none cell-input" name="gender">
+              <option value="M" {% if s.gender == 'M' %}selected{% endif %}>Male</option>
+              <option value="F" {% if s.gender == 'F' %}selected{% endif %}>Female</option>
+              <option value="O" {% if s.gender == 'O' %}selected{% endif %}>Other</option>
+            </select>
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="date_of_birth_bs" value="{{ s.date_of_birth_bs|default_if_none:'' }}" placeholder="YYYY-MM-DD">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="parent_name" value="{{ s.parent_name|default_if_none:'' }}" placeholder="Parent Name">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="contact_number" value="{{ s.contact_number|default_if_none:'' }}" placeholder="Contact">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="address" value="{{ s.address|default_if_none:'' }}" placeholder="Address">
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="text-center py-5 text-slate-500">
+            <i class="bi bi-people fs-1 d-block mb-3"></i>
+            No active students found in this class.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .cell-input:focus {
+    outline: 2px solid var(--bs-primary) !important;
+    outline-offset: -2px;
+    background-color: #f8faff !important;
+    z-index: 2;
+    position: relative;
+  }
+  .cell-saving {
+    background-color: #fff3cd !important;
+  }
+  .cell-saved {
+    background-color: #d1e7dd !important;
+    transition: background-color 0.5s ease;
+  }
+  .cell-error {
+    background-color: #f8d7da !important;
+  }
+  /* Remove number arrows */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+  }
+  input[type="number"] {
+      -moz-appearance: textfield;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = '{{ csrf_token }}';
+    
+    document.querySelectorAll('.cell-input').forEach(input => {
+      // Store original value to detect actual changes
+      input.dataset.original = input.value;
+      
+      input.addEventListener('change', async function() {
+        if (this.value === this.dataset.original) return;
+        
+        const row = this.closest('tr');
+        const studentId = row.dataset.studentId;
+        const fieldName = this.name;
+        const value = this.value;
+        const td = this.closest('td');
+        
+        // Add saving state
+        this.classList.add('cell-saving');
+        this.classList.remove('cell-saved', 'cell-error');
+        
+        const formData = new FormData();
+        formData.append('name', fieldName);
+        formData.append('value', value);
+        
+        try {
+          const res = await fetch(`/students/${studentId}/inline-edit/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfToken
+            },
+            body: formData
+          });
+          
+          const data = await res.json();
+          
+          this.classList.remove('cell-saving');
+          if (res.ok && data.status === 'success') {
+            this.dataset.original = value;
+            this.classList.add('cell-saved');
+            // Remove success color after a short delay
+            setTimeout(() => {
+              this.classList.remove('cell-saved');
+            }, 1500);
+          } else {
+            throw new Error(data.message || 'Save failed');
+          }
+        } catch (err) {
+          this.classList.remove('cell-saving');
+          this.classList.add('cell-error');
+          if (typeof showToast !== 'undefined') {
+            showToast(`Error saving: ${err.message}`, 'danger');
+          } else {
+            console.error('Save error:', err);
+          }
+        }
+      });
+      
+      // Select text on focus for easier typing
+      input.addEventListener('focus', function() {
+        if (this.tagName === 'INPUT') {
+          this.select();
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

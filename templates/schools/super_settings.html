@@ -8,11 +8,31 @@
   <h4 class="mb-0 fw-bold text-slate-800">Global Settings</h4>
 </div>
 
-<div class="card sa-card p-5 text-center">
-  <div class="py-5">
-    <i class="bi bi-gear-fill text-primary" style="font-size: 3rem;"></i>
-    <h5 class="fw-bold mt-3">Settings Dashboard Coming Soon</h5>
-    <p class="text-muted mb-0">Configure global platform toggles, email templates, and system preferences.</p>
+<div class="card sa-card p-4">
+  <div class="card-body">
+    <h5 class="fw-bold mb-3 border-bottom pb-2">Subjects Guide</h5>
+    <p class="text-muted small mb-4">Upload the official Subjects Guide PDF here. It will be available for download on the Subjects page.</p>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="subjects_guide_pdf" class="form-label fw-medium">Upload PDF *</label>
+            <input class="form-control" type="file" id="subjects_guide_pdf" name="subjects_guide_pdf" accept="application/pdf" required>
+        </div>
+        
+        {% if settings.subjects_guide_pdf %}
+            <div class="mb-3">
+                <p class="mb-1 fw-medium text-slate-700">Current File:</p>
+                <a href="{{ settings.subjects_guide_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-file-earmark-pdf-fill me-1"></i> View Current PDF
+                </a>
+            </div>
+        {% endif %}
+        
+        <button type="submit" class="btn btn-primary mt-3">
+            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload
+        </button>
+    </form>
   </div>
 </div>
 {% endblock %}

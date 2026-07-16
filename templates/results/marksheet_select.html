@@ -347,11 +347,6 @@
                   <option value="neb11" {% if template_version == 'neb11' %}selected{% endif %}>NEB Grade 11</option>
                 </select>
               </div>
-              <div class="col-12 mt-3">
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" style="border-radius: var(--radius-md);">
-                  <i class="bi bi-file-earmark-text-fill me-1"></i> View Marksheet
-                </button>
-              </div>
             </form>
             
             {% if exam and selected_student_id %}
@@ -519,11 +514,30 @@ $(document).ready(function() {
   // Bind change events
   $('#examSelect').on('change', function() {
     updateClasses();
+    checkAutoSubmit();
   });
 
   $('#classSelect').on('change', function() {
     updateStudents();
+    checkAutoSubmit();
   });
+
+  $('#studentSelect, #templateSelect').on('change', function() {
+    checkAutoSubmit();
+  });
+
+  let isInitialized = false;
+  function checkAutoSubmit() {
+    if (!isInitialized) return;
+    
+    const exam = examSelect.value;
+    const cls = classSelect.value;
+    const student = studentSelect.value;
+    
+    if (exam && cls && student) {
+      document.getElementById('marksheetForm').submit();
+    }
+  }
 
   // Run initialization
   if (selectedExamId) {
@@ -533,6 +547,7 @@ $(document).ready(function() {
     }
   }
   updateClasses();
+  isInitialized = true;
 });
 </script>
 {% endblock %}

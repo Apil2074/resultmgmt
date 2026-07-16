@@ -396,41 +396,41 @@
 {% else %}
 <!-- ── KPI Stats ───────────────────────────────────────────── -->
 <div class="stats-grid">
-  <div class="stat-card blue">
+  <a href="{% url 'class_list' %}" class="stat-card blue text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-building-fill"></i></div>
     <div class="stat-value">{{ total_classes|default:0 }}</div>
     <div class="stat-label">Total Classes</div>
-  </div>
-  <div class="stat-card gold">
+  </a>
+  <a href="{% url 'student_list' %}" class="stat-card gold text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
     <div class="stat-value">{{ total_students|default:0 }}</div>
     <div class="stat-label">Active Students</div>
-  </div>
-  <div class="stat-card" style="border-top: 4px solid var(--color-indigo);">
+  </a>
+  <a href="{% url 'teacher_list' %}" class="stat-card text-decoration-none text-dark" style="border-top: 4px solid var(--color-indigo);">
     <div class="stat-icon" style="color: var(--color-indigo); background: rgba(99, 102, 241, 0.1);"><i class="bi bi-person-workspace"></i></div>
     <div class="stat-value">{{ total_teachers|default:0 }}</div>
     <div class="stat-label">Teachers</div>
-  </div>
-  <div class="stat-card purple">
+  </a>
+  <a href="{% url 'subject_list' %}" class="stat-card purple text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
     <div class="stat-value">{{ total_subjects|default:0 }}</div>
     <div class="stat-label">Subjects</div>
-  </div>
-  <div class="stat-card cyan">
+  </a>
+  <a href="{% url 'exam_list' %}" class="stat-card cyan text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-clipboard2-check-fill"></i></div>
     <div class="stat-value">{{ total_exams|default:0 }}</div>
     <div class="stat-label">Total Exams</div>
-  </div>
-  <div class="stat-card emerald">
+  </a>
+  <a href="{% url 'exam_list' %}" class="stat-card emerald text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-patch-check-fill"></i></div>
     <div class="stat-value">{{ published_exams|default:0 }}</div>
     <div class="stat-label">Published Results</div>
-  </div>
-  <div class="stat-card {% if pass_percentage >= 80 %}emerald{% elif pass_percentage >= 60 %}gold{% else %}red{% endif %}">
+  </a>
+  <a href="{% url 'reports_index' %}" class="stat-card {% if pass_percentage >= 80 %}emerald{% elif pass_percentage >= 60 %}gold{% else %}red{% endif %} text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
     <div class="stat-value">{{ pass_percentage|default:0 }}%</div>
     <div class="stat-label">Pass Percentage</div>
-  </div>
+  </a>
 </div>
 
 <!-- Removed Advanced Analytics Row -->

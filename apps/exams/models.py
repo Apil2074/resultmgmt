@@ -19,9 +19,10 @@ class Exam(models.Model):
         'schools.AcademicSession', on_delete=models.CASCADE, related_name='exams'
     )
     name = models.CharField(max_length=200)
-    start_date = models.DateField(null=True, blank=True)
-    end_date = models.DateField(null=True, blank=True)
+    start_date = models.CharField(max_length=4, null=True, blank=True)
+    end_date = models.CharField(max_length=4, null=True, blank=True)
     result_date = models.DateField(null=True, blank=True)
+    result_date_is_bs = models.BooleanField(default=True, help_text="Is the result date in BS calendar?")
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.DRAFT
     )
