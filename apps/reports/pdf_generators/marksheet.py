@@ -738,27 +738,18 @@ class MarksheetPDFGenerator:
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ]))
         story.append(date_att_table)
-        story.append(Spacer(1, 1.5*cm))  # Space before signatures
+        story.append(Spacer(1, 1*cm))  # Space before signatures
         
-        # 6. Signatures (style from cached self._styles)
-        sig_label_style = s['sig_label']
-        sig_table_data = [
-            [
-                Paragraph('CLASS TEACHER', sig_label_style),
-                '',
-                Paragraph('CHECKED BY', sig_label_style),
-                '',
-                Paragraph('HEAD TEACHER', sig_label_style)
-            ]
-        ]
-        sig_table = Table(sig_table_data, colWidths=[4.4*cm, 3.1*cm, 4.4*cm, 3.1*cm, 4.4*cm])
+        # 6. Signatures
+        sig_style = ParagraphStyle('Sig', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER)
+        sig_line = HRFlowable(width="75%", thickness=1, color=colors.black, spaceBefore=0, spaceAfter=2, hAlign='CENTER')
+        sig_table = Table([
+            [sig_line, sig_line, sig_line],
+            [Paragraph("PREPARED BY", sig_style), Paragraph("CHECKED BY", sig_style), Paragraph("HEAD TEACHER", sig_style)]
+        ], colWidths=[6.3*cm, 6.3*cm, 6.3*cm])
         sig_table.setStyle(TableStyle([
-            ('LINEABOVE', (0, 0), (0, 0), 0.75, colors.black),
-            ('LINEABOVE', (2, 0), (2, 0), 0.75, colors.black),
-            ('LINEABOVE', (4, 0), (4, 0), 0.75, colors.black),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         story.append(sig_table)
         story.append(Spacer(1, 1.0*cm))  # Space before note and legend

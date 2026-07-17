@@ -345,11 +345,15 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         
         # Signatures
         sig_style = ParagraphStyle('Sig', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER)
-        sig_line = HRFlowable(width="75%", thickness=1, color=colors.black, spaceBefore=0, spaceAfter=2)
+        sig_line = HRFlowable(width="75%", thickness=1, color=colors.black, spaceBefore=0, spaceAfter=2, hAlign='CENTER')
         sig_table = Table([
             [sig_line, sig_line, sig_line],
             [Paragraph("PREPARED BY", sig_style), Paragraph("CHECKED BY", sig_style), Paragraph("HEAD TEACHER", sig_style)]
         ], colWidths=[6.3*cm, 6.3*cm, 6.3*cm])
+        sig_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
         story.append(sig_table)
         
         story.append(Spacer(1, 3*mm))
