@@ -77,9 +77,10 @@ def dashboard(request):
         )
 
         # Recent activity
-        ctx['recent_activities'] = AuditLog.objects.filter(
-            school=school
-        ).select_related('user').order_by('-timestamp')[:10]
+        activities_qs = AuditLog.objects.filter(school=school)
+        if not user.is_super_admin:
+            activities_qs = activities_qs.exclude(user__role='SUPER_ADMIN')
+        ctx['recent_activities'] = activities_qs.select_related('user').order_by('-timestamp')[:10]
 
         # Recent exams
         ctx['recent_exams'] = exams_qs.order_by('-created_at')[:5]

@@ -86,6 +86,9 @@
             <label for="excelFileAll" class="form-label fw-semibold" style="color: var(--color-text);">Select Excel File</label>
             <input type="file" class="form-control" id="excelFileAll" name="excel_file" accept=".xlsx" required style="background: var(--color-bg); border-color: var(--color-border); color: var(--color-text);">
             <div class="form-text text-muted">Upload the completed ME_All_Classes excel workbook. Sheets matching class names will be processed. Locked classes will be skipped.</div>
+            <div class="alert alert-warning mt-2 small p-2">
+              <strong>WARNING:</strong> Do NOT alter the column structure, headers, or reorder the subjects in any sheet. Doing so will import marks into the wrong subjects.
+            </div>
           </div>
         </div>
         <div class="modal-footer" style="border-top-color: var(--color-border);">

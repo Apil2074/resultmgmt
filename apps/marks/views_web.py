@@ -396,6 +396,29 @@ def bulk_mark_import(request, exam_id, class_id):
                 student__in=students_qs, subject__in=subjects
             ).values_list('student_id', 'subject_id'))
 
+            # Validate headers to prevent users from reordering columns
+            expected_headers = ['Roll No', 'Student Name']
+            for subj in subjects:
+                try:
+                    ms = subj
+                    expected_headers.append(f'{subj.name}\nTheory')
+                    if ms.has_practical:
+                        expected_headers.append(f'{subj.name}\nInternal')
+                    else:
+                        expected_headers.append(f'{subj.name}\n(No Internal)')
+                except Exception:
+                    expected_headers.append(subj.name)
+                    expected_headers.append('')
+            expected_headers.append('Present Days')
+            
+            actual_headers = list(next(ws.iter_rows(min_row=1, max_row=1, values_only=True)))
+            actual_headers_clean = [str(h).strip() if h is not None else '' for h in actual_headers][:len(expected_headers)]
+            expected_headers_clean = [str(h).strip() for h in expected_headers]
+            
+            if actual_headers_clean != expected_headers_clean:
+                messages.error(request, 'Column structure mismatch detected. Please download a fresh template and do not alter the headers or column order.')
+                return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
             # Check if Row 2 is the Full Marks / Total config row
             row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
             has_config_row = False
@@ -1020,6 +1043,29 @@ def bulk_mark_all_import(request, exam_id):
 
             subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
             students = {s.roll_number: s for s in Student.objects.filter(class_obj=cls, school=school)}
+
+            # Validate headers to prevent users from reordering columns
+            expected_headers = ['Roll No', 'Student Name']
+            for subj in subjects:
+                try:
+                    ms = subj
+                    expected_headers.append(f'{subj.name}\nTheory')
+                    if ms.has_practical:
+                        expected_headers.append(f'{subj.name}\nInternal')
+                    else:
+                        expected_headers.append(f'{subj.name}\n(No Internal)')
+                except Exception:
+                    expected_headers.append(subj.name)
+                    expected_headers.append('')
+            expected_headers.append('Present Days')
+            
+            actual_headers = list(next(ws.iter_rows(min_row=1, max_row=1, values_only=True)))
+            actual_headers_clean = [str(h).strip() if h is not None else '' for h in actual_headers][:len(expected_headers)]
+            expected_headers_clean = [str(h).strip() for h in expected_headers]
+            
+            if actual_headers_clean != expected_headers_clean:
+                errors.append(f"Sheet '{sheet_name}': Column structure mismatch. Skipping.")
+                continue
 
             # Check if Row 2 is the Full Marks / Total config row
             row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))

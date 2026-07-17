@@ -22,5 +22,8 @@ def audit_log(request):
         raise PermissionDenied
 
     school = user.school
-    logs = AuditLog.objects.filter(school=school).select_related('user').order_by('-timestamp')[:200]
+    logs_qs = AuditLog.objects.filter(school=school)
+    if not user.is_super_admin:
+        logs_qs = logs_qs.exclude(user__role='SUPER_ADMIN')
+    logs = logs_qs.select_related('user').order_by('-timestamp')[:200]
     return render(request, 'audit/log.html', {'logs': logs})
