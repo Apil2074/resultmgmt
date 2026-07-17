@@ -670,3 +670,66 @@ def teacher_dashboard(request):
         'grade_data_json': grade_data_json,
         'top_performers': top_performers,
     })
+
+
+@login_required
+def teacher_spreadsheet_edit(request):
+    school = request.user.school
+    active_session = school.get_active_session() if school else None
+    
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('teacher_list')
+        
+    teachers_qs = Teacher.objects.filter(school=school)
+    if active_session:
+        teachers_qs = teachers_qs.filter(sessions=active_session)
+        
+    def get_sort_key(t):
+        try:
+            val = float(t.sn) if t.sn else float('inf')
+        except ValueError:
+            import re
+            nums = re.findall(r'\d+', t.sn)
+            val = float(nums[0]) if nums else float('inf')
+        return (val, t.name)
+        
+    teachers = sorted(teachers_qs, key=get_sort_key)
+
+    return render(request, 'teachers/spreadsheet_edit.html', {
+        'teachers': teachers,
+    })
+
+
+@login_required
+def teacher_inline_edit(request, teacher_id):
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+    
+    school = request.user.school
+    teacher = get_object_or_404(Teacher, pk=teacher_id, school=school)
+    
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+        
+    field_name = request.POST.get('name')
+    value = request.POST.get('value')
+    
+    allowed_fields = ['sn', 'name', 'contact_number', 'email']
+    if field_name not in allowed_fields:
+        return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
+        
+    try:
+        if field_name == 'email' and value:
+            if Teacher.objects.filter(email__iexact=value).exclude(pk=teacher_id).exists():
+                return JsonResponse({'status': 'error', 'message': 'Email is already in use.'}, status=400)
+        
+        if field_name == 'email' and not value:
+            value = None
+            
+        setattr(teacher, field_name, value)
+        teacher.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

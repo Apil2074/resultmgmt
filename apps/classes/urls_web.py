@@ -1,4 +1,5 @@
 from django.urls import path
+from django.urls import path
 from .views_web import class_list, class_detail, bulk_map_subjects, class_spreadsheet_edit
 
 urlpatterns = [

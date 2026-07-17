@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Spreadsheet Editor - {{ class_obj.full_name }} | {{ request.user.school.name }}{% endblock %}
+{% block title %}Subject Spreadsheet Editor{% if class_obj %} - {{ class_obj.full_name }}{% endif %} | {{ request.user.school.name }}{% endblock %}
 
 {% block content %}
 <div class="alert alert-info shadow-sm border-info-subtle d-flex align-items-center mb-4" role="alert">
@@ -9,82 +9,97 @@
     <strong>Guide:</strong> You can edit the fields directly in the table cells. Press <kbd>Tab</kbd> or <kbd>Enter</kbd> to move between cells. Changes are saved automatically, but you can also click the <strong>Save All</strong> button when you are done.
   </div>
 </div>
-<div class="d-flex justify-content-between align-items-center mb-2">
-    <div class="d-flex gap-2">
 
-    <a href="{% url 'class_detail' class_obj.slug %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-  </div>
-  <div>
-
-    <p class="text-slate-500 mb-0">Class: <strong>{{ class_obj.full_name }}</strong></p>
-  </div>
-
-      <button class="btn btn-success" data-url="{% url 'subject_list' %}{% if class_obj %}?class_id={{ class_obj.id }}{% endif %}" onclick="document.activeElement.blur(); if(typeof showToast !== 'undefined') { showToast('All changes saved successfully!', 'success'); } else { alert('All changes saved successfully!'); } setTimeout(() => window.location.href=this.getAttribute('data-url'), 800);">
-      <i class="bi bi-save me-1"></i>Save All
-    </button>
-</div>
 
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-bottom p-3">
+              <a href="{% url 'subject_list' %}{% if class_obj %}?class_id={{ class_obj.id }}{% endif %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <div class="d-flex justify-content-between align-items-center">
+      
+      <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+        <i class="bi bi-cloud-check me-1"></i>Auto-saves on edit
+      </span>
+          <button class="btn btn-success" data-url="{% url 'subject_list' %}{% if class_obj %}?class_id={{ class_obj.id }}{% endif %}" onclick="document.activeElement.blur(); if(typeof showToast !== 'undefined') { showToast('All changes saved successfully!', 'success'); } else { alert('All changes saved successfully!'); } setTimeout(() => window.location.href=this.getAttribute('data-url'), 800);">
+      <i class="bi bi-save me-1"></i>Save All
+    </button>
+    </div>
 
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+  
+
+    <p class="text-slate-500 mb-0">Class: <strong>{% if class_obj %}{{ class_obj.full_name }}{% else %}All Classes{% endif %}</strong></p>
+  
+  <div class="d-flex gap-2">
+
+
+  </div>
+</div>
+  </div>
   <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
     <table class="table table-bordered table-hover align-middle mb-0" id="spreadsheetTable">
       <thead class="table-light position-sticky top-0 shadow-sm" style="z-index: 10;">
         <tr>
           <th class="text-center" style="width: 60px;">#</th>
-          <th style="min-width: 150px;">Student Name</th>
-          <th style="min-width: 100px;">Roll No.</th>
-          <th style="min-width: 120px;">Reg No.</th>
-          <th style="min-width: 120px;">Symbol No.</th>
-          <th style="min-width: 100px;">Gender</th>
-          <th style="min-width: 120px;">DOB (BS)</th>
-          <th style="min-width: 150px;">Parent Name</th>
-          <th style="min-width: 120px;">Contact</th>
-          <th style="min-width: 150px;">Address</th>
+          {% if not class_obj %}
+          <th style="min-width: 150px;">Class</th>
+          {% endif %}
+          <th style="min-width: 120px;">Code</th>
+          <th style="min-width: 200px;">Subject Name</th>
+          <th style="min-width: 100px;">Th. Credit</th>
+          <th style="min-width: 100px;">Has Practical</th>
+          <th style="min-width: 120px;">Prac. Code</th>
+          <th style="min-width: 100px;">Prac. Credit</th>
+          <th style="min-width: 150px;">Subject Type</th>
+          <th style="min-width: 80px;">Order</th>
         </tr>
       </thead>
       <tbody>
-        {% for s in students %}
-        <tr data-student-id="{{ s.id }}">
+        {% for sub in subjects %}
+        <tr data-subject-id="{{ sub.id }}">
           <td class="text-center text-slate-500 fw-medium bg-light">{{ forloop.counter }}</td>
+          {% if not class_obj %}
+          <td class="text-slate-500 fw-medium bg-light">{{ sub.class_obj.prefixed_name }}</td>
+          {% endif %}
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="name" value="{{ s.name }}" placeholder="Name">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="code" value="{{ sub.code }}" placeholder="Code">
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="roll_number" value="{{ s.roll_number }}" placeholder="Roll">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="name" value="{{ sub.name }}" placeholder="Subject Name">
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="registration_number" value="{{ s.registration_number|default_if_none:'' }}" placeholder="Reg No">
+            <input type="number" step="0.01" class="form-control border-0 rounded-0 shadow-none cell-input" name="theory_credit_hour" value="{{ sub.theory_credit_hour|stringformat:'s' }}" placeholder="0.0">
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="symbol_number" value="{{ s.symbol_number|default_if_none:'' }}" placeholder="Symbol No">
-          </td>
-          <td class="p-0">
-            <select class="form-select border-0 rounded-0 shadow-none cell-input" name="gender">
-              <option value="M" {% if s.gender == 'M' %}selected{% endif %}>Male</option>
-              <option value="F" {% if s.gender == 'F' %}selected{% endif %}>Female</option>
-              <option value="O" {% if s.gender == 'O' %}selected{% endif %}>Other</option>
+            <select class="form-select border-0 rounded-0 shadow-none cell-input" name="has_practical">
+              <option value="False" {% if not sub.has_practical %}selected{% endif %}>No</option>
+              <option value="True" {% if sub.has_practical %}selected{% endif %}>Yes</option>
             </select>
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="date_of_birth_bs" value="{{ s.date_of_birth_bs|default_if_none:'' }}" placeholder="YYYY-MM-DD">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="practical_code" value="{{ sub.practical_code|default_if_none:'' }}" placeholder="Prac. Code">
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="parent_name" value="{{ s.parent_name|default_if_none:'' }}" placeholder="Parent Name">
+            <input type="number" step="0.01" class="form-control border-0 rounded-0 shadow-none cell-input" name="practical_credit_hour" value="{{ sub.practical_credit_hour|default_if_none:'0'|stringformat:'s' }}" placeholder="0.0">
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="contact_number" value="{{ s.contact_number|default_if_none:'' }}" placeholder="Contact">
+            <select class="form-select border-0 rounded-0 shadow-none cell-input" name="subject_type">
+              <option value="COMPULSORY" {% if sub.subject_type == 'COMPULSORY' %}selected{% endif %}>Compulsory</option>
+              <option value="OPTIONAL" {% if sub.subject_type == 'OPTIONAL' %}selected{% endif %}>Optional</option>
+              <option value="NON_CREDIT" {% if sub.subject_type == 'NON_CREDIT' %}selected{% endif %}>Non-Credit</option>
+            </select>
           </td>
           <td class="p-0">
-            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="address" value="{{ s.address|default_if_none:'' }}" placeholder="Address">
+            <input type="number" class="form-control border-0 rounded-0 shadow-none cell-input" name="order" value="{{ sub.order }}" placeholder="Order">
           </td>
         </tr>
         {% empty %}
         <tr>
           <td colspan="10" class="text-center py-5 text-slate-500">
-            <i class="bi bi-people fs-1 d-block mb-3"></i>
-            No active students found in this class.
+            <i class="bi bi-book fs-1 d-block mb-3"></i>
+            No subjects found.
           </td>
         </tr>
         {% endfor %}
@@ -136,7 +151,7 @@
         if (this.value === this.dataset.original) return;
         
         const row = this.closest('tr');
-        const studentId = row.dataset.studentId;
+        const subjectId = row.dataset.subjectId;
         const fieldName = this.name;
         const value = this.value;
         const td = this.closest('td');
@@ -150,7 +165,7 @@
         formData.append('value', value);
         
         try {
-          const res = await fetch(`/students/${studentId}/inline-edit/`, {
+          const res = await fetch(`/subjects/${subjectId}/inline-edit/`, {
             method: 'POST',
             headers: {
               'X-CSRFToken': csrfToken

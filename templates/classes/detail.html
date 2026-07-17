@@ -127,9 +127,7 @@
           <a href="{% url 'student_export' %}?class_id={{ class_obj.id }}" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-download me-1"></i>Export Excel
           </a>
-          <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editStudentsExcelModal">
-            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Edit Details
-          </button>
+
           <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">
             <i class="bi bi-person-plus-fill me-1"></i>Add Student
           </button>
@@ -275,9 +273,11 @@
           <i class="bi bi-book-fill text-primary me-2"></i>Subjects ({{ subjects.count }})
         </h5>
         {% if user.is_school_admin or user.is_super_admin %}
-        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
-          <i class="bi bi-plus-lg me-1"></i>Add Subject
-        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Subject
+          </button>
+        </div>
         {% endif %}
       </div>
       <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">

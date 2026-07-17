@@ -19,6 +19,9 @@
         <button type="button" class="btn btn-outline-danger d-none" id="bulkDeleteBtn" onclick="confirmAction('Permanently delete selected teachers?', () => document.getElementById('bulkDeleteForm').submit())">
             <i class="bi bi-trash-fill me-1"></i> Delete Selected
         </button>
+        <a href="{% url 'teacher_spreadsheet_edit' %}" class="btn btn-outline-info">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Spreadsheet Editor
+        </a>
         <a href="{% url 'teacher_import' %}" class="btn btn-outline-success">
             <i class="bi bi-file-earmark-excel-fill me-1"></i> Import
         </a>

@@ -183,3 +183,65 @@ def subject_list(request):
         'class_id': class_id,
         'system_settings': system_settings,
     })
+@login_required
+def subject_spreadsheet_edit(request):
+    school = request.user.school
+    active_session = school.get_active_session() if school else None
+    class_id = request.GET.get('class_id', '')
+    
+    from apps.classes.models import Class
+    subjects = Subject.objects.filter(school=school)
+    
+    if active_session:
+        subjects = subjects.filter(class_obj__session=active_session)
+        
+    if class_id:
+        subjects = subjects.filter(class_obj_id=class_id)
+        class_obj = get_object_or_404(Class, id=class_id, school=school)
+    else:
+        class_obj = None
+
+    subjects = subjects.select_related('class_obj').order_by('class_obj__numeric_level', 'class_obj__name', 'order', 'name')
+    
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('subject_list')
+
+    return render(request, 'subjects/spreadsheet_edit.html', {
+        'subjects': subjects,
+        'class_obj': class_obj,
+        'class_id': class_id,
+    })
+
+@login_required
+def subject_inline_edit(request, subject_id):
+    from django.http import JsonResponse
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+    
+    school = request.user.school
+    subject = get_object_or_404(Subject, pk=subject_id, school=school)
+    
+    if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
+        return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+        
+    field_name = request.POST.get('name')
+    value = request.POST.get('value')
+    
+    allowed_fields = ['code', 'name', 'theory_credit_hour', 'has_practical', 'practical_code', 'practical_credit_hour', 'subject_type', 'order']
+    if field_name not in allowed_fields:
+        return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
+        
+    try:
+        if field_name == 'has_practical':
+            value = value == 'True'
+        elif field_name in ['theory_credit_hour', 'practical_credit_hour']:
+            value = float(value) if value else 0.0
+        elif field_name == 'order':
+            value = int(value) if value else 0
+            
+        setattr(subject, field_name, value)
+        subject.save()
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

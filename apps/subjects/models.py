@@ -23,9 +23,9 @@ class Subject(models.Model):
     )
     code = models.CharField(max_length=20)
     name = models.CharField(max_length=200)
-    theory_credit_hour = models.DecimalField(max_digits=4, decimal_places=1, default=3.0)
+    theory_credit_hour = models.DecimalField(max_digits=4, decimal_places=2, default=3.0)
     has_practical = models.BooleanField(default=False)
-    practical_credit_hour = models.DecimalField(max_digits=4, decimal_places=1, default=0.0, null=True, blank=True)
+    practical_credit_hour = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, null=True, blank=True)
     practical_code = models.CharField(max_length=20, blank=True, default='')
     subject_type = models.CharField(
         max_length=20, choices=SubjectType.choices, default=SubjectType.COMPULSORY
@@ -79,9 +79,15 @@ class Subject(models.Model):
         )
         if not created:
             sms.has_internal = self.has_practical
-            sms.internal_full_marks = 100 if self.has_practical else 0
-            sms.internal_pass_marks = pass_marks if self.has_practical else 0
-            sms.theory_pass_marks = pass_marks
+            if not self.has_practical:
+                sms.internal_full_marks = 0
+                sms.internal_pass_marks = 0
+            else:
+                # Only set defaults if it was previously 0 or None
+                if not sms.internal_full_marks:
+                    sms.internal_full_marks = 25  # A more reasonable default for practicals
+                if not sms.internal_pass_marks:
+                    sms.internal_pass_marks = 10
             sms.save()
 
     @property

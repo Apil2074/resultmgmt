@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Spreadsheet Editor | {{ request.user.school.name }}{% endblock %}
+
+{% block content %}
+<div class="alert alert-info shadow-sm border-info-subtle d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+  <div>
+    <strong>Guide:</strong> You can edit the fields directly in the table cells. Press <kbd>Tab</kbd> or <kbd>Enter</kbd> to move between cells. Changes are saved automatically, but you can also click the <strong>Save All</strong> button when you are done.
+  </div>
+</div>
+
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+  <div class="card-header bg-white border-bottom p-1">
+    <div class="d-flex justify-content-between align-items-center">
+      <i class="bi bi-arrow-left me-1"></i>Back
+          <a href="{% url 'teacher_list' %}" class="btn btn-outline-secondary">
+    </a>
+          <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+        <i class="bi bi-cloud-check me-1"></i>Auto-saves on edit
+      </span>
+        <div class="d-flex gap-2">
+    <button class=" mr-3 btn btn-success" data-url="{% url 'teacher_list' %}" onclick="document.activeElement.blur(); if(typeof showToast !== 'undefined') { showToast('All changes saved successfully!', 'success'); } else { alert('All changes saved successfully!'); } setTimeout(() => window.location.href=this.getAttribute('data-url'), 800);">
+      <i class="  bi bi-save me-1"></i>Save All
+    </button>
+
+  </div>
+    </div>
+  </div>
+  <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
+    <table class="table table-bordered table-hover align-middle mb-0" id="spreadsheetTable">
+      <thead class="table-light position-sticky top-0 shadow-sm" style="z-index: 10;">
+        <tr>
+          <th class="text-center" style="width: 60px;">#</th>
+          <th style="min-width: 120px;">SN (Sort Order)</th>
+          <th style="min-width: 250px;">Full Name</th>
+          <th style="min-width: 200px;">Contact Number</th>
+          <th style="min-width: 250px;">Email</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in teachers %}
+        <tr data-teacher-id="{{ t.id }}">
+          <td class="text-center text-slate-500 fw-medium bg-light">{{ forloop.counter }}</td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="sn" value="{{ t.sn|default_if_none:'' }}" placeholder="SN">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="name" value="{{ t.name }}" placeholder="Full Name">
+          </td>
+          <td class="p-0">
+            <input type="text" class="form-control border-0 rounded-0 shadow-none cell-input" name="contact_number" value="{{ t.contact_number|default_if_none:'' }}" placeholder="Contact Number">
+          </td>
+          <td class="p-0">
+            <input type="email" class="form-control border-0 rounded-0 shadow-none cell-input" name="email" value="{{ t.email|default_if_none:'' }}" placeholder="Email Address">
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center py-5 text-slate-500">
+            <i class="bi bi-person-badge fs-1 d-block mb-3"></i>
+            No teachers found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .cell-input:focus {
+    outline: 2px solid var(--bs-primary) !important;
+    outline-offset: -2px;
+    background-color: #f8faff !important;
+    z-index: 2;
+    position: relative;
+  }
+  .cell-saving {
+    background-color: #fff3cd !important;
+  }
+  .cell-saved {
+    background-color: #d1e7dd !important;
+    transition: background-color 0.5s ease;
+  }
+  .cell-error {
+    background-color: #f8d7da !important;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = '{{ csrf_token }}';
+    
+    document.querySelectorAll('.cell-input').forEach(input => {
+      input.dataset.original = input.value;
+      
+      input.addEventListener('change', async function() {
+        if (this.value === this.dataset.original) return;
+        
+        const row = this.closest('tr');
+        const teacherId = row.dataset.teacherId;
+        const fieldName = this.name;
+        const value = this.value;
+        
+        this.classList.add('cell-saving');
+        this.classList.remove('cell-saved', 'cell-error');
+        
+        const formData = new FormData();
+        formData.append('name', fieldName);
+        formData.append('value', value);
+        
+        try {
+          const res = await fetch(`/teachers/${teacherId}/inline-edit/`, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrfToken
+            },
+            body: formData
+          });
+          
+          const data = await res.json();
+          
+          this.classList.remove('cell-saving');
+          if (res.ok && data.status === 'success') {
+            this.dataset.original = value;
+            this.classList.add('cell-saved');
+            setTimeout(() => {
+              this.classList.remove('cell-saved');
+            }, 1500);
+          } else {
+            throw new Error(data.message || 'Save failed');
+          }
+        } catch (err) {
+          this.classList.remove('cell-saving');
+          this.classList.add('cell-error');
+          if (typeof showToast !== 'undefined') {
+            showToast(`Error saving: ${err.message}`, 'danger');
+          } else {
+            alert(`Error saving: ${err.message}`);
+          }
+        }
+      });
+      
+      input.addEventListener('focus', function() {
+        if (this.tagName === 'INPUT') {
+          this.select();
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

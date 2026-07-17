@@ -3,6 +3,8 @@ from . import views_web
 
 urlpatterns = [
     path('', views_web.teacher_list, name='teacher_list'),
+    path('spreadsheet-edit/', views_web.teacher_spreadsheet_edit, name='teacher_spreadsheet_edit'),
+    path('<int:teacher_id>/inline-edit/', views_web.teacher_inline_edit, name='teacher_inline_edit'),
     path('create/', views_web.teacher_create, name='teacher_create'),
     path('<int:pk>/', views_web.teacher_detail, name='teacher_detail'),
     path('<int:pk>/edit/', views_web.teacher_edit, name='teacher_edit'),
