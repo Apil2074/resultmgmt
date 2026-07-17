@@ -154,7 +154,12 @@
 </div>
 
 <!-- Scroll hint (screen only) -->
-<div class="d-flex justify-content-end mb-2 d-print-none">
+<div class="d-flex justify-content-between align-items-center mb-2 d-print-none">
+  <div>
+    <a href="{% url 'mark_entry' exam.id class_obj.id %}" class="btn btn-secondary btn-sm">
+      <i class="bi bi-pencil-square"></i> View Mark Entry
+    </a>
+  </div>
   <small class="text-muted fw-medium">
     <i class="bi bi-arrows-expand me-1"></i> Scroll horizontally to view all columns
   </small>

@@ -19,15 +19,19 @@
   </div>
   <div class="d-flex gap-2 flex-wrap">
     {% if user.is_school_admin or user.is_super_admin %}
-    <a href="{% url 'student_import' %}" class="btn btn-secondary">
-      <i class="bi bi-upload"></i> Import Excel
-    </a>
-    <a href="{% url 'student_export' %}{% if class_id %}?class_id={{ class_id }}{% endif %}" class="btn btn-secondary">
-      <i class="bi bi-download"></i> Export Excel
-    </a>
-    <a href="{% url 'student_create' %}" class="btn btn-primary">
-      <i class="bi bi-person-plus-fill"></i> Add Student
-    </a>
+      {% if active_session %}
+      <a href="{% url 'student_import' %}" class="btn btn-secondary">
+        <i class="bi bi-upload"></i> Import Excel
+      </a>
+      {% endif %}
+      <a href="{% url 'student_export' %}{% if class_id %}?class_id={{ class_id }}{% endif %}" class="btn btn-secondary">
+        <i class="bi bi-download"></i> Export Excel
+      </a>
+      {% if active_session %}
+      <a href="{% url 'student_create' %}" class="btn btn-primary">
+        <i class="bi bi-person-plus-fill"></i> Add Student
+      </a>
+      {% endif %}
     {% endif %}
   </div>
 </div>

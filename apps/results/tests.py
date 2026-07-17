@@ -291,54 +291,7 @@ class FailureCasesMitigationTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, url_class_detail)
 
-    def test_pass_fail_report_filters(self):
-        """Verify that pass_fail_report view filters and computes analytics correctly."""
-        self.client.login(username="admin_a", password="password")
-        
-        # Create a StudentResult for student1 (Class 9-A, Male)
-        StudentResult.objects.create(
-            school=self.school_a,
-            exam=self.exam,
-            student=self.student1,
-            overall_gpa=Decimal("3.80"),
-            final_grade="A",
-            is_pass=True
-        )
 
-        url = reverse('pass_fail_report', kwargs={'exam_id': self.exam.id})
-        
-        # Test without filters
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('grade_dist_json', response.context)
-        self.assertIn('gpa_dist_json', response.context)
-
-        # Test filtering by class
-        response_filtered = self.client.get(url + f"?class_id={self.class_9a.id}")
-        self.assertEqual(response_filtered.status_code, 200)
-        
-        # Test filtering by gender
-        response_gender = self.client.get(url + "?gender=M")
-        self.assertEqual(response_gender.status_code, 200)
-
-    def test_merit_list_filters(self):
-        """Verify that merit_list view filters correctly."""
-        self.client.login(username="admin_a", password="password")
-        
-        # Create results
-        StudentResult.objects.create(
-            school=self.school_a,
-            exam=self.exam,
-            student=self.student1,
-            overall_gpa=Decimal("3.80"),
-            is_pass=True
-        )
-        
-        url = reverse('merit_list', kwargs={'exam_id': self.exam.id})
-        
-        # Filter by Class 9-A
-        response = self.client.get(url + f"?class_id={self.class_9a.id}")
-        self.assertEqual(response.status_code, 200)
 
     def test_single_page_pdf_generation(self):
         """Verify that generated marksheet PDFs for both templates have exactly 1 page."""

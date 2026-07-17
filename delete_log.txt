@@ -1,8 +1,0 @@
-teacher_delete called for pk=4, method=POST, user=kdssadmin, role=SCHOOL_ADMIN
-Deleting user bharatkumarshrestha4
-Deleting teacher Bharat Kumar Shrestha
-Deletion successful in view!
-teacher_delete called for pk=3, method=POST, user=kdssadmin, role=SCHOOL_ADMIN
-Deleting user nabarajpaudel31
-Deleting teacher Nabaraj Paudel
-Deletion successful in view!

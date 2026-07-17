@@ -17,6 +17,7 @@ from django.conf import settings as django_settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+from django_ratelimit.decorators import ratelimit
 
 from apps.audit.models import AuditLog
 from apps.schools.models import School
@@ -34,9 +35,9 @@ class LoginView(View):
             return redirect('dashboard')
         return render(request, self.template_name)
 
+    @method_decorator(ratelimit(key='ip', rate='10/m', method='POST', block=True))
     def post(self, request):
-        # Rate limiting is enforced at the nginx / WAF layer or via django-axes.
-        # A manual check is added here to guard against brute-force.
+        # Rate limiting is now enforced by django-ratelimit.
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('remember_me')

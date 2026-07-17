@@ -10,6 +10,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 
 from core.permissions import IsSuperAdmin, IsSchoolAdminOrAbove
 from .models import User
@@ -25,6 +27,7 @@ class LoginAPIView(APIView):
     """
     permission_classes = [AllowAny]
 
+    @method_decorator(ratelimit(key='ip', rate='10/m', method='POST', block=True))
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')

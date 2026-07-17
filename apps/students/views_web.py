@@ -66,6 +66,9 @@ def student_create(request):
         return redirect('student_list')
     school = request.user.school
     active_session = school.get_active_session() if school else None
+    if not active_session:
+        messages.error(request, 'You must create an active academic session before adding students.')
+        return redirect('student_list')
     from apps.classes.models import Class
     classes = Class.objects.filter(school=school)
     if active_session:
@@ -199,6 +202,9 @@ def student_import(request):
     """Import students from Excel."""
     school = request.user.school
     active_session = school.get_active_session() if school else None
+    if not active_session:
+        messages.error(request, 'You must create an active academic session before importing students.')
+        return redirect('student_list')
     from apps.classes.models import Class
     classes = Class.objects.filter(school=school)
     if active_session:

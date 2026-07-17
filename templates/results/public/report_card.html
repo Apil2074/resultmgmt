@@ -555,8 +555,10 @@
               <span class="fw-bold text-slate-800">DAYS</span>
             </div>
             <div class="mt-2">
-              <span class="fw-bold text-slate-800">DATE OF ISSUE :</span>
-              <span class="fw-bold px-2 border-bottom d-inline-block" style="min-width: 120px;">{% now "Y-m-d" %}</span>
+              {% if exam.result_date %}
+              <span class="fw-bold text-slate-800">RESULT DATE :</span>
+              <span class="fw-bold px-2 border-bottom text-center d-inline-block me-3" style="min-width: 110px;">{{ exam.result_date }}</span>
+              {% endif %}
             </div>
           </div>
         </div>

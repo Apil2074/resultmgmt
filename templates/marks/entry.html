@@ -158,6 +158,9 @@ input[type=number]::-webkit-outer-spin-button {
     {% endif %}
   </div>
   <div class="d-flex justify-content-start align-items-center gap-2 flex-wrap w-100">
+    <a href="{% url 'grade_ledger' exam.id class_obj.id %}" class="btn btn-secondary">
+      <i class="bi bi-journal-text"></i> View Ledger
+    </a>
     <a href="{% url 'mark_entry_template' exam.id class_obj.id %}" class="btn-download-template">
       <i class="bi bi-download"></i> Download Template
     </a>

@@ -138,10 +138,10 @@ class ResultProcessingService:
                 all_subject_results.append(sr)
 
             # Calculate pass/fail status
-            is_pass, failed_subjects = self.engine.is_student_pass(subject_results, [])
+            is_pass, failed_subjects = self.engine.is_student_pass(subject_results)
 
             if is_pass:
-                overall_gpa, final_grade = self.engine.calculate_student_gpa(subject_results, [])
+                overall_gpa, final_grade = self.engine.calculate_student_gpa(subject_results)
             else:
                 overall_gpa = None
                 final_grade = 'NG'

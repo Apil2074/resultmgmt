@@ -704,12 +704,17 @@ class MarksheetPDFGenerator:
         ]))
         
         import datetime
-        current_date_str = datetime.date.today().strftime('%Y-%m-%d')
-        
+        if self.exam and self.exam.result_date:
+            date_str = self.exam.result_date.strftime('%Y/%m/%d')
+            suffix = ' BS' if self.exam.result_date_is_bs else ' AD'
+            display_date = f"{date_str}{suffix}"
+        else:
+            display_date = datetime.date.today().strftime('%Y/%m/%d')
+            
         issue_table_data = [
             [
                 Paragraph('DATE OF ISSUE :', att_label_style),
-                Paragraph(current_date_str, att_val_style)
+                Paragraph(display_date, att_val_style)
             ]
         ]
         issue_table = Table(issue_table_data, colWidths=[2.5*cm, 2.5*cm])

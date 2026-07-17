@@ -201,7 +201,10 @@
     </div>
     
     <div class="fw-bold mb-3 ms-4" style="font-family: 'Times New Roman', Times, serif; color: #000;">
-      Date of Issue: <span class="ms-3">{% if exam.result_date %}{{ exam.result_date|date:"Y/m/d" }}{% else %}{% now "Y/m/d" %}{% endif %}</span>
+      {% if exam.result_date %}
+      <span class="me-5">Date of Result: <span class="ms-2">{{ exam.result_date }}</span></span>
+      {% endif %}
+      <span>Date of Issue: <span class="ms-2">{% now "Y/m/d" %}</span></span>
     </div>
 
     <!-- Notes Block -->

@@ -33,10 +33,9 @@ def percentage_to_grade_info(percentage, system='NEB', custom_table=None):
         return ('NG', Decimal('0.0'))
 
     table = custom_table or GRADE_TABLES.get(system, NEB_GRADE_TABLE)
-    pct = Decimal(str(percentage))
     
-    if pct > Decimal('100.0'):
-        pct = Decimal('100.0')
+    # Clamp percentage between 0.0 and 100.0 to prevent edge-case bugs
+    pct = max(Decimal('0.0'), min(Decimal(str(percentage)), Decimal('100.0')))
 
     # Find matching bracket
     for min_pct, max_pct, grade, gp in table:
@@ -60,17 +59,16 @@ def marks_to_percentage(obtained, full_marks):
 def get_neb_final_grade(gpa):
     """
     Map a calculated Subject AVG GPA or Overall GPA to the official NEB Final Grade Letter.
-    Uses pure Decimal comparison to prevent IEEE 754 float precision errors (e.g., 2.009999).
+    Uses strict > operators to map ranges cleanly without magic '+0.01' offsets.
     """
-    if gpa is None or gpa < Decimal('1.60'):
-        return 'NG'
-    elif gpa >= Decimal('3.61'): return 'A+'
-    elif gpa >= Decimal('3.21'): return 'A'
-    elif gpa >= Decimal('2.81'): return 'B+'
-    elif gpa >= Decimal('2.41'): return 'B'
-    elif gpa >= Decimal('2.01'): return 'C+'
-    elif gpa >= Decimal('1.61'): return 'C'
-    elif gpa >= Decimal('1.60'): return 'D'
+    if gpa is None or gpa < Decimal('1.60'): return 'NG'
+    elif gpa > Decimal('3.60'): return 'A+'
+    elif gpa > Decimal('3.20'): return 'A'
+    elif gpa > Decimal('2.80'): return 'B+'
+    elif gpa > Decimal('2.40'): return 'B'
+    elif gpa > Decimal('2.00'): return 'C+'
+    elif gpa > Decimal('1.60'): return 'C'
+    elif gpa == Decimal('1.60'): return 'D'
     
     return 'NG'
 
@@ -102,7 +100,7 @@ class GradingEngine:
             'mark_entry': mark_entry, 
         }
 
-        if mark_entry.special_value:
+        if getattr(mark_entry, 'special_value', None):
             result['remarks'] = mark_entry.get_special_value_display()
             return result
 
@@ -112,7 +110,7 @@ class GradingEngine:
         pass_threshold_theory = Decimal('35.0')
         theory_pass = False
 
-        if mark_entry.theory_obtained is not None:
+        if getattr(mark_entry, 'theory_obtained', None) is not None:
             theory_pct = marks_to_percentage(mark_entry.theory_obtained, subject.theory_full_marks)
             t_grade, t_gp = percentage_to_grade_info(theory_pct, self.system, self.custom_table)
             
@@ -124,8 +122,8 @@ class GradingEngine:
         pass_threshold_internal = Decimal('40.0')
         internal_pass = True
 
-        if subject.has_practical:
-            if mark_entry.internal_obtained is not None:
+        if getattr(subject, 'has_practical', False):
+            if getattr(mark_entry, 'internal_obtained', None) is not None:
                 internal_pct = marks_to_percentage(mark_entry.internal_obtained, subject.practical_full_marks)
                 i_grade, i_gp = percentage_to_grade_info(internal_pct, self.system, self.custom_table)
                 
@@ -140,8 +138,8 @@ class GradingEngine:
         result['is_pass'] = is_pass
 
         # 3. Weighted Grade Point (WGP) Calculation
-        ch_t = Decimal(str(subject.theory_credit_hour or '0'))
-        ch_p = Decimal(str(subject.practical_credit_hour or '0')) if subject.has_practical else Decimal('0')
+        ch_t = Decimal(str(getattr(subject, 'theory_credit_hour', '0') or '0'))
+        ch_p = Decimal(str(getattr(subject, 'practical_credit_hour', '0') or '0')) if getattr(subject, 'has_practical', False) else Decimal('0')
         total_ch = ch_t + ch_p
 
         if total_ch > 0 and is_pass:
@@ -173,7 +171,7 @@ class GradingEngine:
 
         return result
 
-    def calculate_student_gpa(self, subject_results, subjects):
+    def calculate_student_gpa(self, subject_results):
         """
         Calculate overall GPA from a list of SubjectResult dicts/objects.
         Non-credit subjects (affects_gpa=False) are entirely skipped.
@@ -181,7 +179,6 @@ class GradingEngine:
         """
         total_credit_gpa = Decimal('0')
         total_credit_hours = Decimal('0')
-        has_failed_credit_subject = False
 
         for sr in subject_results:
             # Safely handle both dicts (from views) and objects (from DB models)
@@ -192,21 +189,22 @@ class GradingEngine:
             subject = mark_entry.subject
 
             # Skip non-credit subjects for overall GPA 
-            if subject.affects_gpa:
+            if getattr(subject, 'affects_gpa', False):
+                
+                # If they failed a credit subject, overall GPA is instantly NG
                 if not is_pass:
-                    has_failed_credit_subject = True
+                    return Decimal('0.00'), 'NG'
 
-                if grade_point is not None:
-                    ch = Decimal(str(subject.credit_hour))
-                    total_credit_gpa += (grade_point * ch)
-                    total_credit_hours += ch
+                # Dynamically calculate credit hours mathematically (immune to database typos)
+                ch_t = Decimal(str(getattr(subject, 'theory_credit_hour', '0') or '0'))
+                ch_p = Decimal(str(getattr(subject, 'practical_credit_hour', '0') or '0')) if getattr(subject, 'has_practical', False) else Decimal('0')
+                ch = ch_t + ch_p
+                
+                total_credit_gpa += (grade_point * ch)
+                total_credit_hours += ch
 
         if total_credit_hours == Decimal('0'):
             return None, '—'
-
-        # If they failed any credit subject, they get an NG overall
-        if has_failed_credit_subject:
-            return Decimal('0.00'), 'NG'
 
         overall_gpa = (total_credit_gpa / total_credit_hours).quantize(
             Decimal('0.01'), rounding=ROUND_HALF_UP
@@ -224,10 +222,11 @@ class GradingEngine:
 
         return overall_gpa, final_grade
 
-    def is_student_pass(self, subject_results, subjects):
+    def is_student_pass(self, subject_results):
         """
         Checks if a student passes. 
-        Only checks subjects where affects_pass_fail=True (ignoring optional/non-credit failures).
+        Only checks subjects where affects_pass_fail=True.
+        Non-credit/optional failures are ignored completely.
         """
         failed = []
         for sr in subject_results:
@@ -235,7 +234,7 @@ class GradingEngine:
             is_pass = sr['is_pass'] if isinstance(sr, dict) else sr.is_pass
             subject = mark_entry.subject
 
-            if subject.affects_pass_fail and not is_pass:
+            if getattr(subject, 'affects_pass_fail', False) and not is_pass:
                 failed.append(subject.name)
                 
         return len(failed) == 0, failed
@@ -244,18 +243,18 @@ class GradingEngine:
 def calculate_ranks(student_results):
     """
     Assign class_rank to a list of StudentResult objects.
-    Uses 'Dense Ranking' (1, 1, 2, 3, 3, 4).
-    Failed students (NG) receive no rank.
+    Uses 'Dense Ranking' natively with Decimals to prevent precision bugs.
+    Failed students receive no rank.
     """
-    passed_students = [r for r in student_results if r.is_pass]
-    failed_students = [r for r in student_results if not r.is_pass]
+    passed_students = [r for r in student_results if getattr(r, 'is_pass', False)]
+    failed_students = [r for r in student_results if not getattr(r, 'is_pass', False)]
 
-    # Sort descending by GPA, then by total marks
+    # Sort descending by GPA, then by total marks (pure Decimal comparison)
     sorted_passed = sorted(
         passed_students,
         key=lambda r: (
-            -(float(r.overall_gpa or 0)),
-            -(float(r.total_marks_obtained or 0))
+            -(getattr(r, 'overall_gpa', None) or Decimal('0.00')),
+            -(Decimal(str(getattr(r, 'total_marks_obtained', '0') or '0')))
         )
     )
 
@@ -264,21 +263,18 @@ def calculate_ranks(student_results):
     prev_marks = None
 
     for sr in sorted_passed:
-        gpa = float(sr.overall_gpa or 0)
-        marks = float(sr.total_marks_obtained or 0)
+        gpa = getattr(sr, 'overall_gpa', None) or Decimal('0.00')
+        marks = Decimal(str(getattr(sr, 'total_marks_obtained', '0') or '0'))
 
-        # If the score is different from the previous person, go to the NEXT number
+        # Increment rank only when scores change (Dense Ranking logic)
         if gpa != prev_gpa or marks != prev_marks:
-            rank += 1  # <--- THIS IS THE MAGIC LINE FOR DENSE RANKING
+            rank += 1 
             
-        # Assign the rank
         sr.class_rank = rank
         
-        # Update previous trackers for the next loop iteration
         prev_gpa = gpa
         prev_marks = marks
 
-    # Nullify ranks for failed students
     for sr in failed_students:
         sr.class_rank = None
 

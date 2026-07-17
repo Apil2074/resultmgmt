@@ -384,6 +384,10 @@
               <a href="{% url 'marksheet_pdf' exam.id selected_student_id %}?template_version={{ template_version|default:'default' }}" class="btn btn-primary" target="_blank">
                 <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
               </a>
+              {% else %}
+              <a href="{% url 'class_marksheets_pdf' exam.id class_obj.id %}?template_version={{ template_version|default:'default' }}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
+              </a>
               {% endif %}
 
             </div>

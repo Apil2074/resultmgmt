@@ -250,8 +250,7 @@
                       <span class="fw-bold text-slate-800">DAYS</span>
                     </div>
                     <div class="mt-2">
-                      <span class="fw-bold text-slate-800">DATE OF ISSUE :</span>
-                      <span class="fw-bold px-2 border-bottom d-inline-block" style="min-width: 120px;">{% if exam.result_date %}{{ exam.result_date|date:"Y-m-d" }}{% else %}{% now "Y-m-d" %}{% endif %}</span>
+                      <!-- Dates moved to the bottom -->
                     </div>
                   </div>
                 </div>
@@ -346,6 +345,13 @@
                   <p class="signature-title mb-0">HEAD TEACHER</p>
                 </div>
               </div>
+            </div>
+
+            <div class="fw-bold mt-4 mb-2 ms-4 text-slate-800" style="font-size: 0.9rem;">
+              {% if exam.result_date %}
+              <span class="me-5">DATE OF RESULT: <span class="ms-2 text-dark">{{ exam.result_date }}</span></span>
+              {% endif %}
+              <span>DATE OF ISSUE: <span class="ms-2 text-dark">{% now "Y-m-d" %}</span></span>
             </div>
           </div>
         </div>
