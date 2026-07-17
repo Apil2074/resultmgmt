@@ -37,10 +37,12 @@ def mark_entry(request, exam_id, class_id):
             messages.warning(request, 'Results for this class are locked and published. Unlock to edit marks.')
 
     students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
-    subjects = Subject.objects.filter(class_obj=cls, school=school).select_related('marking_structure').order_by('order')
+    subjects = Subject.objects.filter(class_obj=cls, school=school).select_related().order_by('order')
 
     if request.user.is_teacher:
-        subjects = subjects.filter(assigned_teachers__teacher__user=request.user)
+        if not hasattr(request.user, 'teacher_profile') or cls.class_teacher != request.user.teacher_profile:
+            messages.error(request, 'You are not the class teacher for this class.')
+            return redirect('dashboard')
 
     # Load optional enrollments
     from apps.subjects.models import StudentSubjectEnrollment, Subject
@@ -129,9 +131,8 @@ def save_mark(request):
     if exam_class.is_locked:
         return JsonResponse({'error': 'Exam is locked for this class'}, status=403)
 
-    if request.user.is_teacher:
-        if not subject.assigned_teachers.filter(teacher__user=request.user).exists():
-            return JsonResponse({'error': 'You are not assigned to this subject.'}, status=403)
+    if request.user.is_teacher and (not hasattr(request.user, 'teacher_profile') or subject.class_obj.class_teacher != request.user.teacher_profile):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
 
     if subject.subject_type == Subject.SubjectType.OPTIONAL:
         from apps.subjects.models import StudentSubjectEnrollment
@@ -258,8 +259,10 @@ def save_marks_bulk(request):
     students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
     subjects = {s.id: s for s in Subject.objects.filter(id__in=subject_ids, school=school)}
     
-    if is_teacher:
-        assigned_subjects = set(Subject.objects.filter(id__in=subject_ids, assigned_teachers__teacher__user=request.user).values_list('id', flat=True))
+    if request.user.is_teacher:
+        if not hasattr(request.user, 'teacher_profile'):
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+        assigned_subjects = set(Subject.objects.filter(id__in=subject_ids, class_obj__class_teacher=request.user.teacher_profile).values_list('id', flat=True))
 
     from apps.subjects.models import StudentSubjectEnrollment
     optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
@@ -406,7 +409,7 @@ def bulk_mark_import(request, exam_id, class_id):
                 col_idx = 2
                 for subject in subjects:
                     try:
-                        ms = subject.marking_structure
+                        ms = subject
                         changed = False
                         
                         theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
@@ -419,13 +422,13 @@ def bulk_mark_import(request, exam_id, class_id):
                             except Exception:
                                 pass
                                 
-                        if ms.has_internal:
+                        if ms.has_practical:
                             internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
                             if internal_fm is not None:
                                 try:
                                     val = int(float(internal_fm))
-                                    if ms.internal_full_marks != val:
-                                        ms.internal_full_marks = val
+                                    if ms.practical_full_marks != val:
+                                        ms.practical_full_marks = val
                                         changed = True
                                 except Exception:
                                     pass
@@ -463,12 +466,12 @@ def bulk_mark_import(request, exam_id, class_id):
                 try:
                     for subject in subjects:
                         try:
-                            ms = subject.marking_structure
+                            ms = subject
                         except Exception:
                             col_idx += 2
                             continue
                         theory_raw = row[col_idx] if col_idx < len(row) else None
-                        internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                        internal_raw = row[col_idx + 1] if ms.has_practical and (col_idx + 1) < len(row) else None
                         col_idx += 2
 
                         # Parse theory marks / special value
@@ -493,7 +496,7 @@ def bulk_mark_import(request, exam_id, class_id):
 
                         # Parse internal marks / special value
                         internal_obtained = None
-                        if internal_raw is not None and ms.has_internal:
+                        if internal_raw is not None and ms.has_practical:
                             val_str = str(internal_raw).strip().upper()
                             if val_str in ('AB', 'ABSENT'):
                                 special_value = 'AB'
@@ -588,7 +591,7 @@ def mark_entry_template(request, exam_id, class_id):
     cls = get_object_or_404(Class, pk=class_id, school=school)
     students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
     subjects = Subject.objects.filter(class_obj=cls, school=school).select_related(
-        'marking_structure').order_by('order')
+        ).order_by('order')
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -602,10 +605,10 @@ def mark_entry_template(request, exam_id, class_id):
     headers = ['Roll No', 'Student Name']
     for subj in subjects:
         try:
-            ms = subj.marking_structure
-            headers.append(f'{subj.name}\nTheory ({ms.theory_full_marks})')
-            if ms.has_internal:
-                headers.append(f'{subj.name}\nInternal ({ms.internal_full_marks})')
+            ms = subj
+            headers.append(f'{subj.name}\nTheory')
+            if ms.has_practical:
+                headers.append(f'{subj.name}\nInternal')
             else:
                 headers.append(f'{subj.name}\n(No Internal)')
         except Exception:
@@ -645,10 +648,10 @@ def mark_entry_template(request, exam_id, class_id):
     col_idx = 3
     for subj in subjects:
         try:
-            ms = subj.marking_structure
+            ms = subj
             ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
-            if ms.has_internal:
-                ws.cell(row=2, column=col_idx + 1, value=ms.internal_full_marks)
+            if ms.has_practical:
+                ws.cell(row=2, column=col_idx + 1, value=ms.practical_full_marks)
         except Exception:
             pass
         col_idx += 2
@@ -679,7 +682,7 @@ def mark_entry_template(request, exam_id, class_id):
             
             if is_unmapped_optional:
                 ws.cell(row=row_num, column=col_idx).fill = black_fill
-                if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                if subj and subj.has_practical:
                     ws.cell(row=row_num, column=col_idx + 1).fill = black_fill
             else:
                 me = existing_marks.get((student.id, subj.id))
@@ -690,12 +693,12 @@ def mark_entry_template(request, exam_id, class_id):
                     # Pre-populate marks
                     if me.special_value:
                         ws.cell(row=row_num, column=col_idx, value=me.special_value)
-                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                        if subj and subj.has_practical:
                             ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
                     else:
                         if me.theory_obtained is not None:
                             ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
-                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
+                        if subj and subj.has_practical and me.internal_obtained is not None:
                             ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
             col_idx += 2
             
@@ -747,12 +750,11 @@ def save_full_marks(request):
         )
 
     try:
-        sms = subject.marking_structure
         if field == 'theory':
-            sms.theory_full_marks = value
+            subject.theory_full_marks = value
         elif field == 'internal':
-            sms.internal_full_marks = value
-        sms.save()
+            subject.practical_full_marks = value
+        subject.save()
         return JsonResponse({'status': 'saved'})
     except Exception:
         logger.exception('Error in save_full_marks for subject=%s field=%s', data.get('subject_id'), field)
@@ -868,7 +870,7 @@ def mark_entry_all_template(request, exam_id):
             continue
 
         subjects = Subject.objects.filter(class_obj=cls, school=school).select_related(
-            'marking_structure').order_by('order')
+            ).order_by('order')
 
         # Sheet names must be <= 31 chars
         sheet_title = f"{cls.full_name}"[:31].replace(':', '-').replace('/', '-')
@@ -878,10 +880,10 @@ def mark_entry_all_template(request, exam_id):
         headers = ['Roll No', 'Student Name']
         for subj in subjects:
             try:
-                ms = subj.marking_structure
-                headers.append(f'{subj.name}\nTheory ({ms.theory_full_marks})')
-                if ms.has_internal:
-                    headers.append(f'{subj.name}\nInternal ({ms.internal_full_marks})')
+                ms = subj
+                headers.append(f'{subj.name}\nTheory')
+                if ms.has_practical:
+                    headers.append(f'{subj.name}\nInternal')
                 else:
                     headers.append(f'{subj.name}\n(No Internal)')
             except Exception:
@@ -913,10 +915,10 @@ def mark_entry_all_template(request, exam_id):
         col_idx = 3
         for subj in subjects:
             try:
-                ms = subj.marking_structure
+                ms = subj
                 ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
-                if ms.has_internal:
-                    ws.cell(row=2, column=col_idx + 1, value=ms.internal_full_marks)
+                if ms.has_practical:
+                    ws.cell(row=2, column=col_idx + 1, value=ms.practical_full_marks)
             except Exception:
                 pass
             col_idx += 2
@@ -951,12 +953,12 @@ def mark_entry_all_template(request, exam_id):
                     # Pre-populate marks
                     if me.special_value:
                         ws.cell(row=row_num, column=col_idx, value=me.special_value)
-                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal:
+                        if subj and subj.has_practical:
                             ws.cell(row=row_num, column=col_idx + 1, value=me.special_value)
                     else:
                         if me.theory_obtained is not None:
                             ws.cell(row=row_num, column=col_idx, value=float(me.theory_obtained))
-                        if hasattr(subj, 'marking_structure') and subj.marking_structure.has_internal and me.internal_obtained is not None:
+                        if subj and subj.has_practical and me.internal_obtained is not None:
                             ws.cell(row=row_num, column=col_idx + 1, value=float(me.internal_obtained))
                 col_idx += 2
                 
@@ -1036,7 +1038,7 @@ def bulk_mark_all_import(request, exam_id):
                 col_idx = 2
                 for subject in subjects:
                     try:
-                        ms = subject.marking_structure
+                        ms = subject
                         changed = False
 
                         theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
@@ -1050,13 +1052,13 @@ def bulk_mark_all_import(request, exam_id):
                             except Exception:
                                 pass
 
-                        if ms.has_internal:
+                        if ms.has_practical:
                             internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
                             if internal_fm is not None and is_admin_upload:
                                 try:
                                     val = int(float(internal_fm))
-                                    if 1 <= val <= 1000 and ms.internal_full_marks != val:
-                                        ms.internal_full_marks = val
+                                    if 1 <= val <= 1000 and ms.practical_full_marks != val:
+                                        ms.practical_full_marks = val
                                         changed = True
                                 except Exception:
                                     pass
@@ -1091,12 +1093,12 @@ def bulk_mark_all_import(request, exam_id):
                     subject_marks_list = []
                     for subject in subjects:
                         try:
-                            ms = subject.marking_structure
+                            ms = subject
                         except Exception:
                             col_idx += 2
                             continue
                         theory_raw = row[col_idx] if col_idx < len(row) else None
-                        internal_raw = row[col_idx + 1] if ms.has_internal and (col_idx + 1) < len(row) else None
+                        internal_raw = row[col_idx + 1] if ms.has_practical and (col_idx + 1) < len(row) else None
                         col_idx += 2
     
                         # Parse theory marks / special value
@@ -1121,7 +1123,7 @@ def bulk_mark_all_import(request, exam_id):
     
                         # Parse internal marks / special value
                         internal_obtained = None
-                        if internal_raw is not None and ms.has_internal:
+                        if internal_raw is not None and ms.has_practical:
                             val_str = str(internal_raw).strip().upper()
                             if val_str in ('AB', 'ABSENT'):
                                 special_value = 'AB'

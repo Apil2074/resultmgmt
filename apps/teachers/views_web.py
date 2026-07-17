@@ -29,7 +29,7 @@ def teacher_list(request):
 
     active_session = school.get_active_session()
     
-    teachers_qs = Teacher.objects.filter(school=school).select_related('user').prefetch_related('subject_assignments')
+    teachers_qs = Teacher.objects.filter(school=school).select_related('user').prefetch_related('assigned_classes', 'subject_assignments__subject')
     if active_session:
         teachers_qs = teachers_qs.filter(sessions=active_session)
     
@@ -106,17 +106,23 @@ def teacher_detail(request, pk):
         messages.error(request, 'Access denied.')
         return redirect('dashboard')
 
-    teacher = get_object_or_404(Teacher, pk=pk, school=school)
+    teacher = get_object_or_404(
+        Teacher.objects.prefetch_related('assigned_classes', 'subject_assignments__subject'),
+        pk=pk, 
+        school=school
+    )
     
     # Get active session assignments
     active_session = school.get_active_session() if school else None
-    assignments = teacher.subject_assignments.select_related('subject', 'subject__class_obj')
+    assignments = teacher.assigned_classes.all()
+    subject_assignments = teacher.subject_assignments.all()
     if active_session:
-        assignments = assignments.filter(subject__class_obj__session=active_session)
+        assignments = assignments.filter(session=active_session)
         
     return render(request, 'teachers/detail.html', {
         'teacher': teacher,
         'assignments': assignments,
+        'subject_assignments': subject_assignments,
         'active_session': active_session
     })
 
@@ -475,56 +481,6 @@ def teacher_send_password_reset(request, pk):
     return redirect(request.META.get('HTTP_REFERER', 'teacher_list'))
 
 
-@login_required
-def teacher_subject_map(request, pk):
-    """UI to map subjects to a teacher."""
-    school = request.user.school
-    if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
-        messages.error(request, 'Access denied.')
-        return redirect('dashboard')
-
-    teacher = get_object_or_404(Teacher, pk=pk, school=school)
-    
-    if request.method == 'POST':
-        subject_ids = request.POST.getlist('subject_ids')
-        
-        # Only map selected subjects, delete unselected ones
-        TeacherSubject.objects.filter(teacher=teacher).exclude(subject_id__in=subject_ids).delete()
-        
-        for sub_id in subject_ids:
-            TeacherSubject.objects.get_or_create(
-                teacher=teacher,
-                subject_id=sub_id
-            )
-            
-        messages.success(request, f'Subjects mapped successfully for {teacher.name}.')
-        return redirect('teacher_list')
-        
-    active_session = school.get_active_session() if school else None
-    classes_qs = Class.objects.filter(school=school)
-    if active_session:
-        classes_qs = classes_qs.filter(session=active_session)
-        
-    classes = list(classes_qs.prefetch_related('subjects'))
-    mapped_subject_ids = list(teacher.subject_assignments.values_list('subject_id', flat=True))
-    
-    all_other_assignments = TeacherSubject.objects.filter(
-        subject__class_obj__school=school
-    ).exclude(teacher=teacher).select_related('teacher')
-    
-    other_assignments_dict = {ta.subject_id: ta.teacher.name for ta in all_other_assignments}
-
-    for cls in classes:
-        for sub in cls.subjects.all():
-            sub.is_mapped_to_current = sub.id in mapped_subject_ids
-            sub.other_teacher_name = other_assignments_dict.get(sub.id)
-    
-    return render(request, 'teachers/subject_map.html', {
-        'teacher': teacher,
-        'classes': classes,
-    })
-
-
 # ---------------------------------------------------------
 # TEACHER PORTAL VIEWS
 # ---------------------------------------------------------
@@ -543,26 +499,15 @@ def teacher_dashboard(request):
         
     active_session = request.user.school.get_active_session() if hasattr(request.user, 'school') and request.user.school else None
     
-    assignments = TeacherSubject.objects.filter(
-        teacher=teacher
-    ).select_related('subject', 'subject__class_obj')
-    
+    from apps.classes.models import Class
+    classes_qs = Class.objects.filter(class_teacher=teacher)
     if active_session:
-        assignments = assignments.filter(subject__class_obj__session=active_session)
-    
-    # Group by class
-    classes_dict = {}
-    class_ids = set()
-    for assignment in assignments:
-        cls = assignment.subject.class_obj
-        if cls not in classes_dict:
-            classes_dict[cls] = []
-        classes_dict[cls].append(assignment.subject)
-        class_ids.add(cls.id)
-
+        classes_qs = classes_qs.filter(session=active_session)
+        
     classes_info = []
     from apps.exams.models import ExamClass
-    for cls, subjects in classes_dict.items():
+    for cls in classes_qs:
+        subjects = cls.subjects.all()
         latest_ec = ExamClass.objects.filter(
             class_obj=cls, 
             exam__status='DRAFT'
@@ -733,3 +678,52 @@ def teacher_inline_edit(request, teacher_id):
         return JsonResponse({'status': 'success'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+def teacher_subject_map(request, pk):
+    school = request.user.school
+    if request.user.role not in [User.Role.SUPER_ADMIN, User.Role.SCHOOL_ADMIN]:
+        messages.error(request, 'Access denied.')
+        return redirect('dashboard')
+        
+    teacher = get_object_or_404(Teacher, pk=pk, school=school)
+    
+    if request.method == 'POST':
+        subject_ids = request.POST.getlist('subject_ids')
+        
+        with transaction.atomic():
+            TeacherSubject.objects.filter(teacher=teacher).delete()
+            new_mappings = []
+            for sid in subject_ids:
+                if sid.isdigit():
+                    new_mappings.append(TeacherSubject(teacher=teacher, subject_id=int(sid)))
+            TeacherSubject.objects.bulk_create(new_mappings)
+            
+        messages.success(request, f'Subjects successfully mapped to {teacher.name}.')
+        return redirect('teacher_detail', pk=teacher.pk)
+
+    active_session = school.get_active_session()
+    
+    # Get all classes in active session with subjects
+    classes = Class.objects.filter(school=school, session=active_session).prefetch_related('subjects')
+    
+    # Pre-calculate what is mapped
+    all_mappings = TeacherSubject.objects.filter(teacher__school=school).select_related('teacher')
+    mapping_dict = {tm.subject_id: tm.teacher for tm in all_mappings}
+    current_mapped_subject_ids = set(TeacherSubject.objects.filter(teacher=teacher).values_list('subject_id', flat=True))
+    
+    for cls in classes:
+        for sub in cls.subjects.all():
+            if sub.id in current_mapped_subject_ids:
+                sub.is_mapped_to_current = True
+                sub.other_teacher_name = None
+            else:
+                sub.is_mapped_to_current = False
+                other_teacher = mapping_dict.get(sub.id)
+                sub.other_teacher_name = other_teacher.name if other_teacher else None
+
+    return render(request, 'teachers/subject_map.html', {
+        'teacher': teacher,
+        'classes': classes
+    })

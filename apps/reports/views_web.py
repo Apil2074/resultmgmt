@@ -150,10 +150,10 @@ def subject_analysis(request, exam_id, subject_id):
     subject = get_object_or_404(Subject, pk=subject_id, school=school)
     
     if request.user.is_teacher:
-        if not subject.assigned_teachers.filter(teacher__user=request.user).exists():
+        if not hasattr(request.user, 'teacher_profile') or subject.class_obj.class_teacher != request.user.teacher_profile:
             from django.contrib import messages
             from django.shortcuts import redirect
-            messages.error(request, 'You can only view reports for subjects you teach.')
+            messages.error(request, "Access denied.")
             return redirect('dashboard')
 
     entries = MarkEntry.objects.filter(
@@ -313,6 +313,31 @@ def exam_analytics(request, exam_id):
             idx = min(int(float(r.percentage) // 10), 9)
             pct_counts[idx] += 1
 
+    # ── Attendance vs Performance Correlation ────────────────────────
+    attendance_correlation_data = []
+    
+    mark_entries = MarkEntry.objects.filter(exam=exam, school=school, total_days__gt=0).select_related('student')
+    attendance_map = {}
+    for me in mark_entries:
+        sid = me.student_id
+        if sid not in attendance_map:
+            attendance_map[sid] = {'present': 0, 'total': 0}
+        attendance_map[sid]['present'] += (me.present_days or 0)
+        attendance_map[sid]['total'] += me.total_days
+        
+    for r in results:
+        sid = r.student_id
+        if sid in attendance_map and r.overall_gpa is not None:
+            att = attendance_map[sid]
+            if att['total'] > 0:
+                pct = round((att['present'] / att['total']) * 100, 1)
+                attendance_correlation_data.append({
+                    'x': pct,
+                    'y': round(float(r.overall_gpa), 2),
+                    'name': r.student.name,
+                    'pass': r.is_pass
+                })
+
     # ── Radar: average subject GPA per performance group ─────────────
     top_subjects = subj_labels[:6]  # use top 6 for radar
 
@@ -355,5 +380,6 @@ def exam_analytics(request, exam_id):
         # Percentage histogram
         'pct_bins': json.dumps(pct_bins),
         'pct_counts': json.dumps(pct_counts),
+        'attendance_correlation_json': json.dumps(attendance_correlation_data),
     })
 

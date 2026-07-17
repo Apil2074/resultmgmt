@@ -73,7 +73,7 @@
     <div class="col-md-8">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-book text-primary me-2"></i> Subject Assignments</h6>
+                <h6 class="mb-0 fw-bold"><i class="bi bi-book text-primary me-2"></i> Assigned Classes</h6>
                 <span class="badge bg-light text-dark border">{{ active_session.name|default:"No Active Session" }}</span>
             </div>
             <div class="card-body p-0">
@@ -83,29 +83,16 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-4">Class</th>
-                                    <th>Subject</th>
-                                    <th>Type</th>
-                                    <th>Full Marks</th>
+                                    <th>Section</th>
+                                    <th>Level</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in assignments %}
+                                {% for cls in assignments %}
                                 <tr>
-                                    <td class="ps-4 fw-medium">{{ item.subject.class_obj.full_name }}</td>
-                                    <td>{{ item.subject.name }}</td>
-                                    <td><span class="badge bg-secondary">{{ item.subject.get_subject_type_display }}</span></td>
-                                    <td>
-                                        <div class="small">
-                                            {% if item.subject.marking_structure %}
-                                                Th: {{ item.subject.marking_structure.theory_full_marks }}
-                                                {% if item.subject.marking_structure.has_internal %}
-                                                    | Int: {{ item.subject.marking_structure.internal_full_marks }}
-                                                {% endif %}
-                                            {% else %}
-                                                -
-                                            {% endif %}
-                                        </div>
-                                    </td>
+                                    <td class="ps-4 fw-medium">{{ cls.name }}</td>
+                                    <td>{{ cls.section|default:"-" }}</td>
+                                    <td>{{ cls.numeric_level }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -114,7 +101,47 @@
                 {% else %}
                     <div class="text-center py-5 text-muted">
                         <i class="bi bi-folder-x display-4 text-light mb-3"></i>
-                        <p class="mb-1">No subjects assigned for the current session.</p>
+                        <p class="mb-1">No classes assigned for the current session.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-12 mt-4">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-book text-success me-2"></i>Assigned Subjects</h6>
+                {% if user.is_school_admin or user.is_super_admin %}
+                <a href="{% url 'teacher_subject_map' teacher.id %}" class="btn btn-sm btn-outline-primary">Manage Subjects</a>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                {% if subject_assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Subject</th>
+                                    <th>Code</th>
+                                    <th>Assigned At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ta in subject_assignments %}
+                                <tr>
+                                    <td class="ps-4 fw-medium">{{ ta.subject.name }}</td>
+                                    <td>{{ ta.subject.code }}</td>
+                                    <td>{{ ta.assigned_at|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-journal-x display-4 text-light mb-3"></i>
+                        <p class="mb-1">No subjects mapped to this teacher.</p>
                         {% if user.is_school_admin or user.is_super_admin %}
                         <a href="{% url 'teacher_subject_map' teacher.id %}" class="btn btn-sm btn-outline-primary mt-2">Map Subjects Now</a>
                         {% endif %}

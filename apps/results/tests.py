@@ -214,7 +214,7 @@ class FailureCasesMitigationTest(TestCase):
     def test_null_marks_compulsory_fails(self):
         """Failure Case 4: Subject Pass Logic on Null Marks."""
         engine = GradingEngine(system='NEB')
-        ms = self.sub_comp.marking_structure
+        ms = self.sub_comp
         
         # Empty mark entry with None obtained marks
         entry = MarkEntry(
@@ -225,7 +225,7 @@ class FailureCasesMitigationTest(TestCase):
             theory_obtained=None
         )
         
-        res = engine.get_subject_result(entry, ms)
+        res = engine.get_subject_result(entry)
         self.assertFalse(res['is_pass'])
         self.assertEqual(res['grade'], 'NG')
 

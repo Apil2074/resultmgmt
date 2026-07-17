@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import IntegrityError
-from .models import Subject, SubjectMarkingStructure
+from .models import Subject
 
 
 @login_required
@@ -228,14 +228,18 @@ def subject_inline_edit(request, subject_id):
     field_name = request.POST.get('name')
     value = request.POST.get('value')
     
-    allowed_fields = ['code', 'name', 'theory_credit_hour', 'has_practical', 'practical_code', 'practical_credit_hour', 'subject_type', 'order']
+    allowed_fields = [
+        'code', 'name', 'theory_credit_hour', 'has_practical', 'practical_code', 
+        'practical_credit_hour', 'subject_type', 'order',
+        'theory_full_marks', 'theory_pass_marks', 'practical_full_marks', 'practical_pass_marks'
+    ]
     if field_name not in allowed_fields:
         return JsonResponse({'status': 'error', 'message': 'Invalid field'}, status=400)
         
     try:
         if field_name == 'has_practical':
             value = value == 'True'
-        elif field_name in ['theory_credit_hour', 'practical_credit_hour']:
+        elif field_name in ['theory_credit_hour', 'practical_credit_hour', 'theory_full_marks', 'theory_pass_marks', 'practical_full_marks', 'practical_pass_marks']:
             value = float(value) if value else 0.0
         elif field_name == 'order':
             value = int(value) if value else 0

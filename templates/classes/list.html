@@ -59,8 +59,8 @@
               <td>
                 {% if c.class_teacher %}
                 <div class="fw-medium text-slate-700">{{ c.class_teacher.name }}</div>
-                {% if c.class_teacher.phone %}
-                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ c.class_teacher.phone }}</div>
+                {% if c.class_teacher.contact_number %}
+                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ c.class_teacher.contact_number }}</div>
                 {% endif %}
                 {% else %}
                 <span class="text-muted small italic">Not Assigned</span>
@@ -81,9 +81,9 @@
                     data-class-id="{{ c.id }}" data-class-name="{{ c.name|escapejs }}"
                     data-class-section="{{ c.section|escapejs }}"
                     data-numeric-level="{{ c.numeric_level }}"
-                    data-teacher-id="{% if c.class_teacher and c.class_teacher.teacher %}{{ c.class_teacher.teacher.id }}{% endif %}"
+                    data-teacher-id="{% if c.class_teacher and c.class_teacher.teacher %}{{ c.class_teacher.id }}{% endif %}"
                     data-teacher-name="{% if c.class_teacher %}{{ c.class_teacher.name|escapejs }}{% endif %}"
-                    data-teacher-phone="{% if c.class_teacher %}{{ c.class_teacher.phone|escapejs }}{% endif %}"
+                    data-teacher-phone="{% if c.class_teacher %}{{ c.class_teacher.contact_number|escapejs }}{% endif %}"
                     data-teacher-email="{% if c.class_teacher %}{{ c.class_teacher.email|escapejs }}{% endif %}"
                     data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Class">
                     <i class="bi bi-pencil-fill"></i>

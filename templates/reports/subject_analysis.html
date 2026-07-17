@@ -46,15 +46,15 @@
               <td><span class="badge bg-danger-subtle text-danger">Fail</span></td>
             {% else %}
               <td class="font-monospace text-slate-600">
-                {% if entry.subject.marking_structure.has_theory %}
-                  {{ entry.theory_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.marking_structure.theory_full_marks }}</span>
+                {% if True %}
+                  {{ entry.theory_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.theory_full_marks }}</span>
                 {% else %}
                   —
                 {% endif %}
               </td>
               <td class="font-monospace text-slate-600">
-                {% if entry.subject.marking_structure.has_internal %}
-                  {{ entry.internal_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.marking_structure.internal_full_marks }}</span>
+                {% if entry.subject.has_practical %}
+                  {{ entry.internal_obtained|default:"—" }} <span class="text-muted small">/ {{ entry.subject.practical_full_marks }}</span>
                 {% else %}
                   —
                 {% endif %}

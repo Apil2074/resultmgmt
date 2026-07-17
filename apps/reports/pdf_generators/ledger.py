@@ -76,7 +76,7 @@ class LedgerPDFGenerator:
         
         for subj in self.subjects:
             try:
-                ms = subj.marking_structure
+                ms = subj
                 has_int = ms.has_internal
             except Exception:
                 has_int = False
@@ -143,7 +143,7 @@ class LedgerPDFGenerator:
 
             for subj in page_subjs:
                 try:
-                    ms = subj.marking_structure
+                    ms = subj
                     has_int = ms.has_internal
                 except Exception:
                     has_int = False
@@ -218,7 +218,7 @@ class LedgerPDFGenerator:
             total_weights = 0.0
             for s in page_subjs:
                 try:
-                    ms = s.marking_structure
+                    ms = s
                     has_int = ms.has_internal
                 except Exception:
                     has_int = False
@@ -235,7 +235,7 @@ class LedgerPDFGenerator:
             col_widths = [0.5*cm, 1.2*cm, 2.0*cm, 3.0*cm, 1.1*cm] # Left columns (sum to 7.8 cm)
             for s in page_subjs:
                 try:
-                    ms = s.marking_structure
+                    ms = s
                     has_int = ms.has_internal
                 except Exception:
                     has_int = False
@@ -293,7 +293,7 @@ class LedgerPDFGenerator:
                 
                 for subj in page_subjs:
                     try:
-                        ms = subj.marking_structure
+                        ms = subj
                         has_int = ms.has_internal
                     except Exception:
                         has_int = False
@@ -381,7 +381,7 @@ class LedgerPDFGenerator:
             col_c = 5
             for subj in page_subjs:
                 try:
-                    ms = subj.marking_structure
+                    ms = subj
                     has_int = ms.has_internal
                 except Exception:
                     has_int = False

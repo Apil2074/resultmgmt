@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button {
 <div class="page-header flex-column align-items-start gap-3">
   <div class="d-flex justify-content-between w-100 align-items-start flex-wrap gap-3">
     <div>
-      <h1 class="page-title">📝 Mark Entry</h1>
+  
       <div class="page-subtitle">
         <strong>{{ exam.name }}</strong> &nbsp;|&nbsp; {{ class_obj.full_name }}
         &nbsp;|&nbsp; {{ students.count }} students
@@ -222,11 +222,11 @@ input[type=number]::-webkit-outer-spin-button {
           <th class="sticky-roll" rowspan="2">#</th>
           <th class="sticky-name" rowspan="2">Student Name</th>
           {% for subject in subjects %}
-          <th id="subject-col-{{ subject.id }}" colspan="{% if subject.marking_structure.has_internal %}3{% else %}2{% endif %}"
+          <th id="subject-col-{{ subject.id }}" colspan="{% if subject.has_practical %}3{% else %}2{% endif %}"
               style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center;">
             {{ subject.name }}
             <span class="badge badge-gray ms-1" style="font-size:0.6rem;">{{ subject.get_subject_type_display }}</span>
-            <div data-bs-toggle="tooltip" title="Credit Hours determine the overall weight of this subject in GPA calculation" style="font-size:0.7rem; font-weight:normal; color:var(--color-text-muted); opacity:0.8; margin-top:4px; cursor:help;">TH: {{ subject.theory_credit_hour|floatformat:"-1" }}{% if subject.marking_structure.has_internal %}, IN: {{ subject.practical_credit_hour|default:0|floatformat:"-1" }}{% endif %} <i class="bi bi-question-circle"></i></div>
+            <div data-bs-toggle="tooltip" title="Credit Hours determine the overall weight of this subject in GPA calculation" style="font-size:0.7rem; font-weight:normal; color:var(--color-text-muted); opacity:0.8; margin-top:4px; cursor:help;">TH: {{ subject.theory_credit_hour|floatformat:"-2" }}{% if subject.has_practical %}, IN: {{ subject.practical_credit_hour|default:0|floatformat:"-2" }}{% endif %} <i class="bi bi-question-circle"></i></div>
           </th>
           {% endfor %}
           {% if not request.user.is_teacher %}
@@ -250,19 +250,19 @@ input[type=number]::-webkit-outer-spin-button {
               Th.
               <input type="number" 
                      class="full-marks-input" 
-                     value="{{ subject.marking_structure.theory_full_marks }}" 
+                     value="{{ subject.theory_full_marks }}" 
                      data-subject="{{ subject.id }}" 
                      data-field="theory"
                      {% if exam_class.is_locked %}disabled{% endif %}
                      style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;"
                      data-bs-toggle="tooltip" title="Full Marks (Theory)">
             </th>
-            {% if subject.marking_structure.has_internal %}
+            {% if subject.has_practical %}
             <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
               Int.
               <input type="number" 
                      class="full-marks-input" 
-                     value="{{ subject.marking_structure.internal_full_marks }}" 
+                     value="{{ subject.practical_full_marks }}" 
                      data-subject="{{ subject.id }}" 
                      data-field="internal"
                      {% if exam_class.is_locked %}disabled{% endif %}
@@ -288,32 +288,32 @@ input[type=number]::-webkit-outer-spin-button {
           {% for sm in student.subject_marks %}
             <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
               <div style="position: relative; display: inline-block;">
-                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.theory_full_marks }}"
                   step="1"
                   value="{{ sm.me.theory_obtained|default:'' }}"
                   data-student="{{ student.id }}"
                   data-subject="{{ sm.subject.id }}"
                   data-field="theory"
-                  data-max="{{ sm.subject.marking_structure.theory_full_marks }}"
+                  data-max="{{ sm.subject.theory_full_marks }}"
                   {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
                   oninput="scheduleSave(this)"
-                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.marking_structure.theory_full_marks }}){% endif %}">
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.theory_full_marks }}){% endif %}">
                 <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-theory"></i>
               </div>
             </td>
-            {% if sm.subject.marking_structure.has_internal %}
+            {% if sm.subject.has_practical %}
             <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
               <div style="position: relative; display: inline-block;">
-                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                <input type="number" class="mark-input {% if sm.is_restricted %}restricted-input{% endif %}" min="0" max="{{ sm.subject.practical_full_marks }}"
                   step="1"
                   value="{{ sm.me.internal_obtained|default:'' }}"
                   data-student="{{ student.id }}"
                   data-subject="{{ sm.subject.id }}"
                   data-field="internal"
-                  data-max="{{ sm.subject.marking_structure.internal_full_marks }}"
+                  data-max="{{ sm.subject.practical_full_marks }}"
                   {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
                   oninput="scheduleSave(this)"
-                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.marking_structure.internal_full_marks }}){% endif %}">
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.practical_full_marks }}){% endif %}">
                 <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-internal"></i>
               </div>
             </td>

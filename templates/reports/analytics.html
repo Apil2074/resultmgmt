@@ -153,6 +153,17 @@
   </div>
 </div>
 
+<!-- Attendance Correlation -->
+<div class="section-title"><i class="bi bi-graph-up text-success"></i> Attendance vs Performance</div>
+<div class="row g-3 mb-3">
+  <div class="col-12">
+    <div class="chart-card">
+      <h6><i class="bi bi-scatter-chart text-primary"></i> Attendance vs GPA Correlation</h6>
+      <div style="position:relative;height:350px;"><canvas id="attendanceChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
 <!-- Class and Gender -->
 <div class="section-title"><i class="bi bi-grid-3x3-gap-fill" style="color:#14b8a6;"></i> Class and Gender Breakdown</div>
 <div class="row g-3 mb-3">
@@ -472,6 +483,39 @@ document.addEventListener("DOMContentLoaded", function() {
       } else { tip.style.display = "none"; }
     });
     swarmCanvas.addEventListener("mouseleave", () => tip.style.display = "none");
+  }
+
+  // 9. Attendance vs Performance Correlation
+  const attendanceData = {{ attendance_correlation_json|safe }};
+  if (attendanceData && attendanceData.length > 0) {
+    new Chart(document.getElementById("attendanceChart"), {
+      type: "scatter",
+      data: { 
+        datasets: [{
+          label: "Students",
+          data: attendanceData.map(d => ({x: d.x, y: d.y, name: d.name, pass: d.pass})),
+          backgroundColor: attendanceData.map(d => d.pass ? "rgba(34,197,94,.7)" : "rgba(239,68,68,.7)"),
+          borderColor: attendanceData.map(d => d.pass ? "#16a34a" : "#dc2626"),
+          pointRadius: 5, pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ctx.raw.name + ": Attendance " + ctx.raw.x + "%, GPA " + ctx.raw.y } }
+        },
+        scales: {
+          x: { title: { display: true, text: "Attendance %", font: { weight: "bold" } }, min: 0, max: 100, grid: { color: "#f1f5f9" } },
+          y: { title: { display: true, text: "Overall GPA", font: { weight: "bold" } }, min: 0, max: 4.0, grid: { color: "#f1f5f9" } }
+        }
+      }
+    });
+  } else {
+      const cvs = document.getElementById("attendanceChart");
+      if (cvs) {
+          cvs.parentElement.innerHTML = '<div class="text-center text-muted mt-5 pt-5"><i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No attendance data available to correlate.</div>';
+      }
   }
 
 });

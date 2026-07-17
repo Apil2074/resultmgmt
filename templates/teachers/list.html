@@ -49,8 +49,8 @@
                         <th>Name</th>
                         <th>Email</th>
                         <th>Contact</th>
-                        <th>Account</th>
                         <th>Mapped Subjects</th>
+                        <th>Account</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -87,6 +87,14 @@
                         </td>
                         <td>{{ teacher.contact_number|default:"-" }}</td>
                         <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary text-white rounded-pill px-3 py-1">{{ teacher.subject_assignments.count }} Subjects</span>
+                                {% if user.is_school_admin or user.is_super_admin %}
+                                <a href="{% url 'teacher_subject_map' teacher.pk %}" class="text-decoration-none text-primary fw-medium small">Edit</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
                             {% if teacher.user %}
                                 <span class="badge bg-success">Active</span>
                                 <div class="small text-muted mb-1">{{ teacher.user.username }}</div>
@@ -103,12 +111,6 @@
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="confirmAction('Generate user account for {{ teacher.name|escapejs }}?', () => document.getElementById('create-user-form-{{ teacher.pk }}').submit())">Create Account</button>
                                 </form>
                                 {% endif %}
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary">{{ teacher.subject_assignments.count }} Subjects</span>
-                            {% if user.is_school_admin or user.is_super_admin %}
-                            <a href="{% url 'teacher_subject_map' teacher.pk %}" class="btn btn-sm btn-link text-decoration-none">Edit Map</a>
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -132,7 +134,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             No teachers found. Add one or import from Excel.
                         </td>
                     </tr>

@@ -44,6 +44,19 @@ class Student(models.Model):
         verbose_name_plural = 'Students'
         unique_together = ['school', 'class_obj', 'roll_number']
         ordering = ['class_obj', Length('roll_number'), 'roll_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['school', 'symbol_number'],
+                condition=~models.Q(symbol_number=''),
+                name='unique_school_symbol_number'
+            ),
+            models.UniqueConstraint(
+                fields=['school', 'registration_number'],
+                condition=~models.Q(registration_number=''),
+                name='unique_school_registration_number'
+            )
+        ]
+
     def save(self, *args, **kwargs):
         if not self.session and self.class_obj:
             self.session = self.class_obj.session

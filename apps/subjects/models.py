@@ -27,6 +27,10 @@ class Subject(models.Model):
     has_practical = models.BooleanField(default=False)
     practical_credit_hour = models.DecimalField(max_digits=4, decimal_places=2, default=0.0, null=True, blank=True)
     practical_code = models.CharField(max_length=20, blank=True, default='')
+    theory_full_marks = models.DecimalField(max_digits=5, decimal_places=2, default=100.0)
+    theory_pass_marks = models.DecimalField(max_digits=5, decimal_places=2, default=35.0)
+    practical_full_marks = models.DecimalField(max_digits=5, decimal_places=2, default=25.0, null=True, blank=True)
+    practical_pass_marks = models.DecimalField(max_digits=5, decimal_places=2, default=10.0, null=True, blank=True)
     subject_type = models.CharField(
         max_length=20, choices=SubjectType.choices, default=SubjectType.COMPULSORY
     )
@@ -61,34 +65,6 @@ class Subject(models.Model):
         if not self.session and self.class_obj:
             self.session = self.class_obj.session
         super().save(*args, **kwargs)
-        
-        # Auto-create or update SubjectMarkingStructure
-        from apps.subjects.models import SubjectMarkingStructure
-        pass_marks = 35
-        
-        sms, created = SubjectMarkingStructure.objects.get_or_create(
-            subject=self,
-            defaults={
-                'has_theory': True,
-                'theory_full_marks': 100,
-                'theory_pass_marks': pass_marks,
-                'has_internal': self.has_practical,
-                'internal_full_marks': 100 if self.has_practical else 0,
-                'internal_pass_marks': pass_marks if self.has_practical else 0,
-            }
-        )
-        if not created:
-            sms.has_internal = self.has_practical
-            if not self.has_practical:
-                sms.internal_full_marks = 0
-                sms.internal_pass_marks = 0
-            else:
-                # Only set defaults if it was previously 0 or None
-                if not sms.internal_full_marks:
-                    sms.internal_full_marks = 25  # A more reasonable default for practicals
-                if not sms.internal_pass_marks:
-                    sms.internal_pass_marks = 10
-            sms.save()
 
     @property
     def affects_gpa(self):
@@ -97,71 +73,6 @@ class Subject(models.Model):
     @property
     def affects_pass_fail(self):
         return self.subject_type != self.SubjectType.NON_CREDIT
-
-
-class SubjectMarkingStructure(models.Model):
-    """Defines the marking structure for a subject (theory + internal components)."""
-
-    subject = models.OneToOneField(
-        Subject, on_delete=models.CASCADE, related_name='marking_structure'
-    )
-    # Theory component
-    has_theory = models.BooleanField(default=True)
-    theory_full_marks = models.PositiveIntegerField(default=100)
-    theory_pass_marks = models.PositiveIntegerField(default=40)
-
-    # Internal / Practical component
-    has_internal = models.BooleanField(default=False)
-    internal_full_marks = models.PositiveIntegerField(default=25, null=True, blank=True)
-    internal_pass_marks = models.PositiveIntegerField(default=10, null=True, blank=True)
-
-    class Meta:
-        verbose_name = 'Subject Marking Structure'
-
-    def __str__(self):
-        return f"Marking — {self.subject.name}"
-
-    @property
-    def total_full_marks(self):
-        total = 0
-        if self.has_theory:
-            total += self.theory_full_marks
-        if self.has_internal:
-            total += (self.internal_full_marks or 0)
-        return total
-
-    @property
-    def total_pass_marks(self):
-        total = 0
-        if self.has_theory:
-            total += self.theory_pass_marks
-        if self.has_internal:
-            total += (self.internal_pass_marks or 0)
-        return total
-
-    def clean(self):
-        super().clean()
-        if self.pk:
-            from django.core.exceptions import ValidationError
-            from apps.marks.models import MarkEntry
-            exceeding_theory = MarkEntry.objects.filter(
-                subject=self.subject,
-                theory_obtained__gt=self.theory_full_marks
-            ).exists()
-            if exceeding_theory:
-                raise ValidationError("Cannot reduce theory full marks because some students already have marks exceeding the new limit.")
-            
-            if self.has_internal and self.internal_full_marks is not None:
-                exceeding_internal = MarkEntry.objects.filter(
-                    subject=self.subject,
-                    internal_obtained__gt=self.internal_full_marks
-                ).exists()
-                if exceeding_internal:
-                    raise ValidationError("Cannot reduce internal full marks because some students already have marks exceeding the new limit.")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
 
 class StudentSubjectEnrollment(models.Model):

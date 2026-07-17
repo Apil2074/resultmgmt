@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models.functions import Length
-from .models import Class, ClassTeacher
+from .models import Class
 
 
 @login_required
@@ -50,15 +50,8 @@ def class_list(request):
                 from apps.teachers.models import Teacher
                 teacher_obj = Teacher.objects.filter(id=teacher_id, school=school).first()
                 if teacher_obj:
-                    ClassTeacher.objects.create(
-                        class_obj=cls, teacher=teacher_obj,
-                        name=teacher_obj.name, phone=teacher_obj.contact_number
-                    )
-            elif teacher_name:
-                ClassTeacher.objects.create(
-                    class_obj=cls, name=teacher_name,
-                    phone=teacher_phone, email=teacher_email
-                )
+                    cls.class_teacher = teacher_obj
+                    cls.save()
             messages.success(request, f'Class "{cls.full_name}" created.')
 
         elif action == 'delete':
@@ -77,9 +70,6 @@ def class_list(request):
             if not new_numeric_level.isdigit():
                 new_numeric_level = 0
             teacher_id = request.POST.get('teacher_id')
-            teacher_name = request.POST.get('teacher_name', '').strip()
-            teacher_phone = request.POST.get('teacher_phone', '').strip()
-            teacher_email = request.POST.get('teacher_email', '').strip()
 
             if new_name:
                 cls.name = new_name
@@ -88,25 +78,13 @@ def class_list(request):
                 # Regenerate slug if name/section changed
                 from django.utils.text import slugify
                 cls.slug = slugify(f"{cls.full_name}-{cls.session.name}")
+                if teacher_id:
+                    from apps.teachers.models import Teacher
+                    teacher_obj = Teacher.objects.filter(id=teacher_id, school=school).first()
+                    cls.class_teacher = teacher_obj
+                else:
+                    cls.class_teacher = None
                 cls.save()
-
-            # Update or create class teacher
-            if teacher_id:
-                from apps.teachers.models import Teacher
-                teacher_obj = Teacher.objects.filter(id=teacher_id, school=school).first()
-                if teacher_obj:
-                    ClassTeacher.objects.update_or_create(
-                        class_obj=cls,
-                        defaults={'teacher': teacher_obj, 'name': teacher_obj.name, 'phone': teacher_obj.contact_number, 'email': ''}
-                    )
-            elif teacher_name:
-                ClassTeacher.objects.update_or_create(
-                    class_obj=cls,
-                    defaults={'teacher': None, 'name': teacher_name, 'phone': teacher_phone, 'email': teacher_email}
-                )
-            else:
-                # Remove teacher if name and id are cleared
-                ClassTeacher.objects.filter(class_obj=cls).delete()
 
             messages.success(request, f'Class "{cls.full_name}" updated successfully.')
 
@@ -325,7 +303,7 @@ def class_detail(request, slug):
         return redirect('class_detail', slug=cls.slug)
 
     students = cls.students.filter(is_active=True)
-    subjects = cls.subjects.all().select_related('marking_structure').order_by('order', 'name')
+    subjects = cls.subjects.all().select_related().order_by('order', 'name')
 
     from apps.subjects.models import Subject
     optional_subjects = cls.subjects.filter(subject_type=Subject.SubjectType.OPTIONAL).order_by('order', 'name')

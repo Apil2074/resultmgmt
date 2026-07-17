@@ -101,7 +101,7 @@ class MarkEntry(models.Model):
 
         if not self.is_special:
             try:
-                struct = self.subject.marking_structure
+                struct = self.subject
             except Exception:
                 return
             
@@ -123,7 +123,7 @@ class MarkEntry(models.Model):
 
             internal_obtained = self.internal_obtained
             if internal_obtained is not None:
-                if not struct.has_internal:
+                if not struct.has_practical:
                     raise ValidationError("Cannot enter internal/practical marks for a subject without a practical component.")
                 try:
                     internal_obtained = Decimal(str(internal_obtained))
@@ -131,10 +131,10 @@ class MarkEntry(models.Model):
                     raise ValidationError("Invalid internal marks format.")
                 if internal_obtained < 0:
                     raise ValidationError("Internal marks cannot be negative.")
-                if internal_obtained > Decimal(struct.internal_full_marks):
+                if internal_obtained > Decimal(struct.practical_full_marks):
                     raise ValidationError(
                         f"Internal marks ({internal_obtained}) cannot exceed "
-                        f"full marks ({struct.internal_full_marks})"
+                        f"full marks ({struct.practical_full_marks})"
                     )
 
     def save(self, *args, **kwargs):

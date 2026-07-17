@@ -29,6 +29,7 @@ class Teacher(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
     class Meta:
         ordering = ['name']
         verbose_name = 'Teacher'
@@ -37,18 +38,9 @@ class Teacher(models.Model):
     def __str__(self):
         return f"{self.name} ({self.sn})" if self.sn else self.name
 
-
 class TeacherSubject(models.Model):
-    teacher = models.ForeignKey(
-        Teacher,
-        on_delete=models.CASCADE,
-        related_name='subject_assignments'
-    )
-    subject = models.ForeignKey(
-        'subjects.Subject',
-        on_delete=models.CASCADE,
-        related_name='assigned_teachers'
-    )
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='subject_assignments')
+    subject = models.ForeignKey('subjects.Subject', on_delete=models.CASCADE, related_name='assigned_teachers')
     assigned_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -57,15 +49,4 @@ class TeacherSubject(models.Model):
         verbose_name_plural = 'Teacher Subject Assignments'
 
     def __str__(self):
-        return f"{self.teacher.name} -> {self.subject.name} ({self.subject.class_obj.full_name})"
-
-    def clean(self):
-        super().clean()
-        from django.core.exceptions import ValidationError
-        if self.teacher and self.subject:
-            if self.teacher.school_id != self.subject.school_id:
-                raise ValidationError("Teacher and Subject must belong to the same school.")
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+        return f"{self.teacher.name} - {self.subject.name}"

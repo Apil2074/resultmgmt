@@ -17,6 +17,9 @@ class Class(models.Model):
     section = models.CharField(max_length=10, blank=True, help_text='e.g. A, B, C')
     numeric_level = models.PositiveIntegerField(default=0, help_text='Sort order (e.g., 1 for Nursery, 10 for Class 10)')
     slug = models.SlugField(max_length=150, blank=True)
+    class_teacher = models.ForeignKey(
+        'teachers.Teacher', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_classes'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,23 +61,4 @@ class Class(models.Model):
         return self.students.count()
 
 
-class ClassTeacher(models.Model):
-    """Class teacher assignment."""
 
-    class_obj = models.OneToOneField(
-        Class, on_delete=models.CASCADE, related_name='class_teacher'
-    )
-    teacher = models.ForeignKey(
-        'teachers.Teacher', on_delete=models.SET_NULL, null=True, blank=True, related_name='class_teacher_roles'
-    )
-    name = models.CharField(max_length=150, blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Class Teacher'
-        verbose_name_plural = 'Class Teachers'
-
-    def __str__(self):
-        return f"{self.name} — {self.class_obj}"

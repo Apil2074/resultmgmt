@@ -68,7 +68,7 @@ class ResultProcessingService:
 
         # Get all mark entries grouped by student
         all_entries = MarkEntry.objects.filter(**mark_filter).select_related(
-            'student', 'subject', 'subject__marking_structure'
+            'student', 'subject', 
         ).order_by('student_id').iterator(chunk_size=1000)
 
         from apps.subjects.models import Subject, StudentSubjectEnrollment
@@ -106,7 +106,7 @@ class ResultProcessingService:
             MarkEntry.objects.bulk_create(missing_entries, batch_size=1000)
             # Re-fetch after creation
             all_entries = MarkEntry.objects.filter(**mark_filter).select_related(
-                'student', 'subject', 'subject__marking_structure'
+                'student', 'subject', 
             ).order_by('student_id').iterator(chunk_size=1000)
 
         total_processed_students = 0
@@ -118,12 +118,7 @@ class ResultProcessingService:
             if not entries: return
             subject_results = []
             for entry in entries:
-                try:
-                    ms = entry.subject.marking_structure
-                except Exception:
-                    continue
-
-                computed = self.engine.get_subject_result(entry, ms)
+                computed = self.engine.get_subject_result(entry)
 
                 sr = SubjectResult(
                     mark_entry=entry,
@@ -153,7 +148,7 @@ class ResultProcessingService:
 
             # Total marks
             total_obtained = sum(float(e.total_obtained or 0) for e in entries if not e.is_special)
-            total_full = sum(e.subject.marking_structure.total_full_marks for e in entries if hasattr(e.subject, 'marking_structure'))
+            total_full = sum((e.subject.theory_full_marks + (e.subject.practical_full_marks or 0)) for e in entries if e.subject)
             total_credit_hours = sum(float(e.subject.credit_hour) for e in entries if e.subject.affects_gpa)
             percentage = Decimal(str(total_obtained)) / Decimal(str(total_full)) * 100 if total_full > 0 else Decimal('0')
 

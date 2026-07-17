@@ -57,7 +57,7 @@ def grade_ledger(request, exam_id, class_id):
 
     subjects = Subject.objects.filter(
         class_obj=cls, school=school
-    ).select_related('marking_structure').order_by('order')
+    ).select_related().order_by('order')
 
     # Get all student results
     student_results = StudentResult.objects.filter(
@@ -83,12 +83,12 @@ def grade_ledger(request, exam_id, class_id):
             me = mark_map.get((sr.student_id, subject.id))
             score_info = {
                 'subject': subject,
-                'has_theory': subject.marking_structure.has_theory if hasattr(subject, 'marking_structure') else True,
-                'theory_full_marks': subject.marking_structure.theory_full_marks if hasattr(subject, 'marking_structure') else 100,
+                'has_theory': True,
+                'theory_full_marks': subject.theory_full_marks,
                 'theory_obtained': '—',
                 'theory_grade': '—',
-                'has_internal': subject.marking_structure.has_internal if hasattr(subject, 'marking_structure') else False,
-                'internal_full_marks': subject.marking_structure.internal_full_marks if hasattr(subject, 'marking_structure') and subject.marking_structure.has_internal else 0,
+                'has_internal': subject.has_practical,
+                'internal_full_marks': subject.practical_full_marks or 0,
                 'internal_obtained': '—',
                 'internal_grade': '—',
             }
@@ -177,7 +177,7 @@ def marksheet(request, exam_id, student_id):
     mark_entries = MarkEntry.objects.filter(
         exam=exam, student=student, school=school
     ).select_related(
-        'subject', 'subject__marking_structure', 'subject_result'
+        'subject', 'subject_result'
     ).order_by('subject__order')
 
     grade_remarks = {
@@ -261,7 +261,7 @@ def marksheet_pdf(request, exam_id, student_id):
 
     mark_entries = MarkEntry.objects.filter(
         exam=exam, student=student, school=school
-    ).select_related('subject', 'subject__marking_structure', 'subject_result')
+    ).select_related('subject', 'subject_result')
 
     template_version = request.GET.get('template_version', 'default')
     if template_version == 'neb11':
@@ -310,7 +310,7 @@ def class_marksheets_pdf(request, exam_id, class_id):
     # Get all mark entries for this exam and class
     mark_entries = MarkEntry.objects.filter(
         exam=exam, school=school, student__class_obj=cls
-    ).select_related('subject', 'subject__marking_structure', 'subject_result')
+    ).select_related('subject', 'subject_result')
 
     # Group mark entries by student_id
     from collections import defaultdict
@@ -356,7 +356,7 @@ def ledger_pdf(request, exam_id, class_id):
         return redirect('grade_ledger_select')
 
     subjects = Subject.objects.filter(class_obj=cls, school=school).select_related(
-        'marking_structure').order_by('order')
+        ).order_by('order')
     student_results_qs = StudentResult.objects.filter(
         exam=exam, student__class_obj=cls
     ).select_related('student')
@@ -408,7 +408,7 @@ def ledger_excel(request, exam_id, class_id):
         return redirect('grade_ledger_select')
 
     subjects = list(Subject.objects.filter(class_obj=cls, school=school).select_related(
-        'marking_structure').order_by('order'))
+        ).order_by('order'))
         
     student_results_qs = StudentResult.objects.filter(
         exam=exam, student__class_obj=cls
@@ -436,9 +436,9 @@ def ledger_excel(request, exam_id, class_id):
     headers = ["SN", "Symbol No", "Reg No", "Student Name", "Date of Birth"]
     
     for subject in subjects:
-        if subject.marking_structure.has_theory:
+        if True:
             headers.append(f"{subject.name} - Th")
-        if subject.marking_structure.has_internal:
+        if subject.has_practical:
             headers.append(f"{subject.name} - In")
         headers.extend([
             f"{subject.name} - Th GP",
@@ -473,15 +473,15 @@ def ledger_excel(request, exam_id, class_id):
             if not me or not me.subject_result:
                 # Add empty columns based on subject structure
                 cols = 3
-                if subject.marking_structure.has_theory: cols += 1
-                if subject.marking_structure.has_internal: cols += 1
+                if True: cols += 1
+                if subject.has_practical: cols += 1
                 row.extend([""] * cols)
                 continue
                 
             sr_subj = me.subject_result
-            if subject.marking_structure.has_theory:
+            if True:
                 row.append(me.theory_obtained if me.theory_obtained is not None else (me.special_value or ""))
-            if subject.marking_structure.has_internal:
+            if subject.has_practical:
                 row.append(me.internal_obtained if me.internal_obtained is not None else "")
                 
             row.extend([
@@ -565,7 +565,7 @@ def grade_ledger_select(request):
 
             subjects = Subject.objects.filter(
                 class_obj=cls, school=school
-            ).select_related('marking_structure').order_by('order')
+            ).select_related().order_by('order')
 
             student_results_qs = StudentResult.objects.filter(
                 exam=exam, student__class_obj=cls, school=school
@@ -596,12 +596,12 @@ def grade_ledger_select(request):
                     me = mark_map.get((sr.student_id, subject.id))
                     score_info = {
                         'subject': subject,
-                        'has_theory': subject.marking_structure.has_theory if hasattr(subject, 'marking_structure') else True,
-                        'theory_full_marks': subject.marking_structure.theory_full_marks if hasattr(subject, 'marking_structure') else 100,
+                        'has_theory': True,
+                        'theory_full_marks': subject.theory_full_marks,
                         'theory_obtained': '—',
                         'theory_grade': '—',
-                        'has_internal': subject.marking_structure.has_internal if hasattr(subject, 'marking_structure') else False,
-                        'internal_full_marks': subject.marking_structure.internal_full_marks if hasattr(subject, 'marking_structure') and subject.marking_structure.has_internal else 0,
+                        'has_internal': subject.has_practical,
+                        'internal_full_marks': subject.practical_full_marks or 0,
                         'internal_obtained': '—',
                         'internal_grade': '—',
                     }
@@ -808,7 +808,7 @@ def marksheet_select(request):
                 mark_entries = MarkEntry.objects.filter(
                     exam=exam, student=st, school=school
                 ).select_related(
-                    'subject', 'subject__marking_structure', 'subject_result'
+                    'subject', 'subject_result'
                 ).order_by('subject__order')
 
                 for me in mark_entries:
@@ -962,7 +962,7 @@ def public_report_card(request, exam_id, student_id):
     mark_entries = MarkEntry.objects.filter(
         exam=exam, student=student
     ).select_related(
-        'subject', 'subject__marking_structure', 'subject_result'
+        'subject', 'subject_result'
     ).order_by('subject__order')
 
     grade_remarks = {
