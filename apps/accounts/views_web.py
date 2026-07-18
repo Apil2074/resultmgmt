@@ -383,7 +383,7 @@ class LandingPageView(View):
     template_name = "landing.html"
 
     def get(self, request):
-        schools = School.objects.filter(is_active=True).exclude(logo='')
+        schools = School.objects.filter(is_active=True).exclude(logo__isnull=True).exclude(logo='')
         return render(request, self.template_name, {"schools": schools})
 
 

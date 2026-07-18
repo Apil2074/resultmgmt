@@ -77,8 +77,11 @@
                 <a href="{% url 'edit_school' s.id %}" class="btn btn-sm btn-outline-primary" title="Edit School Details">
                   <i class="bi bi-pencil-fill me-1"></i>Edit
                 </a>
-                <a href="{% url 'reset_school_admin_password' s.id %}" class="btn btn-sm btn-outline-danger" title="Reset Admin Password">
+                <a href="{% url 'reset_school_admin_password' s.id %}" class="btn btn-sm btn-outline-warning" title="Reset Admin Password">
                   <i class="bi bi-shield-lock-fill me-1"></i>Reset Password
+                </a>
+                <a href="{% url 'delete_school' s.id %}" class="btn btn-sm btn-outline-danger" title="Delete School">
+                  <i class="bi bi-trash-fill me-1"></i>Delete
                 </a>
               </div>
             </td>

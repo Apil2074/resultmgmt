@@ -757,3 +757,21 @@ def super_settings(request):
             return redirect('super_settings')
             
     return render(request, 'schools/super_settings.html', {'settings': settings_obj})
+
+
+@login_required
+def delete_school(request, school_id):
+    if not request.user.is_super_admin:
+        messages.error(request, "Access denied. Super Admin only.")
+        return redirect('dashboard')
+        
+    school = get_object_or_404(School, pk=school_id)
+    
+    if request.method == 'POST':
+        school_name = school.name
+        school.delete()
+        messages.success(request, f"School '{school_name}' and all associated tenant data deleted successfully.")
+        return redirect('super_schools')
+        
+    return render(request, 'schools/super_school_confirm_delete.html', {'school': school})
+

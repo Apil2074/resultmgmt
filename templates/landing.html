@@ -73,7 +73,7 @@
                             Try Demo <i class="bi bi-star"></i>
                         </a>
                         <a href="{% url 'login' %}" class="btn-modern btn-outline-glass justify-content-center">
-                            Admin Login <i class="bi bi-box-arrow-in-right"></i>
+                            Login <i class="bi bi-box-arrow-in-right"></i>
                         </a>
                     {% endif %}
                 </div>
@@ -101,6 +101,9 @@
                             Enter Dashboard <i class="bi bi-rocket-fill"></i>
                         </a>
                     {% else %}
+                        <a href="{% url 'login' %}" class="btn-modern btn-outline-glass">
+                            Login <i class="bi bi-box-arrow-in-right"></i>
+                        </a>
                         <a href="{% url 'register_demo' %}" class="btn-modern btn-primary-glow">
                             Start Free Demo <i class="bi bi-arrow-right"></i>
                         </a>
@@ -114,29 +117,39 @@
     </section>
 
     <!-- Trusted By / Schools Logos Carousel -->
-    {% if schools %}
     <section class="logo-carousel-section">
         <div class="container-fluid px-0">
             <h5 class="text-center text-muted mb-4" style="font-weight: 600; font-family: var(--font-display); letter-spacing: 1px; text-transform: uppercase;">Trusted By Innovative Schools</h5>
             <div class="logo-carousel-container">
                 <div class="logo-carousel-track">
-                    <!-- First set of logos -->
+                    <!-- First Set -->
                     {% for school in schools %}
                         <div class="logo-item">
                             <img src="{{ school.logo.url }}" alt="{{ school.name }} Logo" class="img-thumbnail shadow-sm p-2" title="{{ school.name }}">
                         </div>
+                    {% empty %}
+                        <div class="logo-item"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-mortarboard-fill text-primary me-2"></i>Everest Academy</span></div>
+                        <div class="logo-item"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-book-half text-success me-2"></i>Valley View School</span></div>
+                        <div class="logo-item"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-globe text-info me-2"></i>Global High School</span></div>
+                        <div class="logo-item"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-award-fill text-warning me-2"></i>St. Xavier Academy</span></div>
+                        <div class="logo-item"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-compass-fill text-secondary me-2"></i>Horizon School</span></div>
                     {% endfor %}
-                    <!-- Duplicate set of logos for seamless infinite scroll -->
+                    <!-- Second Set (Duplicate for seamless infinite scroll) -->
                     {% for school in schools %}
                         <div class="logo-item" aria-hidden="true">
                             <img src="{{ school.logo.url }}" alt="{{ school.name }} Logo" class="img-thumbnail shadow-sm p-2">
                         </div>
+                    {% empty %}
+                        <div class="logo-item" aria-hidden="true"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-mortarboard-fill text-primary me-2"></i>Everest Academy</span></div>
+                        <div class="logo-item" aria-hidden="true"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-book-half text-success me-2"></i>Valley View School</span></div>
+                        <div class="logo-item" aria-hidden="true"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-globe text-info me-2"></i>Global High School</span></div>
+                        <div class="logo-item" aria-hidden="true"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-award-fill text-warning me-2"></i>St. Xavier Academy</span></div>
+                        <div class="logo-item" aria-hidden="true"><span class="badge bg-light text-dark p-3 border shadow-sm fs-6"><i class="bi bi-compass-fill text-secondary me-2"></i>Horizon School</span></div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </section>
-    {% endif %}
 
 
     <!-- Stats -->
