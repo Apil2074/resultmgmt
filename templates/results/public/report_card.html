@@ -82,13 +82,13 @@
 .info-label {
   color: #1e3a8a;
   font-weight: 700;
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   letter-spacing: 0.3px;
 }
 .info-value {
   color: #0f172a;
   font-weight: 700;
-  font-size: 0.96rem;
+  font-size: 0.86rem;
   border-bottom: 1.5px solid #475569;
   display: inline-block;
   min-width: 80px;
@@ -314,9 +314,9 @@
         </div>
         <div class="d-flex align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">CLASS :</span>
-          <span class="info-value px-2 text-center" style="width: 100px; min-width: 100px; flex-grow: 0;">{{ student.class_obj.name }}</span>
+          <span class="info-value px-2 text-center flex-shrink-0" style="min-width: 60px;">{{ student.class_obj.name }}</span>
           <span class="info-label text-uppercase text-nowrap ms-3">IN THE :</span>
-          <span class="info-value px-2 flex-grow-1 text-uppercase" style="min-width: 120px;">{{ exam.name }}</span>
+          <span class="info-value px-2 flex-grow-1 text-uppercase text-nowrap">{{ exam.name }}</span>
         </div>
       </div>
       <div class="col-md-6 ps-md-4">
@@ -384,7 +384,7 @@
               </tr>
               <!-- Row 2: Practical/Internal Component -->
               <tr>
-                <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code|add:"P" }}</td>
+                <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code }}</td>
                 <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} In</td>
                 <td class="text-center font-monospace">{{ me.subject.practical_credit_hour|floatformat:2 }}</td>
                 
@@ -482,7 +482,7 @@
                 </tr>
                 <!-- Row 2: Practical/Internal Component -->
                 <tr>
-                  <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code|add:"P" }}</td>
+                  <td class="text-center font-monospace">{{ me.subject.practical_code|default:me.subject.code }}</td>
                   <td class="fw-semibold text-slate-800 text-start">{{ me.subject.name }} In</td>
                   <td class="text-center font-monospace">{{ me.subject.practical_credit_hour|floatformat:2 }}</td>
                   

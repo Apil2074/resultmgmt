@@ -143,11 +143,11 @@ class MarksheetPDFGenerator:
             ),
             'note_title': ParagraphStyle(
                 'NoteTitle', fontSize=10.0, fontName='Times-Bold',
-                textColor=colors.HexColor('#1e293b'), spaceAfter=1
+                textColor=colors.HexColor('#1e293b'), leading=12, spaceAfter=3
             ),
             'note_text': ParagraphStyle(
-                'NoteText', fontSize=10.0, fontName='Times-Roman',
-                textColor=colors.HexColor('#475569'), leading=8, spaceAfter=5
+                'NoteText', fontSize=9.0, fontName='Times-Roman',
+                textColor=colors.HexColor('#475569'), leading=12, spaceAfter=3
             ),
             'legend_th': ParagraphStyle(
                 'LegendTh', fontSize=6.5, fontName='Times-Bold',
@@ -215,13 +215,7 @@ class MarksheetPDFGenerator:
                 canvas_obj.drawImage(self._logo_path, (A4[0]-logo_w)/2, (A4[1]-logo_h)/2, width=logo_w, height=logo_h, mask='auto')
         except Exception:
             pass
-        
-        # Reset alphas and draw Footer text
-        canvas_obj.restoreState()
-        canvas_obj.saveState()
-        canvas_obj.setFont('Times-Roman', 8)
-        canvas_obj.setFillColor(colors.HexColor('#64748b'))
-        canvas_obj.drawString(0.9*cm, 0.4*cm, self.school.name)
+        # Reset alphas
         canvas_obj.restoreState()
 
     def _build_story(self):
@@ -641,9 +635,10 @@ class MarksheetPDFGenerator:
         
         note_flowables = [
             Paragraph('NOTE :', note_title_style),
-            Paragraph(' One credit hour equals 32 working hours.', note_text_style),
-            Paragraph(' Internal (In): This covers the participation, practical/project works, community works, internship, presentations and terminal examinations.', note_text_style),
-            Paragraph(' Theory (Th): This covers written external examination.', note_text_style),
+            Paragraph(' ONE CREDIT HOUR IS EQUAL TO 32 WORKING HOURS', note_text_style),
+            Paragraph(' THEORY (TH): THIS COVERS WRITTEN EXTERNAL EXAMINATION.', note_text_style),
+            Paragraph('INTERNAL (IN): THIS COVERS THE PARTICIPATION, PRACTICAL/PROJECT WORKS, COMMUNITY WORKS, INTERNSHIP, PRESENTATIONS AND TERMINAL EXAMINATIONS. ', note_text_style),
+            Paragraph(' ABS = ABSENT &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; W = WITHHELD', note_text_style),
         ]
         
         note_box = Table([[note_flowables]], colWidths=[10.8*cm])
@@ -652,8 +647,8 @@ class MarksheetPDFGenerator:
             ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#e2e8f0')),
             ('LEFTPADDING', (0, 0), (-1, -1), 8),
             ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ]))
         
         legend_th_style = s['legend_th']

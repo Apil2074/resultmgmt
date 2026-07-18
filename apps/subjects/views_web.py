@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import IntegrityError
+from django.core.exceptions import ValidationError
 from .models import Subject
 
 
@@ -44,11 +45,13 @@ def subject_list(request):
             practical_credits = request.POST.getlist('practical_credit_hour[]')
             orders = request.POST.getlist('order[]')
             
-            created_count = 0
+            created_classes_count = 0
+            successfully_created_count = 0
             subject_count = len(codes)
 
             for cid in class_ids:
                 cls = get_object_or_404(Class, pk=cid, school=school)
+                class_has_created_subject = False
                 for i in range(subject_count):
                     code = codes[i].strip()
                     name = names[i].strip()
@@ -91,11 +94,18 @@ def subject_list(request):
                             subject_type=subject_type,
                             order=order,
                         )
+                        successfully_created_count += 1
+                        class_has_created_subject = True
+                    except ValidationError as ve:
+                        messages.error(request, f"Validation error for '{name}': {ve.message if hasattr(ve, 'message') else ve}")
+                        continue
                     except IntegrityError:
                         messages.error(request, f"Subject with code '{code}' already exists for class '{cls.name}'.")
                         continue
-                created_count += 1
-            messages.success(request, f'{subject_count} subject(s) created across {created_count} class(es).')
+                if class_has_created_subject:
+                    created_classes_count += 1
+            if successfully_created_count > 0:
+                messages.success(request, f'{successfully_created_count} subject(s) created across {created_classes_count} class(es).')
         elif action == 'delete':
             subj = get_object_or_404(Subject, pk=request.POST.get('subject_id'), school=school)
             subj.delete()
@@ -126,6 +136,8 @@ def subject_list(request):
             try:
                 subj.save()
                 messages.success(request, f'Subject "{subj.name}" updated successfully.')
+            except ValidationError as ve:
+                messages.error(request, f"Validation error: {ve.message if hasattr(ve, 'message') else ve}")
             except IntegrityError:
                 messages.error(request, f'Subject with code "{subj.code}" already exists for this class.')
         elif action == 'reorder_subjects':

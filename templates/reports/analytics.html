@@ -3,374 +3,660 @@
 {% block page_title %}📊 Exam Analytics: {{ exam.name }}{% endblock %}
 
 {% block content %}
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-.analytics-wrap{font-family:'Inter',sans-serif;}
-.kpi-card{background:#fff;border-radius:16px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #f1f5f9;transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;}
-.kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.1);}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
-.kpi-primary::before{background:linear-gradient(90deg,#6366f1,#8b5cf6);}
-.kpi-success::before{background:linear-gradient(90deg,#22c55e,#16a34a);}
-.kpi-info::before{background:linear-gradient(90deg,#0ea5e9,#0284c7);}
-.kpi-warning::before{background:linear-gradient(90deg,#f59e0b,#d97706);}
-.kpi-purple::before{background:linear-gradient(90deg,#a855f7,#9333ea);}
-.kpi-teal::before{background:linear-gradient(90deg,#14b8a6,#0d9488);}
-.kpi-rose::before{background:linear-gradient(90deg,#f43f5e,#e11d48);}
-.kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;}
-.kpi-value{font-size:1.85rem;font-weight:700;line-height:1;color:#0f172a;}
-.kpi-label{font-size:.75rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
-.kpi-sub{font-size:.78rem;color:#64748b;margin-top:4px;}
-.chart-card{background:#fff;border-radius:16px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);border:1px solid #f1f5f9;height:100%;}
-.chart-card h6{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.section-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin:28px 0 12px;display:flex;align-items:center;gap:8px;}
-.section-title::after{content:'';flex:1;height:1px;background:#f1f5f9;}
-.gender-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:#f8fafc;border:1px solid #f1f5f9;margin-bottom:8px;}
-.analytics-table th{font-size:.73rem;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;font-weight:600;border-top:none;}
-.analytics-table td{font-size:.875rem;vertical-align:middle;}
-.grade-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:700;letter-spacing:.04em;}
+/* ─── Base ─────────────────────────────────────────── */
+.an-wrap { font-family: 'Inter', sans-serif; color: #0f172a; }
+
+/* ─── Hero Banner ──────────────────────────────────── */
+.an-hero {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #1e3a8a 100%);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+}
+.an-hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(139,92,246,.3) 0%, transparent 70%);
+}
+.an-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: 20%;
+  width: 400px; height: 200px;
+  background: radial-gradient(ellipse, rgba(59,130,246,.2) 0%, transparent 70%);
+}
+.an-hero-title { color: #fff; font-size: 1.5rem; font-weight: 800; letter-spacing: -.02em; }
+.an-hero-sub { color: rgba(255,255,255,.6); font-size: .82rem; margin-top: 2px; }
+.an-hero-kpis { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 20px; position: relative; z-index: 1; }
+.an-hero-kpi { text-align: center; }
+.an-hero-kpi-val { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1; }
+.an-hero-kpi-lbl { font-size: .68rem; font-weight: 600; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .07em; margin-top: 3px; }
+.an-hero-kpi-sub { font-size: .73rem; color: rgba(255,255,255,.4); margin-top: 1px; }
+.an-hero-divider { width: 1px; background: rgba(255,255,255,.12); align-self: stretch; }
+
+/* ─── Section Label ────────────────────────────────── */
+.an-section {
+  font-size: .65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: #94a3b8; margin: 24px 0 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.an-section::after { content: ''; flex: 1; height: 1px; background: #f1f5f9; }
+
+/* ─── Cards ────────────────────────────────────────── */
+.an-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  border: 1px solid #f1f5f9;
+  height: 100%;
+  transition: box-shadow .2s;
+}
+.an-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+.an-card-title {
+  font-size: .73rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: #64748b;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.an-card-title i { font-size: .85rem; }
+
+/* ─── Accent Strips ────────────────────────────────── */
+.an-card-blue  { border-top: 3px solid #6366f1; }
+.an-card-green { border-top: 3px solid #22c55e; }
+.an-card-red   { border-top: 3px solid #ef4444; }
+.an-card-amber { border-top: 3px solid #f59e0b; }
+.an-card-teal  { border-top: 3px solid #14b8a6; }
+.an-card-purple{ border-top: 3px solid #a855f7; }
+
+/* ─── Big Number ───────────────────────────────────── */
+.an-bignum { font-size: 3.5rem; font-weight: 800; line-height: 1; }
+.an-bignum-lbl { font-size: .73rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px; }
+
+/* ─── Donut Ring ───────────────────────────────────── */
+.an-ring-wrap { position: relative; width: 130px; height: 130px; }
+.an-ring-wrap svg { transform: rotate(-90deg); }
+.an-ring-bg { fill: none; stroke: #f1f5f9; stroke-width: 12; }
+.an-ring-fg { fill: none; stroke-width: 12; stroke-linecap: round; transition: stroke-dasharray 1s ease; }
+.an-ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.an-ring-val { font-size: 1.5rem; font-weight: 800; }
+.an-ring-sub { font-size: .62rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+
+/* ─── Heatmap Bars ─────────────────────────────────── */
+.heatmap-row { margin-bottom: 10px; }
+.heatmap-label { font-size: .82rem; font-weight: 600; color: #334155; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.heatmap-track { height: 10px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.heatmap-fill { height: 100%; border-radius: 99px; transition: width 1s ease; }
+.heatmap-fill.lvl-high   { background: linear-gradient(90deg, #ef4444, #f97316); }
+.heatmap-fill.lvl-mid    { background: linear-gradient(90deg, #f59e0b, #eab308); }
+.heatmap-fill.lvl-low    { background: linear-gradient(90deg, #94a3b8, #64748b); }
+
+/* ─── Severity Pills ───────────────────────────────── */
+.sev-pill {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 12px; margin-bottom: 10px;
+}
+.sev-pill-num { font-size: 2rem; font-weight: 800; line-height: 1; min-width: 52px; text-align: center; }
+.sev-pill-lbl { font-size: .8rem; font-weight: 600; }
+.sev-pill-sub { font-size: .7rem; color: #94a3b8; }
+.sev-1 { background: #fff7ed; }
+.sev-1 .sev-pill-num { color: #f97316; }
+.sev-2 { background: #fef3c7; }
+.sev-2 .sev-pill-num { color: #d97706; }
+.sev-3 { background: #fee2e2; }
+.sev-3 .sev-pill-num { color: #ef4444; }
+
+/* ─── Attendance KPI Cards ─────────────────────────── */
+.att-kpi {
+  border-radius: 14px; padding: 20px 22px;
+  display: flex; align-items: center; gap: 16px;
+}
+.att-kpi-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.att-kpi-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+.att-kpi-lbl { font-size: .73rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.att-kpi-sub { font-size: .72rem; color: inherit; opacity: .7; margin-top: 2px; }
+.att-green { background: linear-gradient(135deg, #ecfdf5, #d1fae5); color: #065f46; }
+.att-green .att-kpi-icon { background: #22c55e; color: #fff; }
+.att-red   { background: linear-gradient(135deg, #fff1f2, #ffe4e6); color: #881337; }
+.att-red   .att-kpi-icon { background: #ef4444; color: #fff; }
+
+/* ─── Gender Row ───────────────────────────────────── */
+.gender-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f8fafc; }
+.gender-item:last-child { border-bottom: none; }
+.gender-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.gender-name { font-size: .83rem; font-weight: 600; flex: 1; }
+.gender-meta { font-size: .72rem; color: #94a3b8; }
+.gender-rate { font-size: 1.05rem; font-weight: 700; min-width: 48px; text-align: right; }
+
+/* ─── Class Table ──────────────────────────────────── */
+.an-table th { font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; font-weight: 700; border-top: none; padding: 12px 16px; background: #f8fafc; }
+.an-table td { font-size: .85rem; vertical-align: middle; padding: 11px 16px; border-color: #f8fafc; }
+.an-table tr:hover td { background: #fafbff; }
+.grade-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: .75rem; font-weight: 700; letter-spacing: .03em; }
+.pbar-wrap { display: flex; align-items: center; gap: 8px; }
+.pbar { height: 6px; border-radius: 99px; background: #f1f5f9; flex: 1; overflow: hidden; min-width: 60px; }
+.pbar-fill { height: 100%; border-radius: 99px; }
 </style>
 
-<div class="analytics-wrap">
+<div class="an-wrap">
 
-<!-- KPI Row -->
-<div class="section-title"><i class="bi bi-lightning-charge-fill text-warning"></i> Key Performance Indicators</div>
+<!-- ─── HERO BANNER ─────────────────────────────────────── -->
+<div class="an-hero">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3" style="position:relative;z-index:1;">
+    <div>
+      <div class="an-hero-title">📊 {{ exam.name }}</div>
+      <div class="an-hero-sub">Exam Performance Analytics Dashboard</div>
+    </div>
+    <div>
+      <span style="background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);font-size:.75rem;font-weight:600;padding:6px 14px;border-radius:99px;">
+        📅 {{ exam.session.name|default:"" }} B.S.
+      </span>
+    </div>
+  </div>
+  <div class="an-hero-kpis">
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val">{{ total_students }}</div>
+      <div class="an-hero-kpi-lbl">Total Students</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#86efac;">{{ pass_fail_stats.pass_rate }}%</div>
+      <div class="an-hero-kpi-lbl">Pass Rate</div>
+      <div class="an-hero-kpi-sub">{{ pass_fail_stats.passed }} passed · {{ pass_fail_stats.failed }} failed</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#93c5fd;">{{ avg_gpa }}</div>
+      <div class="an-hero-kpi-lbl">Avg GPA</div>
+      <div class="an-hero-kpi-sub">Median {{ median_gpa }}</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#f9a8d4;">{{ max_gpa }}</div>
+      <div class="an-hero-kpi-lbl">Highest GPA</div>
+      <div class="an-hero-kpi-sub">Lowest {{ min_gpa }}</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#fde68a;">{{ p90 }}</div>
+      <div class="an-hero-kpi-lbl">90th Percentile</div>
+      <div class="an-hero-kpi-sub">IQR {{ p25 }} – {{ p75 }}</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#6ee7b7;">{{ perf_categories.Excellent }}</div>
+      <div class="an-hero-kpi-lbl">Excellent (≥3.6)</div>
+      <div class="an-hero-kpi-sub">Needs help: {{ perf_categories.Needs_Improvement|default:perf_categories|dictsort:"0"|last }}</div>
+    </div>
+    <div class="an-hero-divider"></div>
+    <div class="an-hero-kpi">
+      <div class="an-hero-kpi-val" style="color:#c4b5fd;">{{ std_gpa }}</div>
+      <div class="an-hero-kpi-lbl">Std Deviation</div>
+      <div class="an-hero-kpi-sub">Spread of performance</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ROW 1: Pass Donut + Grade Chart + Class GPA ────── -->
+<div class="an-section"><i class="bi bi-bar-chart-fill" style="color:#6366f1;"></i> Performance Overview</div>
 <div class="row g-3 mb-2">
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-primary">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#ede9fe;color:#6366f1"><i class="bi bi-people-fill"></i></div>
-        <div><div class="kpi-value">{{ total_students }}</div><div class="kpi-label">Total Students</div></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-success">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#dcfce7;color:#22c55e"><i class="bi bi-check-circle-fill"></i></div>
-        <div><div class="kpi-value">{{ pass_fail_stats.pass_rate }}%</div><div class="kpi-label">Pass Rate</div></div>
-      </div>
-      <div class="kpi-sub">{{ pass_fail_stats.passed }} passed &middot; {{ pass_fail_stats.failed }} failed</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-info">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#e0f2fe;color:#0ea5e9"><i class="bi bi-graph-up-arrow"></i></div>
-        <div><div class="kpi-value">{{ avg_gpa }}</div><div class="kpi-label">Average GPA</div></div>
-      </div>
-      <div class="kpi-sub">Median: {{ median_gpa }}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-purple">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#f5f3ff;color:#a855f7"><i class="bi bi-arrow-up-right-square-fill"></i></div>
-        <div><div class="kpi-value">{{ max_gpa }}</div><div class="kpi-label">Highest GPA</div></div>
-      </div>
-      <div class="kpi-sub">Lowest: {{ min_gpa }}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-teal">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#ccfbf1;color:#14b8a6"><i class="bi bi-distribute-vertical"></i></div>
-        <div><div class="kpi-value">{{ std_gpa }}</div><div class="kpi-label">Std Deviation</div></div>
-      </div>
-      <div class="kpi-sub">IQR: {{ p25 }} to {{ p75 }}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-warning">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#fef9c3;color:#f59e0b"><i class="bi bi-trophy-fill"></i></div>
-        <div><div class="kpi-value">{{ p90 }}</div><div class="kpi-label">90th Percentile</div></div>
-      </div>
-      <div class="kpi-sub">P25: {{ p25 }} &middot; P75: {{ p75 }}</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-success">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#dcfce7;color:#16a34a"><i class="bi bi-star-fill"></i></div>
-        <div><div class="kpi-value">{{ perf_categories.Excellent }}</div><div class="kpi-label">Excellent</div></div>
-      </div>
-      <div class="kpi-sub">GPA 3.6 and above</div>
-    </div>
-  </div>
-  <div class="col-6 col-md-4 col-xl">
-    <div class="kpi-card kpi-rose">
-      <div class="d-flex align-items-center gap-3">
-        <div class="kpi-icon" style="background:#ffe4e6;color:#f43f5e"><i class="bi bi-exclamation-triangle-fill"></i></div>
-        <div><div class="kpi-value">{{ perf_categories.Average }}</div><div class="kpi-label">Average</div></div>
-      </div>
-      <div class="kpi-sub">Good: {{ perf_categories.Good }}</div>
-    </div>
-  </div>
-</div>
 
-<!-- Distribution Charts -->
-<div class="section-title"><i class="bi bi-bar-chart-fill text-primary"></i> Distribution Charts</div>
-<div class="row g-3 mb-3">
-  <div class="col-lg-4">
-    <div class="chart-card">
-      <h6><i class="bi bi-bar-chart-steps text-success"></i> Grade Distribution</h6>
-      <div style="position:relative;height:260px;"><canvas id="gradeChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="chart-card">
-      <h6><i class="bi bi-bar-chart-line-fill text-info"></i> GPA Distribution</h6>
-      <div style="position:relative;height:260px;"><canvas id="gpaChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="chart-card">
-      <h6><i class="bi bi-percent text-warning"></i> Score Percentage Histogram</h6>
-      <div style="position:relative;height:260px;"><canvas id="pctChart"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<!-- Bee Swarm and Subject Analysis -->
-<div class="section-title"><i class="bi bi-diagram-3-fill" style="color:#8b5cf6;"></i> Individual and Subject Analysis</div>
-<div class="row g-3 mb-3">
-  <div class="col-lg-8">
-    <div class="chart-card">
-      <h6><i class="bi bi-bullseye" style="color:#8b5cf6;"></i> GPA Bee Swarm - Individual Student Distribution <span class="badge bg-light text-muted ms-auto" style="font-size:.68rem;">Hover dots for details</span></h6>
-      <div style="position:relative;min-height:300px;overflow:visible;"><canvas id="swarmCanvas"></canvas></div>
-      <div class="d-flex gap-3 mt-2" style="font-size:.75rem;color:#64748b;">
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:4px;"></span>Pass</span>
-        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Fail</span>
-        <span><span style="display:inline-block;width:22px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px;"></span>School Average</span>
-      </div>
-    </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="chart-card">
-      <h6><i class="bi bi-book-fill text-primary"></i> Subject Avg. Marks (Top 12)</h6>
-      <div style="position:relative;height:320px;"><canvas id="subjChart"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<!-- Attendance Correlation -->
-<div class="section-title"><i class="bi bi-graph-up text-success"></i> Attendance vs Performance</div>
-<div class="row g-3 mb-3">
-  <div class="col-12">
-    <div class="chart-card">
-      <h6><i class="bi bi-scatter-chart text-primary"></i> Attendance vs GPA Correlation</h6>
-      <div style="position:relative;height:350px;"><canvas id="attendanceChart"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<!-- Class and Gender -->
-<div class="section-title"><i class="bi bi-grid-3x3-gap-fill" style="color:#14b8a6;"></i> Class and Gender Breakdown</div>
-<div class="row g-3 mb-3">
-  <div class="col-lg-5">
-    <div class="chart-card">
-      <h6><i class="bi bi-building text-secondary"></i> Class GPA Range (Min / Avg / Max)</h6>
-      <div style="position:relative;height:300px;"><canvas id="classRangeChart"></canvas></div>
-    </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="chart-card">
-      <h6><i class="bi bi-check2-circle text-success"></i> Class Pass Rate Comparison</h6>
-      <div style="position:relative;height:300px;"><canvas id="classPassChart"></canvas></div>
-    </div>
-  </div>
+  <!-- Pass/Fail Donut -->
   <div class="col-lg-3">
-    <div class="chart-card">
-      <h6><i class="bi bi-gender-ambiguous" style="color:#8b5cf6;"></i> Gender Breakdown</h6>
-      {% for gender, data in gender_stats.items %}
-      <div class="gender-row">
+    <div class="an-card an-card-green d-flex flex-column align-items-center justify-content-center text-center" style="min-height:260px;">
+      <div class="an-card-title justify-content-center"><i class="bi bi-check-circle-fill text-success"></i> Pass / Fail Ratio</div>
+      <div class="an-ring-wrap mx-auto">
+        <svg viewBox="0 0 120 120" width="130" height="130">
+          <circle class="an-ring-bg" cx="60" cy="60" r="48"/>
+          <circle class="an-ring-fg" cx="60" cy="60" r="48"
+            stroke="#22c55e"
+            stroke-dasharray="{{ pass_fail_stats.pass_rate|floatformat:1 }} {{ pass_fail_stats.fail_rate|floatformat:1 }}"
+            stroke-dashoffset="0"
+            id="passRing"
+            style="stroke-dasharray: calc({{ pass_fail_stats.pass_rate }} * 3.016) calc(100 * 3.016);"/>
+        </svg>
+        <div class="an-ring-center">
+          <div class="an-ring-val" style="color:#22c55e;">{{ pass_fail_stats.pass_rate }}%</div>
+          <div class="an-ring-sub">Pass</div>
+        </div>
+      </div>
+      <div class="d-flex gap-3 mt-3" style="font-size:.78rem;">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:5px;"></span>Passed {{ pass_fail_stats.passed }}</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#fee2e2;border:1.5px solid #ef4444;margin-right:5px;"></span>Failed {{ pass_fail_stats.failed }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Distribution -->
+  <div class="col-lg-5">
+    <div class="an-card an-card-blue">
+      <div class="an-card-title"><i class="bi bi-bar-chart-steps text-primary"></i> Grade Distribution</div>
+      <div style="position:relative;height:210px;"><canvas id="gradeChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Class GPA Range -->
+  <div class="col-lg-4">
+    <div class="an-card an-card-purple">
+      <div class="an-card-title"><i class="bi bi-building" style="color:#a855f7;"></i> Class GPA Range</div>
+      <div style="position:relative;height:210px;"><canvas id="classRangeChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ROW 2: Class Pass Rate + Subject Avg ────────────── -->
+<div class="row g-3 mb-2">
+  <div class="col-lg-5">
+    <div class="an-card an-card-teal">
+      <div class="an-card-title"><i class="bi bi-check2-circle" style="color:#14b8a6;"></i> Class Pass Rate Comparison</div>
+      <div style="position:relative;height:220px;"><canvas id="classPassChart"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="an-card an-card-blue">
+      <div class="an-card-title"><i class="bi bi-book-fill text-primary"></i> Subject Avg. Marks (Top 12)</div>
+      <div style="position:relative;height:220px;"><canvas id="subjChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ROW 3: Bee Swarm ─────────────────────────────────── -->
+<div class="an-section"><i class="bi bi-diagram-3-fill" style="color:#8b5cf6;"></i> Individual Student Distribution</div>
+<div class="an-card an-card-purple mb-3">
+  <div class="an-card-title"><i class="bi bi-bullseye" style="color:#8b5cf6;"></i> GPA Bee Swarm — Per-Student View <span class="badge bg-light text-secondary ms-auto fw-normal" style="font-size:.68rem;text-transform:none;letter-spacing:0;">Hover dots for details</span></div>
+  <div style="position:relative;min-height:260px;overflow:visible;"><canvas id="swarmCanvas"></canvas></div>
+  <div class="d-flex gap-4 mt-3" style="font-size:.75rem;color:#64748b;">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;margin-right:5px;"></span>Pass</span>
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:5px;"></span>Fail</span>
+    <span><span style="display:inline-block;width:22px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:5px;"></span>School Average</span>
+  </div>
+</div>
+
+<!-- ─── ROW 4: Failure Analytics ────────────────────────── -->
+<div class="an-section"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Failure Analytics</div>
+<div class="row g-3 mb-2">
+
+  <!-- Severity Index -->
+  <div class="col-lg-3">
+    <div class="an-card an-card-red" style="height:100%;">
+      <div class="an-card-title"><i class="bi bi-layers-fill text-danger"></i> Failure Severity Index</div>
+      <p class="text-muted mb-3" style="font-size:.78rem;">Students grouped by how many subjects they failed</p>
+      <div class="sev-pill sev-1">
+        <div class="sev-pill-num">{{ failure_severity.one }}</div>
+        <div><div class="sev-pill-lbl">1 Subject Failed</div><div class="sev-pill-sub">Borderline cases</div></div>
+      </div>
+      <div class="sev-pill sev-2">
+        <div class="sev-pill-num">{{ failure_severity.two }}</div>
+        <div><div class="sev-pill-lbl">2 Subjects Failed</div><div class="sev-pill-sub">At-risk students</div></div>
+      </div>
+      <div class="sev-pill sev-3">
+        <div class="sev-pill-num">{{ failure_severity.three_plus }}</div>
+        <div><div class="sev-pill-lbl">3+ Subjects Failed</div><div class="sev-pill-sub">High-risk — needs intervention</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="col-lg-9">
+    <div class="an-card an-card-red" style="height:100%;">
+      <div class="an-card-title"><i class="bi bi-fire text-danger"></i> Subject Failure Heatmap <span class="ms-auto badge bg-danger bg-opacity-10 text-danger fw-semibold" style="font-size:.65rem;text-transform:none;letter-spacing:0;">sorted by failure rate</span></div>
+      <p class="text-muted mb-3" style="font-size:.78rem;">Percentage of students who failed each subject — red means critical remedial action needed</p>
+      <div style="max-height:280px;overflow-y:auto;padding-right:4px;">
+        {% for item in subject_failure_heatmap %}
+        <div class="heatmap-row">
+          <div class="heatmap-label">
+            <span>{{ item.subject }}</span>
+            <span class="fw-bold {% if item.fail_pct > 30 %}text-danger{% elif item.fail_pct > 15 %}text-warning{% else %}text-secondary{% endif %}">{{ item.fail_pct }}% <span class="text-muted fw-normal">({{ item.count }} students)</span></span>
+          </div>
+          <div class="heatmap-track">
+            <div class="heatmap-fill {% if item.fail_pct > 30 %}lvl-high{% elif item.fail_pct > 15 %}lvl-mid{% else %}lvl-low{% endif %}"
+                 style="width:{{ item.fail_pct }}%;"></div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5"><i class="bi bi-emoji-smile fs-2 d-block mb-2"></i>No failure data — everyone passed!</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ROW 5: Attendance + Gender ──────────────────────── -->
+<div class="an-section"><i class="bi bi-calendar-check-fill text-success"></i> Attendance & Gender Insights</div>
+<div class="row g-3 mb-2">
+
+  <!-- Attendance KPIs -->
+  <div class="col-lg-3">
+    <div class="an-card d-flex flex-column gap-3" style="border-top:3px solid #14b8a6;">
+      <div class="an-card-title"><i class="bi bi-calendar-week" style="color:#14b8a6;"></i> Attendance Indices</div>
+      <div class="att-kpi att-green">
+        <div class="att-kpi-icon"><i class="bi bi-star-fill"></i></div>
         <div>
-          <div class="fw-semibold" style="font-size:.88rem;">{{ gender }}</div>
-          <div class="text-muted" style="font-size:.73rem;">{{ data.total }} students &middot; Avg GPA {{ data.avg_gpa }}</div>
+          <div class="att-kpi-val">{{ attendance_excellence_count }}</div>
+          <div class="att-kpi-lbl">Excellence Index</div>
+          <div class="att-kpi-sub">≥ 90% attendance</div>
         </div>
-        <div class="text-end">
-          <div class="fw-bold" style="font-size:1.1rem;{% if data.pass_rate >= 80 %}color:#22c55e;{% elif data.pass_rate >= 60 %}color:#f59e0b;{% else %}color:#ef4444;{% endif %}">{{ data.pass_rate }}%</div>
-          <div class="text-muted" style="font-size:.7rem;">pass rate</div>
+      </div>
+      <div class="att-kpi att-red">
+        <div class="att-kpi-icon"><i class="bi bi-exclamation-octagon-fill"></i></div>
+        <div>
+          <div class="att-kpi-val">{{ absence_risk_count }}</div>
+          <div class="att-kpi-lbl">Absence Risk Index</div>
+          <div class="att-kpi-sub">< 75% attendance</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Scatter -->
+  <div class="col-lg-5">
+    <div class="an-card an-card-green">
+      <div class="an-card-title"><i class="bi bi-scatter-chart text-success"></i> Attendance vs GPA Correlation</div>
+      <div style="position:relative;height:260px;"><canvas id="attendanceChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Gender Breakdown -->
+  <div class="col-lg-4">
+    <div class="an-card an-card-purple">
+      <div class="an-card-title"><i class="bi bi-gender-ambiguous" style="color:#8b5cf6;"></i> Gender Breakdown</div>
+      {% for gender, data in gender_stats.items %}
+      <div class="gender-item">
+        <span class="gender-dot" style="background:{% if forloop.counter == 1 %}#6366f1{% elif forloop.counter == 2 %}#f43f5e{% else %}#14b8a6{% endif %};"></span>
+        <div class="gender-name">
+          {{ gender }}
+          <div class="gender-meta">{{ data.total }} students · Avg GPA {{ data.avg_gpa }}</div>
+        </div>
+        <div class="gender-rate {% if data.pass_rate >= 80 %}text-success{% elif data.pass_rate >= 60 %}text-warning{% else %}text-danger{% endif %}">{{ data.pass_rate }}%</div>
       </div>
       {% empty %}
-      <p class="text-muted text-center py-4 small">No gender data available</p>
+      <p class="text-muted text-center py-4 small">No gender data</p>
       {% endfor %}
-      <div class="mt-3" style="position:relative;height:180px;"><canvas id="genderChart"></canvas></div>
+      <div class="mt-3" style="position:relative;height:160px;"><canvas id="genderChart"></canvas></div>
     </div>
   </div>
 </div>
 
-<!-- Class Table -->
-<div class="section-title"><i class="bi bi-table text-primary"></i> Class Performance Metrics</div>
-<div class="chart-card mb-4 p-0">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0 analytics-table">
-      <thead class="table-light">
-        <tr>
-          <th class="ps-3">Class</th>
-          <th>Students</th>
-          <th>Avg GPA</th>
-          <th>GPA Range</th>
-          <th>Avg Marks</th>
-          <th>Passed</th>
-          <th>Pass Rate</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for cls in class_stats %}
-        <tr>
-          <td class="ps-3 fw-semibold">{{ cls.name }}</td>
-          <td>{{ cls.total_students }}</td>
-          <td>
-            <span class="grade-pill {% if cls.avg_gpa >= 3.6 %}bg-success text-white{% elif cls.avg_gpa >= 2.8 %}bg-primary text-white{% elif cls.avg_gpa >= 2.0 %}bg-warning text-dark{% else %}bg-danger text-white{% endif %}">{{ cls.avg_gpa }}</span>
-          </td>
-          <td class="text-muted small">{{ cls.min_gpa }} &ndash; {{ cls.max_gpa }}</td>
-          <td>{{ cls.avg_marks }}</td>
-          <td>{{ cls.passed }}</td>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <div class="progress flex-grow-1" style="height:6px;width:80px;">
-                <div class="progress-bar {% if cls.pass_rate >= 80 %}bg-success{% elif cls.pass_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width:{{ cls.pass_rate }}%"></div>
-              </div>
-              <span class="fw-semibold" style="font-size:.85rem;">{{ cls.pass_rate }}%</span>
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-4">No class data available.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<!-- ─── ROW 7: Attendance Impact + Grade Velocity ────────── -->
+<div class="an-section"><i class="bi bi-activity" style="color:#6366f1;"></i> Actionable Insights</div>
+<div class="row g-3 mb-2">
+
+  <!-- Attendance Impact Score -->
+  <div class="col-lg-4">
+    <div class="an-card" style="border-top:3px solid #f59e0b;height:100%;">
+      <div class="an-card-title"><i class="bi bi-wifi-off text-warning"></i> Attendance Impact Score</div>
+      <p class="text-muted mb-4" style="font-size:.78rem;">How much of the failure is driven by poor attendance?</p>
+      <div class="text-center mb-3">
+        <div style="font-size:4rem;font-weight:800;line-height:1;color:#f59e0b;">{{ attendance_impact.pct }}%</div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:6px;">of failed students had &lt;75% attendance</div>
+      </div>
+      <div style="background:#fef9c3;border-radius:12px;padding:12px 14px;font-size:.78rem;color:#92400e;">
+        <i class="bi bi-exclamation-circle-fill me-2" style="color:#d97706;"></i>
+        <b>{{ attendance_impact.count }}</b> out of <b>{{ attendance_impact.failed_total }}</b> failures linked to low attendance
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Velocity -->
+  <div class="col-lg-8">
+    <div class="an-card" style="border-top:3px solid #8b5cf6;height:100%;">
+      <div class="an-card-title">
+        <i class="bi bi-speedometer2" style="color:#8b5cf6;"></i> Grade Velocity — Borderline Students
+        <span class="ms-auto badge rounded-pill" style="background:#f5f3ff;color:#7c3aed;font-size:.68rem;font-weight:600;text-transform:none;letter-spacing:0;">GPA 2.0 – 2.6 zone</span>
+      </div>
+      <p class="text-muted mb-3" style="font-size:.78rem;">{{ borderline_count }} student{{ borderline_count|pluralize }} in the intervention zone — one push could flip them to pass</p>
+      {% if borderline_students %}
+      <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
+        <table class="table table-sm table-hover align-middle mb-0 an-table">
+          <thead class="position-sticky top-0" style="z-index:1;">
+            <tr><th>Student</th><th>Class</th><th>GPA</th><th>Grade</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for s in borderline_students %}
+            <tr>
+              <td class="fw-semibold">{{ s.name }}</td>
+              <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
+              <td>
+                <span class="grade-chip bg-warning text-dark">{{ s.gpa }}</span>
+              </td>
+              <td>{{ s.grade }}</td>
+              <td>
+                {% if s.is_pass %}
+                  <span class="badge bg-success bg-opacity-15 text-success">Pass</span>
+                {% else %}
+                  <span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-4"><i class="bi bi-emoji-smile fs-2 d-block mb-2"></i>No students in borderline zone</div>
+      {% endif %}
+    </div>
   </div>
 </div>
 
+<!-- ─── ROW 8: Top Improvers & Biggest Decliners ─────────── -->
+{% if prior_exam %}
+<div class="an-section"><i class="bi bi-arrow-left-right" style="color:#14b8a6;"></i> Compared to "{{ prior_exam.name }}"</div>
+<div class="row g-3 mb-2">
+
+  <!-- Top Improvers -->
+  <div class="col-lg-6">
+    <div class="an-card" style="border-top:3px solid #22c55e;height:100%;">
+      <div class="an-card-title"><i class="bi bi-graph-up-arrow text-success"></i> Top Improvers</div>
+      <p class="text-muted mb-3" style="font-size:.78rem;">Students with the biggest GPA gains from the previous exam</p>
+      {% if top_improvers %}
+      <table class="table table-sm table-hover align-middle mb-0 an-table">
+        <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in top_improvers %}
+          <tr>
+            <td class="fw-semibold">{{ s.name }}</td>
+            <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
+            <td class="text-muted">{{ s.prev_gpa }}</td>
+            <td><span class="grade-chip bg-success bg-opacity-10 text-success">{{ s.curr_gpa }}</span></td>
+            <td><span class="fw-bold text-success">+{{ s.delta }}</span></td>
+            <td>
+              {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
+              {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center text-muted py-4"><i class="bi bi-info-circle fs-2 d-block mb-2"></i>No comparable data yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Biggest Decliners -->
+  <div class="col-lg-6">
+    <div class="an-card" style="border-top:3px solid #ef4444;height:100%;">
+      <div class="an-card-title"><i class="bi bi-graph-down-arrow text-danger"></i> Biggest Decliners</div>
+      <p class="text-muted mb-3" style="font-size:.78rem;">Students with the sharpest GPA drops — may need urgent support</p>
+      {% if biggest_decliners %}
+      <table class="table table-sm table-hover align-middle mb-0 an-table">
+        <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in biggest_decliners %}
+          <tr>
+            <td class="fw-semibold">{{ s.name }}</td>
+            <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
+            <td class="text-muted">{{ s.prev_gpa }}</td>
+            <td><span class="grade-chip bg-danger bg-opacity-10 text-danger">{{ s.curr_gpa }}</span></td>
+            <td><span class="fw-bold text-danger">{{ s.delta }}</span></td>
+            <td>
+              {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
+              {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center text-muted py-4"><i class="bi bi-info-circle fs-2 d-block mb-2"></i>No comparable data yet</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+{% endif %}
+
+
+
+<!-- ─── ROW 9: Class Table ────────────────────────────────── -->
+<div class="an-section"><i class="bi bi-table text-primary"></i> Class Performance Details</div>
+<div class="an-card mb-4 p-0 overflow-hidden">
+  <table class="table table-hover align-middle mb-0 an-table">
+    <thead>
+      <tr>
+        <th class="ps-4">Class</th>
+        <th>Students</th>
+        <th>Avg GPA</th>
+        <th>GPA Range</th>
+        <th>Avg Marks</th>
+        <th>Passed</th>
+        <th>Pass Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cls in class_stats %}
+      <tr>
+        <td class="ps-4 fw-semibold">{{ cls.name }}</td>
+        <td>{{ cls.total_students }}</td>
+        <td>
+          <span class="grade-chip {% if cls.avg_gpa >= 3.6 %}bg-success text-white{% elif cls.avg_gpa >= 2.8 %}bg-primary text-white{% elif cls.avg_gpa >= 2.0 %}bg-warning text-dark{% else %}bg-danger text-white{% endif %}">{{ cls.avg_gpa }}</span>
+        </td>
+        <td class="text-muted" style="font-size:.82rem;">{{ cls.min_gpa }} – {{ cls.max_gpa }}</td>
+        <td>{{ cls.avg_marks }}</td>
+        <td>{{ cls.passed }}</td>
+        <td>
+          <div class="pbar-wrap">
+            <div class="pbar">
+              <div class="pbar-fill {% if cls.pass_rate >= 80 %}bg-success{% elif cls.pass_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width:{{ cls.pass_rate }}%;"></div>
+            </div>
+            <span class="fw-semibold" style="font-size:.82rem;min-width:38px;">{{ cls.pass_rate }}%</span>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-database-x fs-2 d-block mb-2"></i>No class data available.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+</div><!-- /an-wrap -->
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
 
-  const gradeColors = {"A+":"#16a34a","A":"#22c55e","B+":"#0ea5e9","B":"#6366f1","C+":"#a855f7","C":"#f59e0b","D":"#f97316","NG":"#ef4444"};
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = "#94a3b8";
+
+  const gradeColors = {
+    "A+":"#15803d","A":"#22c55e","B+":"#0ea5e9","B":"#6366f1",
+    "C+":"#a855f7","C":"#f59e0b","D":"#f97316","NG":"#ef4444"
+  };
 
   // 1. Grade Distribution
   const gradeLabels = {{ grade_dist_labels|safe }};
-  const gradeData = {{ grade_dist_data|safe }};
+  const gradeData   = {{ grade_dist_data|safe }};
   new Chart(document.getElementById("gradeChart"), {
     type: "bar",
     data: { labels: gradeLabels, datasets: [{ label: "Students", data: gradeData,
       backgroundColor: gradeLabels.map(g => gradeColors[g] || "#94a3b8"),
       borderRadius: 8, borderSkipped: false }] },
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } }, x: { grid: { display: false } } } }
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + c.parsed.y + " students" } } },
+      scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { precision: 0 } },
+        x: { grid: { display: false } } } }
   });
 
-  // 2. GPA Distribution
-  const gpaBuckets = {{ gpa_dist_labels|safe }};
-  const gpaCounts = {{ gpa_dist_data|safe }};
-  new Chart(document.getElementById("gpaChart"), {
-    type: "bar",
-    data: { labels: gpaBuckets, datasets: [{ label: "Students", data: gpaCounts,
-      backgroundColor: ["#16a34a","#22c55e","#0ea5e9","#6366f1","#f59e0b","#f97316","#ef4444"],
-      borderRadius: 8, borderSkipped: false }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
-        x: { grid: { display: false }, ticks: { font: { size: 10 } } } } }
-  });
-
-  // 3. Percentage Histogram
-  const pctBins = {{ pct_bins|safe }};
-  const pctCounts = {{ pct_counts|safe }};
-  new Chart(document.getElementById("pctChart"), {
-    type: "bar",
-    data: { labels: pctBins, datasets: [{ label: "Students", data: pctCounts,
-      backgroundColor: "rgba(99,102,241,.75)", borderColor: "#6366f1",
-      borderWidth: 1, borderRadius: 6, borderSkipped: false }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, grid: { color: "#f1f5f9" } },
-        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } } } }
-  });
-
-  // 4. Subject Chart
+  // 2. Subject Chart
   const subjLabels = {{ subj_labels|safe }};
-  const subjAvgs = {{ subj_avg_data|safe }};
-  const subjNames = {{ subj_names|safe }};
+  const subjAvgs   = {{ subj_avg_data|safe }};
+  const subjNames  = {{ subj_names|safe }};
   if (subjNames.length) {
     new Chart(document.getElementById("subjChart"), {
       type: "bar",
       data: { labels: subjNames, datasets: [{ label: "Avg Marks", data: subjAvgs,
-        backgroundColor: [
-          "rgba(99,102,241,.8)","rgba(20,184,166,.8)","rgba(245,158,11,.8)",
-          "rgba(239,68,68,.8)","rgba(168,85,247,.8)","rgba(34,197,94,.8)",
-          "rgba(14,165,233,.8)","rgba(244,63,94,.8)","rgba(234,179,8,.8)",
-          "rgba(249,115,22,.8)","rgba(16,185,129,.8)","rgba(139,92,246,.8)"
-        ],
-        borderColor: [
-          "#6366f1","#14b8a6","#f59e0b","#ef4444","#a855f7","#22c55e",
-          "#0ea5e9","#f43f5e","#eab308","#f97316","#10b981","#8b5cf6"
-        ],
-        borderWidth: 1, borderRadius: 6, borderSkipped: false }] },
+        backgroundColor: ["rgba(99,102,241,.85)","rgba(20,184,166,.85)","rgba(245,158,11,.85)",
+          "rgba(239,68,68,.85)","rgba(168,85,247,.85)","rgba(34,197,94,.85)",
+          "rgba(14,165,233,.85)","rgba(244,63,94,.85)","rgba(234,179,8,.85)",
+          "rgba(249,115,22,.85)","rgba(16,185,129,.85)","rgba(139,92,246,.85)"],
+        borderRadius: 6, borderSkipped: false }] },
       options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false },
-          tooltip: { callbacks: { title: ctx => "Code: " + subjLabels[ctx[0].dataIndex], label: ctx => " Avg Marks: " + ctx.parsed.x } } },
-        scales: { x: { beginAtZero: true, grid: { color: "#f1f5f9" } }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } }
+          tooltip: { callbacks: { title: c => "Code: " + subjLabels[c[0].dataIndex], label: c => " Avg Marks: " + c.parsed.x } } },
+        scales: { x: { beginAtZero: true, grid: { color: "#f1f5f9" } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 } } } } }
     });
   }
 
-  // 5. Class Range
-  const classLabels = {{ class_labels_json|safe }};
-  const classAvgGpa = {{ class_gpa_json|safe }};
-  const classMinGpa = {{ class_min_gpa_json|safe }};
-  const classMaxGpa = {{ class_max_gpa_json|safe }};
+  // 3. Class Range (floating bar)
+  const classLabels  = {{ class_labels_json|safe }};
+  const classAvgGpa  = {{ class_gpa_json|safe }};
+  const classMinGpa  = {{ class_min_gpa_json|safe }};
+  const classMaxGpa  = {{ class_max_gpa_json|safe }};
   if (classLabels.length) {
     new Chart(document.getElementById("classRangeChart"), {
       type: "bar",
       data: { labels: classLabels, datasets: [
         { label: "GPA Range", data: classMinGpa.map((mn, i) => [mn, classMaxGpa[i]]),
-          backgroundColor: "rgba(99,102,241,.18)", borderColor: "#6366f1",
-          borderWidth: 2, borderRadius: 4, barPercentage: 0.5 },
+          backgroundColor: "rgba(168,85,247,.2)", borderColor: "#a855f7", borderWidth: 2, borderRadius: 4, barPercentage: 0.55 },
         { type: "line", label: "Avg GPA", data: classAvgGpa,
           borderColor: "#f59e0b", backgroundColor: "#f59e0b",
-          pointRadius: 6, pointHoverRadius: 8, borderWidth: 2, tension: 0.3, fill: false }
+          pointRadius: 5, pointHoverRadius: 8, borderWidth: 2.5, tension: 0.4, fill: false }
       ]},
       options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } },
+        plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } },
         scales: { y: { min: 0, max: 4.0, grid: { color: "#f1f5f9" } },
           x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 30 } } } }
     });
   }
 
-  // 6. Class Pass Rate
+  // 4. Class Pass Rate
   const classPass = {{ class_pass_json|safe }};
   if (classLabels.length) {
     new Chart(document.getElementById("classPassChart"), {
       type: "bar",
       data: { labels: classLabels, datasets: [{ label: "Pass Rate %", data: classPass,
-        backgroundColor: classPass.map(v => v >= 80 ? "rgba(34,197,94,.75)" : v >= 50 ? "rgba(245,158,11,.75)" : "rgba(239,68,68,.75)"),
+        backgroundColor: classPass.map(v => v >= 80 ? "rgba(34,197,94,.8)" : v >= 50 ? "rgba(245,158,11,.8)" : "rgba(239,68,68,.8)"),
         borderRadius: 6, borderSkipped: false }] },
       options: { indexAxis: "y", responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => " " + ctx.parsed.x + "%" } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => " " + c.parsed.x + "%" } } },
         scales: { x: { min: 0, max: 100, grid: { color: "#f1f5f9" }, ticks: { callback: v => v + "%" } },
           y: { grid: { display: false }, ticks: { font: { size: 10 } } } } }
     });
   }
 
-  // 7. Gender Radar
-  const genderLabels = {{ gender_labels|safe }};
+  // 5. Gender Radar
+  const genderLabels    = {{ gender_labels|safe }};
   const genderPassRates = {{ gender_pass_rates|safe }};
-  const genderAvgGpas = {{ gender_avg_gpas|safe }};
+  const genderAvgGpas   = {{ gender_avg_gpas|safe }};
   if (genderLabels.length) {
     new Chart(document.getElementById("genderChart"), {
       type: "radar",
-      data: { labels: ["Pass Rate", "Avg GPA x25"],
+      data: { labels: ["Pass Rate", "Avg GPA ×25"],
         datasets: genderLabels.map((g, i) => ({
           label: g,
           data: [genderPassRates[i], genderAvgGpas[i] * 25],
           borderColor: ["#6366f1","#f43f5e","#14b8a6"][i] || "#a855f7",
-          backgroundColor: ["rgba(99,102,241,.15)","rgba(244,63,94,.15)","rgba(20,184,166,.15)"][i] || "transparent",
+          backgroundColor: ["rgba(99,102,241,.12)","rgba(244,63,94,.12)","rgba(20,184,166,.12)"][i] || "transparent",
           borderWidth: 2, pointRadius: 3
         })) },
       options: { responsive: true, maintainAspectRatio: false,
@@ -379,83 +665,77 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 
-  // 8. Bee Swarm (custom canvas)
-  const swarmData = {{ swarm_data|safe }};
+  // 6. Bee Swarm (custom canvas)
+  const swarmData   = {{ swarm_data|safe }};
   const swarmCanvas = document.getElementById("swarmCanvas");
   if (swarmCanvas && swarmData.length) {
-    const ctx = swarmCanvas.getContext("2d");
-    const activeClassesSet = new Set(swarmData.map(d => d.cls));
-    const classes = classLabels.filter(c => activeClassesSet.has(c));
-    const rowH = Math.max(36, Math.floor(290 / (classes.length || 1)));
-    const mL = 105, mR = 20, mT = 28, mB = 30;
+    const ctx2 = swarmCanvas.getContext("2d");
+    const activeSet = new Set(swarmData.map(d => d.cls));
+    const classes   = classLabels.filter(c => activeSet.has(c));
+    const rowH      = Math.max(36, Math.floor(260 / (classes.length || 1)));
+    const mL = 110, mR = 20, mT = 28, mB = 28;
     const AVG_GPA = {{ avg_gpa }};
 
     function drawSwarm() {
-      const W = swarmCanvas.parentElement.offsetWidth || 600;
+      const W = swarmCanvas.parentElement.offsetWidth || 640;
       swarmCanvas.width = W;
       swarmCanvas.height = mT + classes.length * rowH + mB;
-      ctx.clearRect(0, 0, W, swarmCanvas.height);
+      ctx2.clearRect(0, 0, W, swarmCanvas.height);
       const plotW = W - mL - mR;
       const toX = g => mL + (Math.min(parseFloat(g), 4.0) / 4.0) * plotW;
 
-      // Zebra rows + labels
       classes.forEach((c, i) => {
-        ctx.fillStyle = i % 2 === 0 ? "#f8fafc" : "#fff";
-        ctx.fillRect(0, mT + i * rowH, W, rowH);
-        ctx.fillStyle = "#475569";
-        ctx.font = "600 11px Inter, sans-serif";
-        ctx.textAlign = "right";
-        const label = c.length > 15 ? c.slice(0, 15) + "…" : c;
-        ctx.fillText(label, mL - 8, mT + i * rowH + rowH / 2 + 4);
+        ctx2.fillStyle = i % 2 === 0 ? "#f8fafc" : "#fff";
+        ctx2.fillRect(0, mT + i * rowH, W, rowH);
+        ctx2.fillStyle = "#475569";
+        ctx2.font = "600 11px Inter, sans-serif";
+        ctx2.textAlign = "right";
+        const label = c.length > 16 ? c.slice(0, 16) + "…" : c;
+        ctx2.fillText(label, mL - 8, mT + i * rowH + rowH / 2 + 4);
       });
 
-      // Grid lines
-      ctx.strokeStyle = "#e2e8f0"; ctx.lineWidth = 1;
+      ctx2.strokeStyle = "#e2e8f0"; ctx2.lineWidth = 1;
       [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4].forEach(g => {
         const x = toX(g);
-        ctx.beginPath(); ctx.moveTo(x, mT); ctx.lineTo(x, mT + classes.length * rowH); ctx.stroke();
-        ctx.fillStyle = "#94a3b8"; ctx.font = "10px Inter, sans-serif"; ctx.textAlign = "center";
-        ctx.fillText(g.toFixed(1), x, mT + classes.length * rowH + mB - 8);
+        ctx2.beginPath(); ctx2.moveTo(x, mT); ctx2.lineTo(x, mT + classes.length * rowH); ctx2.stroke();
+        ctx2.fillStyle = "#cbd5e1"; ctx2.font = "10px Inter"; ctx2.textAlign = "center";
+        ctx2.fillText(g.toFixed(1), x, mT + classes.length * rowH + mB - 6);
       });
 
-      // Draw dots (bee swarm layout)
       const placed = {};
       swarmData.forEach(d => {
         const ri = classes.indexOf(d.cls); if (ri < 0) return;
-        const x = toX(d.x);
-        const xb = Math.round(x * 2);
+        const x   = toX(d.x);
+        const xb  = Math.round(x * 2);
         const key = ri + "-" + xb;
         placed[key] = (placed[key] || 0) + 1;
-        const cnt = placed[key];
-        const col = Math.floor((cnt - 1) / 8);
-        const row = (cnt - 1) % 8;
+        const cnt  = placed[key];
+        const col  = Math.floor((cnt - 1) / 8);
+        const row  = (cnt - 1) % 8;
         const offX = col * 10 * (col % 2 === 0 ? 1 : -1);
         const offY = (row - 3.5) * 7;
-        const cy = mT + ri * rowH + rowH / 2;
-        ctx.beginPath();
-        ctx.arc(x + offX, cy + offY, 4, 0, Math.PI * 2);
-        ctx.fillStyle = d.pass ? "rgba(34,197,94,.85)" : "rgba(239,68,68,.85)";
-        ctx.fill();
-        ctx.strokeStyle = d.pass ? "#16a34a" : "#dc2626";
-        ctx.lineWidth = 0.5; ctx.stroke();
+        const cy   = mT + ri * rowH + rowH / 2;
+        ctx2.beginPath();
+        ctx2.arc(x + offX, cy + offY, 4, 0, Math.PI * 2);
+        ctx2.fillStyle = d.pass ? "rgba(34,197,94,.85)" : "rgba(239,68,68,.85)";
+        ctx2.fill();
+        ctx2.strokeStyle = d.pass ? "#16a34a" : "#dc2626"; ctx2.lineWidth = 0.5; ctx2.stroke();
       });
 
-      // School average vertical line
       const avgX = toX(AVG_GPA);
-      ctx.save();
-      ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 2; ctx.setLineDash([6, 3]);
-      ctx.beginPath(); ctx.moveTo(avgX, mT); ctx.lineTo(avgX, mT + classes.length * rowH); ctx.stroke();
-      ctx.restore();
-      ctx.fillStyle = "#f59e0b"; ctx.font = "bold 10px Inter, sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("Avg " + AVG_GPA, avgX, mT - 10);
+      ctx2.save();
+      ctx2.strokeStyle = "#f59e0b"; ctx2.lineWidth = 2; ctx2.setLineDash([6, 3]);
+      ctx2.beginPath(); ctx2.moveTo(avgX, mT); ctx2.lineTo(avgX, mT + classes.length * rowH); ctx2.stroke();
+      ctx2.restore();
+      ctx2.fillStyle = "#f59e0b"; ctx2.font = "bold 10px Inter"; ctx2.textAlign = "center";
+      ctx2.fillText("Avg " + AVG_GPA, avgX, mT - 8);
     }
 
     drawSwarm();
     window.addEventListener("resize", drawSwarm);
 
-    // Tooltip
     const tip = document.createElement("div");
-    tip.style.cssText = "position:fixed;background:#0f172a;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;pointer-events:none;display:none;z-index:9999;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,.3);";
+    tip.style.cssText = "position:fixed;background:#0f172a;color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;pointer-events:none;display:none;z-index:9999;line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.3);";
     document.body.appendChild(tip);
 
     swarmCanvas.addEventListener("mousemove", function(e) {
@@ -466,58 +746,61 @@ document.addEventListener("DOMContentLoaded", function() {
       const p2 = {};
       for (const d of swarmData) {
         const ri = classes.indexOf(d.cls); if (ri < 0) continue;
-        const x = mL + (Math.min(d.x, 4.0) / 4.0) * plotW;
+        const x  = mL + (Math.min(d.x, 4.0) / 4.0) * plotW;
         const xb = Math.round(x * 2); const key = ri + "-" + xb;
         p2[key] = (p2[key] || 0) + 1;
         const cnt = p2[key];
         const col = Math.floor((cnt - 1) / 8), row = (cnt - 1) % 8;
         const offX = col * 10 * (col % 2 === 0 ? 1 : -1);
         const offY = (row - 3.5) * 7;
-        const cy = mT + ri * rowH + rowH / 2;
+        const cy   = mT + ri * rowH + rowH / 2;
         if (Math.hypot(mx - (x + offX), my - (cy + offY)) < 6) { found = d; break; }
       }
       if (found) {
         tip.style.display = "block";
         tip.style.left = (e.clientX + 14) + "px";
-        tip.style.top = (e.clientY - 40) + "px";
-        tip.innerHTML = "<b>" + found.name + "</b><br>" + found.cls + "<br>GPA: " + found.x + " &bull; Grade: " + found.grade + "<br>" + (found.pass ? "&#10003; Pass" : "&#10007; Fail");
+        tip.style.top  = (e.clientY - 40) + "px";
+        tip.innerHTML  = "<b>" + found.name + "</b><br>" + found.cls + "<br>GPA: " + found.x + " · Grade: " + found.grade + "<br>" + (found.pass ? "✓ Pass" : "✗ Fail");
       } else { tip.style.display = "none"; }
     });
     swarmCanvas.addEventListener("mouseleave", () => tip.style.display = "none");
   }
 
-  // 9. Attendance vs Performance Correlation
+  // 7. Attendance Scatter
   const attendanceData = {{ attendance_correlation_json|safe }};
   if (attendanceData && attendanceData.length > 0) {
     new Chart(document.getElementById("attendanceChart"), {
       type: "scatter",
-      data: { 
-        datasets: [{
-          label: "Students",
-          data: attendanceData.map(d => ({x: d.x, y: d.y, name: d.name, pass: d.pass})),
-          backgroundColor: attendanceData.map(d => d.pass ? "rgba(34,197,94,.7)" : "rgba(239,68,68,.7)"),
-          borderColor: attendanceData.map(d => d.pass ? "#16a34a" : "#dc2626"),
-          pointRadius: 5, pointHoverRadius: 7
-        }]
-      },
+      data: { datasets: [{
+        label: "Students",
+        data: attendanceData.map(d => ({x: d.x, y: d.y, name: d.name, pass: d.pass})),
+        backgroundColor: attendanceData.map(d => d.pass ? "rgba(34,197,94,.7)" : "rgba(239,68,68,.7)"),
+        borderColor:     attendanceData.map(d => d.pass ? "#16a34a" : "#dc2626"),
+        pointRadius: 5, pointHoverRadius: 8
+      }] },
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ctx.raw.name + ": Attendance " + ctx.raw.x + "%, GPA " + ctx.raw.y } }
+          tooltip: { callbacks: { label: c => c.raw.name + ": " + c.raw.x + "% att · GPA " + c.raw.y } }
         },
         scales: {
-          x: { title: { display: true, text: "Attendance %", font: { weight: "bold" } }, min: 0, max: 100, grid: { color: "#f1f5f9" } },
-          y: { title: { display: true, text: "Overall GPA", font: { weight: "bold" } }, min: 0, max: 4.0, grid: { color: "#f1f5f9" } }
+          x: { title: { display: true, text: "Attendance %", font: { weight: "600", size: 11 } }, min: 0, max: 100, grid: { color: "#f1f5f9" } },
+          y: { title: { display: true, text: "Overall GPA",  font: { weight: "600", size: 11 } }, min: 0, max: 4.0, grid: { color: "#f1f5f9" } }
         }
       }
     });
   } else {
-      const cvs = document.getElementById("attendanceChart");
-      if (cvs) {
-          cvs.parentElement.innerHTML = '<div class="text-center text-muted mt-5 pt-5"><i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No attendance data available to correlate.</div>';
-      }
+    const cvs = document.getElementById("attendanceChart");
+    if (cvs) cvs.parentElement.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No attendance data available.</div>';
   }
+
+  // Animate heatmap bars on load
+  document.querySelectorAll(".heatmap-fill").forEach(el => {
+    const w = el.style.width;
+    el.style.width = "0%";
+    requestAnimationFrame(() => { el.style.width = w; });
+  });
 
 });
 </script>

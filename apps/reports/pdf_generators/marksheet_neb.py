@@ -21,12 +21,12 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         school_name_style = ParagraphStyle(
             'SchoolNameNEB', fontSize=sfs, fontName='Times-Bold',
             alignment=TA_CENTER, textColor=colors.black,
-            leading=sfs * 1.2 * bls, spaceAfter=4
+            leading=sfs * 1.2, spaceAfter=4
         )
         address_style = ParagraphStyle(
             'AddressNEB', fontSize=14, fontName='Times-Roman',
             alignment=TA_CENTER, textColor=colors.black,
-            leading=12, spaceAfter=4
+            leading=16, spaceAfter=4
         )
         see_style = ParagraphStyle(
             'SEENEB', fontSize=13, fontName='Times-Bold',
@@ -312,6 +312,7 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
                             Paragraph(fg, cell_style)
                         ]
                     table_data.append(row)
+                    span_rules.append(('LINEBELOW', (0, row_idx), (-1, row_idx), 0.5, colors.HexColor('#475569')))
                     row_idx += 1
         
         # GPA row
@@ -401,8 +402,8 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
             pagesize=A4,
             rightMargin=0.8*cm,
             leftMargin=0.8*cm,
-            topMargin=0.8*cm,
-            bottomMargin=0.8*cm,
+            topMargin=0.4*cm,
+            bottomMargin=0.4*cm,
         )
         
         story = self.get_story()

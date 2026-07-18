@@ -153,6 +153,31 @@ def exam_analytics(request, exam_id):
                 'pass_rate': round(g_passed / g_total * 100, 1),
                 'avg_gpa': round(statistics.mean(g_gpas), 2) if g_gpas else 0,
             }
+    # ── Failure Severity Index & Subject Failure Heatmap ─────────────
+    failure_severity = {'one': 0, 'two': 0, 'three_plus': 0}
+    subject_failure_counts = {}
+    
+    for r in results:
+        if r.failed_subjects:
+            num_failed = len(r.failed_subjects)
+            if num_failed == 1:
+                failure_severity['one'] += 1
+            elif num_failed == 2:
+                failure_severity['two'] += 1
+            elif num_failed >= 3:
+                failure_severity['three_plus'] += 1
+                
+            for subj in r.failed_subjects:
+                subject_failure_counts[subj] = subject_failure_counts.get(subj, 0) + 1
+                
+    subject_failure_heatmap = []
+    for subj, count in sorted(subject_failure_counts.items(), key=lambda x: x[1], reverse=True):
+        pct = round((count / total_students * 100)) if total_students else 0
+        subject_failure_heatmap.append({
+            'subject': subj,
+            'count': count,
+            'fail_pct': pct
+        })
 
     # ── Class Analytics ───────────────────────────────────────────────
     class_stats = []
@@ -240,12 +265,21 @@ def exam_analytics(request, exam_id):
         attendance_map[sid]['present'] += me.present_days
         attendance_map[sid]['total'] += me.total_days
         
+    attendance_excellence_count = 0
+    absence_risk_count = 0
+    
     for r in results:
         sid = r.student_id
         if sid in attendance_map and r.overall_gpa is not None:
             att = attendance_map[sid]
             if att['total'] > 0:
                 pct = round((att['present'] / att['total']) * 100, 1)
+                
+                if pct >= 90:
+                    attendance_excellence_count += 1
+                elif pct < 75:
+                    absence_risk_count += 1
+                    
                 attendance_correlation_data.append({
                     'x': pct,
                     'y': round(float(r.overall_gpa), 2),
@@ -253,8 +287,112 @@ def exam_analytics(request, exam_id):
                     'pass': r.is_pass
                 })
 
+    # ── Attendance Impact Score ───────────────────────────────────────
+    # "X% of failed students had <75% attendance"
+    failed_students_ids = set(r.student_id for r in results if not r.is_pass)
+    low_att_failed = 0
+    for r in results:
+        sid = r.student_id
+        if sid in failed_students_ids and sid in attendance_map:
+            att = attendance_map[sid]
+            if att['total'] > 0:
+                pct = (att['present'] / att['total']) * 100
+                if pct < 75:
+                    low_att_failed += 1
+    attendance_impact_pct = round((low_att_failed / len(failed_students_ids) * 100)) if failed_students_ids else 0
+    attendance_impact = {
+        'pct': attendance_impact_pct,
+        'count': low_att_failed,
+        'failed_total': len(failed_students_ids),
+    }
+
+    # ── Grade Velocity (Borderline Zone) ─────────────────────────────
+    # Students with GPA 2.0–2.6 who failed — intervention candidates
+    borderline_students = []
+    for r in results:
+        if r.overall_gpa is not None:
+            gpa = float(r.overall_gpa)
+            if 2.0 <= gpa <= 2.6:
+                borderline_students.append({
+                    'name': r.student.name,
+                    'gpa': round(gpa, 2),
+                    'grade': r.final_grade or '—',
+                    'class': r.student.class_obj.full_name if r.student.class_obj else '—',
+                    'is_pass': r.is_pass,
+                })
+    borderline_students.sort(key=lambda x: x['gpa'], reverse=True)
+
+    # ── Top Improvers & Biggest Decliners ────────────────────────────
+    # Find most recent prior exam in the same session (excluding this one)
+    prior_exam = (
+        Exam.objects.filter(school=school, session=exam.session)
+        .exclude(pk=exam.pk)
+        .order_by('-start_date', '-created_at')
+        .first()
+    )
+    # Fallback: any prior exam for this school
+    if not prior_exam:
+        prior_exam = (
+            Exam.objects.filter(school=school)
+            .exclude(pk=exam.pk)
+            .order_by('-start_date', '-created_at')
+            .first()
+        )
+
+    top_improvers = []
+    biggest_decliners = []
+    if prior_exam:
+        # Fetch ALL results from prior exam — including failed students (gpa may be None)
+        prior_results_qs = StudentResult.objects.filter(
+            exam=prior_exam, school=school
+        ).select_related('student', 'student__class_obj')
+        
+        # Use percentage as the comparable metric since failed students have NULL gpa.
+        # Fall back to 0.0 if both gpa and percentage are None.
+        def score_of(result):
+            if result.overall_gpa is not None:
+                return float(result.overall_gpa)
+            if result.percentage is not None:
+                # Normalise percentage to 0–4 GPA scale for delta comparison
+                return round(float(result.percentage) / 25, 2)
+            return 0.0
+
+        prior_map = {}
+        for pr in prior_results_qs:
+            prior_map[pr.student_id] = {
+                'score': score_of(pr),
+                'gpa_display': str(pr.overall_gpa) if pr.overall_gpa is not None else 'NG',
+            }
+
+        # Current results — also include failed students
+        all_current = StudentResult.objects.filter(
+            exam=exam, school=school
+        ).select_related('student', 'student__class_obj')
+
+        deltas = []
+        for r in all_current:
+            if r.student_id in prior_map:
+                prev_score = prior_map[r.student_id]['score']
+                curr_score = score_of(r)
+                delta = round(curr_score - prev_score, 2)
+                curr_gpa_display = str(r.overall_gpa) if r.overall_gpa is not None else 'NG'
+                prev_gpa_display = prior_map[r.student_id]['gpa_display']
+                # Only include if there's a meaningful change or the student changed pass/fail status
+                deltas.append({
+                    'name': r.student.name,
+                    'class': r.student.class_obj.full_name if r.student.class_obj else '—',
+                    'prev_gpa': prev_gpa_display,
+                    'curr_gpa': curr_gpa_display,
+                    'delta': delta,
+                    'is_pass': r.is_pass,
+                })
+        deltas.sort(key=lambda x: x['delta'], reverse=True)
+        top_improvers = [d for d in deltas if d['delta'] > 0][:10]
+        biggest_decliners = [d for d in sorted(deltas, key=lambda x: x['delta']) if d['delta'] < 0][:10]
+
     # ── Radar: average subject GPA per performance group ─────────────
     top_subjects = subj_labels[:6]  # use top 6 for radar
+
 
     return render(request, 'reports/analytics.html', {
         'exam': exam,
@@ -274,6 +412,20 @@ def exam_analytics(request, exam_id):
         'gpa_dist_data': json.dumps(list(gpa_dist.values())),
         # Performance
         'perf_categories': perf_categories,
+        # Failure Analytics
+        'failure_severity': failure_severity,
+        'subject_failure_heatmap': subject_failure_heatmap,
+        # Attendance Analytics
+        'attendance_excellence_count': attendance_excellence_count,
+        'absence_risk_count': absence_risk_count,
+        'attendance_impact': attendance_impact,
+        # Grade Velocity
+        'borderline_students': borderline_students,
+        'borderline_count': len(borderline_students),
+        # Improvers / Decliners
+        'prior_exam': prior_exam,
+        'top_improvers': top_improvers,
+        'biggest_decliners': biggest_decliners,
         # Gender
         'gender_stats': gender_stats,
         'gender_labels': json.dumps(list(gender_stats.keys())),

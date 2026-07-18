@@ -50,7 +50,9 @@ class Subject(models.Model):
     @property
     def credit_hour(self):
         from decimal import Decimal
-        return self.theory_credit_hour + (self.practical_credit_hour or Decimal('0.0'))
+        th = Decimal(str(self.theory_credit_hour or '0.0'))
+        pr = Decimal(str(self.practical_credit_hour or '0.0'))
+        return th + pr
 
     def clean(self):
         super().clean()
@@ -59,6 +61,8 @@ class Subject(models.Model):
             raise ValidationError("Theory credit hour cannot be negative.")
         if self.practical_credit_hour is not None and self.practical_credit_hour < 0:
             raise ValidationError("Practical credit hour cannot be negative.")
+        if self.credit_hour <= 1:
+            raise ValidationError("Total credit hour (Theory + Practical) must be greater than 1.")
 
     def save(self, *args, **kwargs):
         self.clean()
