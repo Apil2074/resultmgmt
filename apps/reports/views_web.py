@@ -298,3 +298,176 @@ def exam_analytics(request, exam_id):
         'attendance_correlation_json': json.dumps(attendance_correlation_data),
     })
 
+
+@login_required
+def export_toppers_pdf(request, exam_id):
+    school = request.user.school
+    from apps.exams.models import Exam
+    from apps.results.models import StudentResult
+    from apps.classes.models import Class
+    from django.http import HttpResponse
+    from django.shortcuts import get_object_or_404
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+
+    exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    classes = Class.objects.filter(school=school, session=exam.session).order_by('numeric_level', 'name', 'section')
+
+    # Gather top 3 students for all classes (handling ties)
+    data = []
+    for cls in classes:
+        # Sort by GPA descending, then percentage descending as a secondary tie-breaker
+        results = StudentResult.objects.filter(
+            exam=exam, school=school, student__class_obj=cls, is_pass=True, overall_gpa__isnull=False
+        ).select_related('student').order_by('-overall_gpa', '-percentage')
+
+        # Find the top 3 unique GPA values
+        unique_gpas = []
+        for r in results:
+            g = r.overall_gpa
+            if g not in unique_gpas:
+                unique_gpas.append(g)
+                if len(unique_gpas) == 3:
+                    break
+
+        # Filter students who hold any of these top 3 GPA values
+        toppers = [r for r in results if r.overall_gpa in unique_gpas]
+
+        if toppers:
+            toppers_data = []
+            current_rank = 1
+            previous_gpa = None
+            for idx, t in enumerate(toppers):
+                if previous_gpa is not None and t.overall_gpa < previous_gpa:
+                    current_rank = idx + 1
+                previous_gpa = t.overall_gpa
+                toppers_data.append({
+                    'rank': current_rank,
+                    'student_name': t.student.name,
+                    'gpa': t.overall_gpa,
+                    'grade': t.final_grade or '—'
+                })
+
+            data.append({
+                'class': cls,
+                'toppers': toppers_data
+            })
+
+    # Create PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="toppers_{exam.name.replace(" ", "_")}.pdf"'
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
+        bottomMargin=40
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=18,
+        leading=22,
+        textColor=colors.HexColor('#0F172A'),
+        alignment=TA_CENTER
+    )
+    subtitle_style = ParagraphStyle(
+        'DocSub',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=11,
+        leading=15,
+        textColor=colors.HexColor('#475569'),
+        alignment=TA_CENTER
+    )
+    class_title_style = ParagraphStyle(
+        'ClassTitle',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        leading=15,
+        textColor=colors.HexColor('#2563EB'),
+        spaceBefore=12,
+        spaceAfter=6
+    )
+    cell_style = ParagraphStyle(
+        'Cell',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor('#0F172A')
+    )
+    header_style = ParagraphStyle(
+        'Header',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        leading=11,
+        textColor=colors.white
+    )
+
+    story = []
+
+    # Header block
+    story.append(Paragraph(school.name, title_style))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(f"Top Performers of All Classes — {exam.name}", subtitle_style))
+    story.append(Paragraph(f"Academic Session: {exam.session.name}", subtitle_style))
+    story.append(Spacer(1, 15))
+
+    if not data:
+        story.append(Paragraph("No topper data available for this exam. Make sure results are processed.", subtitle_style))
+    else:
+        for item in data:
+            cls = item['class']
+            toppers = item['toppers']
+
+            story.append(Paragraph(cls.full_name, class_title_style))
+
+            table_data = [[
+                Paragraph("Rank", header_style),
+                Paragraph("Student Name", header_style),
+                Paragraph("GPA", header_style),
+                Paragraph("Grade", header_style),
+            ]]
+
+            for t in toppers:
+                table_data.append([
+                    Paragraph(str(t['rank']), cell_style),
+                    Paragraph(t['student_name'], cell_style),
+                    Paragraph(f"{t['gpa']:.2f}" if t['gpa'] else '—', cell_style),
+                    Paragraph(t['grade'], cell_style),
+                ])
+
+            t_table = Table(table_data, colWidths=[50, 325, 70, 70])
+            t_table.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#1E293B')),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+                ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+                ('TOPPADDING', (0,0), (-1,-1), 6),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ]))
+            story.append(t_table)
+            story.append(Spacer(1, 10))
+
+    doc.build(story)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+
+    response.write(pdf_content)
+    return response
+
+
