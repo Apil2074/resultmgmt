@@ -165,6 +165,9 @@ def exam_analytics(request, exam_id):
         cls_total = cls_results.count()
         if cls_total == 0:
             continue
+        # Skip classes that do not have any computed results/GPAs
+        if not cls_results.filter(overall_gpa__isnull=False).exists():
+            continue
         cls_passed = cls_results.filter(is_pass=True).count()
         cls_pass_rate = round((cls_passed / cls_total) * 100, 1)
         agg = cls_results.aggregate(
@@ -223,13 +226,18 @@ def exam_analytics(request, exam_id):
     # ── Attendance vs Performance Correlation ────────────────────────
     attendance_correlation_data = []
     
-    mark_entries = MarkEntry.objects.filter(exam=exam, school=school, total_days__gt=0).select_related('student')
+    mark_entries = MarkEntry.objects.filter(
+        exam=exam, 
+        school=school, 
+        total_days__gt=0, 
+        present_days__isnull=False
+    ).select_related('student')
     attendance_map = {}
     for me in mark_entries:
         sid = me.student_id
         if sid not in attendance_map:
             attendance_map[sid] = {'present': 0, 'total': 0}
-        attendance_map[sid]['present'] += (me.present_days or 0)
+        attendance_map[sid]['present'] += me.present_days
         attendance_map[sid]['total'] += me.total_days
         
     for r in results:
