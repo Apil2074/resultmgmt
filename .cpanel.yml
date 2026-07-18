@@ -1,5 +1,6 @@
 ---
 deployment:
   tasks:
-    - source /home/tvfcoijb/virtualenv/test/3.11/bin/activate && cd /home/tvfcoijb/test && python manage.py collectstatic --noinput
+    - cd /home/tvfcoijb/test
+    - /home/tvfcoijb/virtualenv/test/3.11/bin/python manage.py collectstatic --noinput
     - touch /home/tvfcoijb/test/passenger_wsgi.py
