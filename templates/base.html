@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}RMS{% endblock %} | {% if school %}{{ school.name }}{% else %}Multi-School RMS{% endif %}</title>
-  <meta name="description" content="{% block meta_description %}Multi-School Result Management System{% endblock %}">
+  <title>{% block title %}E-Naitja{% endblock %} | {% if school %}{{ school.name }}{% else %}E-Naitja{% endif %}</title>
+  <meta name="description" content="{% block meta_description %}E-Naitja{% endblock %}">
 
   <!-- SECURITY: Provide CSRF token via meta tag since the cookie is now HttpOnly -->
   <meta name="csrf-token" content="{{ csrf_token }}">
@@ -54,7 +54,7 @@
     <a class="sidebar-logo" href="{% url 'dashboard' %}">
       <div class="logo-icon">R</div>
       <div class="logo-text">
-        <div class="brand-name">RMS</div>
+        <div class="brand-name">E-Naitja</div>
         <div class="brand-sub">Result Management</div>
       </div>
     </a>
@@ -185,7 +185,7 @@
           <i class="bi bi-chevron-left" id="desktopToggleIcon"></i>
         </button>
         <div class="d-flex align-items-center gap-2" style="min-width: 0;">
-          <div class="d-md-none fw-bold text-primary" style="font-size: 1.2rem; font-family: 'Outfit', sans-serif;">RMS</div>
+          <div class="d-md-none fw-bold text-primary" style="font-size: 1.2rem; font-family: 'Outfit', sans-serif;">E-Naitja</div>
           <div class="topbar-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.9rem, 3vw, 1.25rem);">{% block page_title %}Dashboard{% endblock %}</div>
         </div>
       </div>

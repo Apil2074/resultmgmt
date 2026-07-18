@@ -18,7 +18,7 @@ class MarksheetPDFGenerator:
         'NG': 'Not Graded',
     }
 
-    def __init__(self, school, exam, student, result, mark_entries):
+    def __init__(self, school, exam, student, result, mark_entries, base_font_size=22.0, line_spacing=1.2, exam_title=""):
         """
         Initialize the generator with context objects required for the marksheet.
         
@@ -33,6 +33,9 @@ class MarksheetPDFGenerator:
         self.exam = exam
         self.student = student
         self.result = result
+        self.school_name_font_size = float(base_font_size)
+        self.line_spacing = float(line_spacing)
+        self.exam_title = exam_title
         # Sort mark entries by subject order
         self.mark_entries = sorted(list(mark_entries), key=lambda x: x.subject.order if x.subject else 0)
         
@@ -64,29 +67,30 @@ class MarksheetPDFGenerator:
                 break
 
         # Pre-build reusable ParagraphStyles once (avoids re-creating per _build_story call)
-        self._styles = self._create_styles()
+        self._styles = self._get_styles()
 
-    @staticmethod
-    def _create_styles():
+    def _get_styles(self):
         """Create and return all ParagraphStyle objects used in the marksheet, once."""
+        sfs = self.school_name_font_size
+        bls = self.line_spacing
         return {
             'school_name': ParagraphStyle(
-                'SchoolNameNEB', fontSize=22, fontName='Times-Bold',
+                'SchoolNameNEB', fontSize=sfs, fontName='Times-Bold',
                 alignment=TA_CENTER, textColor=colors.black,
-                leading=26, spaceAfter=4
+                leading=sfs * 1.2 * bls, spaceAfter=2
             ),
             'address': ParagraphStyle(
                 'AddressNEB', fontSize=12, fontName='Times-Roman',
                 alignment=TA_CENTER, textColor=colors.black,
-                leading=16, spaceAfter=4
+                leading=16, spaceAfter=2
             ),
             'see': ParagraphStyle(
-                'SEENEB', fontSize=14, fontName='Times-Bold',
-                alignment=TA_CENTER, textColor=colors.black, spaceBefore=4, spaceAfter=4,
+                'SEENEB', fontSize=13, fontName='Times-Bold',
+                alignment=TA_CENTER, textColor=colors.black, spaceBefore=1, spaceAfter=2,
                 leading=18
             ),
             'gs': ParagraphStyle(
-                'GSNEB', fontSize=16, fontName='Times-Bold',
+                'GSNEB', fontSize=14, fontName='Times-Bold',
                 alignment=TA_CENTER, textColor=colors.HexColor('#1e3a8a'),
                 leading=20
             ),
@@ -236,13 +240,15 @@ class MarksheetPDFGenerator:
         if self.school.establishment_year:
             school_info.append(Paragraph(f"Estd: {self.school.establishment_year}", s['address']))
         school_info.extend([
-        
-            Paragraph("<u>GRADE-SHEET</u>", s['gs'])
+            Spacer(1, 2*mm),
+            Paragraph(self.exam_title.upper(), s['see']) if getattr(self, 'exam_title', '') else Spacer(1, 0),
+            Paragraph("<u>GRADE-SHEET</u>", s['gs']),
+            Spacer(1, 4*mm)
         ])
         
         logo = _get_logo_image(self.school, width=2.5*cm, height=2.5*cm)
         if logo:
-            header_table = Table([[logo, school_info, ""]], colWidths=[2.5*cm, 14.4*cm, 2.5*cm], hAlign='CENTER')
+            header_table = Table([[logo, school_info, Spacer(1, 0)]], colWidths=[2.5*cm, 14.4*cm, 2.5*cm], hAlign='CENTER')
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('ALIGN', (1, 0), (1, 0), 'CENTER'),
@@ -606,7 +612,9 @@ class MarksheetPDFGenerator:
         
         # Calculate dynamic padding based on number of subjects
         num_subjects = len(self.mark_entries)
-        dynamic_padding = max(1, 1 + int((10 - num_subjects) * 1.4))
+        base_pad = max(1, 1 + int((10 - num_subjects) * 1.4))
+        # Apply line spacing: (1.0 = base_pad, 1.5 = base_pad + 4, etc.)
+        dynamic_padding = base_pad + (getattr(self, 'line_spacing', 1.0) - 1.0) * 10
 
         table_style_commands = [
             ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#475569')),
@@ -752,7 +760,7 @@ class MarksheetPDFGenerator:
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
         story.append(sig_table)
-        story.append(Spacer(1, 1.0*cm))  # Space before note and legend
+        story.append(Spacer(1, 0.5*cm))  # Space before note and legend
         
         # 7. Note and Legend (moved below signatures)
         bottom_sections_table = Table([[note_box, legend_table]], colWidths=[11.2*cm, 8.2*cm])
@@ -774,7 +782,7 @@ class ClassMarksheetsPDFGenerator:
     Each student's marksheet will appear on a new page.
     """
 
-    def __init__(self, school, exam, cls, student_results, student_mark_map):
+    def __init__(self, school, exam, cls, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.2, exam_title=""):
         """
         Initialize the Class Marksheets generator.
         
@@ -784,12 +792,17 @@ class ClassMarksheetsPDFGenerator:
             cls: Class instance
             student_results: Iterable of student results for the class
             student_mark_map: Dictionary mapping student_id to their MarkEntry objects
+            base_font_size: Base font size for the PDF
+            line_spacing: Line spacing factor
         """
         self.school = school
         self.exam = exam
         self.cls = cls
         self.student_results = student_results
         self.student_mark_map = student_mark_map
+        self.base_font_size = base_font_size
+        self.line_spacing = line_spacing
+        self.exam_title = exam_title
 
     def generate(self):
         """
@@ -801,8 +814,8 @@ class ClassMarksheetsPDFGenerator:
             pagesize=A4,
             rightMargin=0.8*cm,
             leftMargin=0.8*cm,
-            topMargin=0.8*cm,
-            bottomMargin=0.8*cm,
+            topMargin=0.4*cm,
+            bottomMargin=0.4*cm,
         )
         
         story = []
@@ -813,7 +826,11 @@ class ClassMarksheetsPDFGenerator:
             student = sr.student
             mark_entries = self.student_mark_map.get(student.id, [])
             
-            student_generator = MarksheetPDFGenerator(self.school, self.exam, student, sr, mark_entries)
+            student_generator = MarksheetPDFGenerator(
+                self.school, self.exam, student, sr, mark_entries, 
+                base_font_size=self.base_font_size, line_spacing=self.line_spacing,
+                exam_title=self.exam_title
+            )
             student_story = student_generator._build_story()
             
             # Save reference to the first generator for header/footer reuse (avoids creating a duplicate)

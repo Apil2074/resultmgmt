@@ -16,10 +16,12 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         story = []
         
         # 1. School Header
+        sfs = getattr(self, 'school_name_font_size', 22.0)
+        bls = getattr(self, 'line_spacing', 1.2)
         school_name_style = ParagraphStyle(
-            'SchoolNameNEB', fontSize=22, fontName='Times-Bold',
+            'SchoolNameNEB', fontSize=sfs, fontName='Times-Bold',
             alignment=TA_CENTER, textColor=colors.black,
-            leading=20, spaceAfter=6
+            leading=sfs * 1.2 * bls, spaceAfter=4
         )
         address_style = ParagraphStyle(
             'AddressNEB', fontSize=14, fontName='Times-Roman',
@@ -27,14 +29,14 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
             leading=12, spaceAfter=4
         )
         see_style = ParagraphStyle(
-            'SEENEB', fontSize=12, fontName='Times-Bold',
+            'SEENEB', fontSize=13, fontName='Times-Bold',
             alignment=TA_CENTER, textColor=colors.black, spaceBefore=2, spaceAfter=2,
             leading=18
         )
         gs_style = ParagraphStyle(
-            'GSNEB', fontSize=16, fontName='Times-Bold',
+            'GSNEB', fontSize=14, fontName='Times-Bold',
             alignment=TA_CENTER, textColor=colors.HexColor('#1e3a8a'),
-            leading=20
+            leading=20,spaceAfter=1
         )
         
         school_info = [
@@ -43,8 +45,9 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         ]
         if self.school.establishment_year:
             school_info.append(Paragraph(f"Estd: {self.school.establishment_year}", address_style))
+        if getattr(self, 'exam_title', ''):
+            school_info.append(Paragraph(self.exam_title.upper(), see_style))
         school_info.extend([
-            # Paragraph("SECONDARY EDUCATION EXAMINATION", see_style),
             Paragraph("<u>GRADE-SHEET</u>", gs_style)
         ])
         
@@ -313,10 +316,16 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         
         # GPA row
         if self.result:
-            gpa_text = f"GRADE POINT AVERAGE (GPA): {self.result.overall_gpa:.2f}" if self.result.overall_gpa is not None else "0.00"
-            gpa_para = Paragraph(gpa_text, ParagraphStyle('GPA', fontSize=9, fontName='Times-Bold', alignment=TA_RIGHT, textColor=colors.HexColor('#1e3a8a')))
-            table_data.append([gpa_para, "", "", "", "", ""])
-            span_rules.append(('SPAN', (0, row_idx), (4, row_idx)))
+            if self.result.is_pass is False:
+                gpa_val = "NG"
+            else:
+                gpa_val = f"{self.result.overall_gpa:.2f}" if self.result.overall_gpa is not None else "0.00"
+                
+            gpa_label = Paragraph("GRADE POINT AVERAGE (GPA)", ParagraphStyle('GPALabel', fontSize=9, fontName='Times-Bold', alignment=TA_RIGHT, textColor=colors.HexColor('#1e3a8a')))
+            gpa_para = Paragraph(gpa_val, ParagraphStyle('GPAVal', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#1e3a8a')))
+            
+            table_data.append([gpa_label, "", "", gpa_para, "", ""])
+            span_rules.append(('SPAN', (0, row_idx), (2, row_idx)))
             span_rules.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor('#f8f9fa')))
         
         # col_widths = [1.8*cm, 9.0*cm, 1.5*cm, 2.0*cm, 1.5*cm, 3.6*cm] (Total 19.4cm)
@@ -326,7 +335,8 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
         # Calculate dynamic padding based on number of subjects
         num_subjects = len(self.mark_entries)
         # When 10 subjects, padding is 1. Increases linearly as subject count drops.
-        dynamic_padding = max(1, 1 + int((10 - num_subjects) * 1.5))
+        base_pad = max(1, 1 + int((10 - num_subjects) * 1.5))
+        dynamic_padding = base_pad + (getattr(self, 'line_spacing', 1.0) - 1.0) * 10
 
         ts = [
             ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#475569')),
@@ -417,7 +427,7 @@ class NEB11ClassMarksheetsPDFGenerator:
     Combines the output of NEB11MarksheetPDFGenerator for multiple students into one document.
     """
 
-    def __init__(self, school, exam, cls_obj, student_results, student_mark_map):
+    def __init__(self, school, exam, cls_obj, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.2, exam_title=""):
         """
         Initialize the Class NEB11 Marksheets generator.
         """
@@ -426,6 +436,9 @@ class NEB11ClassMarksheetsPDFGenerator:
         self.cls_obj = cls_obj
         self.student_results = student_results
         self.student_mark_map = student_mark_map
+        self.base_font_size = base_font_size
+        self.line_spacing = line_spacing
+        self.exam_title = exam_title
 
     def generate(self):
         """
@@ -456,7 +469,12 @@ class NEB11ClassMarksheetsPDFGenerator:
             student = sr.student
             mark_entries = self.student_mark_map.get(student.id, [])
             
-            single_gen = NEB11MarksheetPDFGenerator(self.school, self.exam, student, sr, mark_entries)
+            # Delegate to individual marksheet generator
+            single_gen = NEB11MarksheetPDFGenerator(
+                self.school, self.exam, student, sr, mark_entries,
+                base_font_size=self.base_font_size, line_spacing=self.line_spacing,
+                exam_title=self.exam_title
+            )
             
             # Wrap the entire marksheet inside a KeepTogether to prevent page breaks in the middle
             student_story = single_gen.get_story()

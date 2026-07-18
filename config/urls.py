@@ -1,5 +1,5 @@
 """
-URL configuration for RMS project
+URL configuration for E-Naitja project
 """
 from django.contrib import admin
 from django.urls import path, include

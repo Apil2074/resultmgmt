@@ -1,5 +1,5 @@
 """
-Django Base Settings for Multi-School Result Management System
+Django Base Settings for E-Naitja
 """
 import os
 from pathlib import Path

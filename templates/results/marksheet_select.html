@@ -311,12 +311,12 @@
   <div class="row g-4">
     <!-- Left Sidebar (Selection Form) -->
     <div class="col-lg-3 col-md-4 d-print-none mb-4">
-      <div class="sticky-sidebar">
+      <div class="sticky-sidebar" style="position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; overflow-x: hidden; padding-right: 0.5rem;">
         <!-- Selection Card -->
         <div class="card shadow-sm border-0 mb-3" style="background: var(--color-bg-light); border: 1px solid var(--color-border) !important; border-radius: var(--radius-lg);">
           <div class="card-body p-4">
             <h5 class="card-title mb-3 fw-bold" style="color: var(--color-text);"><i class="bi bi-funnel text-primary me-2"></i>Select Student Details</h5>
-            <form method="GET" action="" class="row g-2" id="marksheetForm">
+            <form method="GET" action="" class="row g-3" id="marksheetForm">
               <div class="col-12">
                 <label for="examSelect" class="form-label fw-semibold text-slate-700">Examination</label>
                 <select name="exam" id="examSelect" class="form-select select2" required>
@@ -334,18 +334,39 @@
                   <option value="">-- Select Class --</option>
                 </select>
               </div>
-              <div class="col-12">
+              <div class="col-12 mb-2">
                 <label for="studentSelect" class="form-label fw-semibold text-slate-700">Student</label>
                 <select name="student" id="studentSelect" class="form-select select2" required>
                   <option value="">-- Select Student --</option>
                 </select>
               </div>
+
               <div class="col-12">
-                <label for="templateSelect" class="form-label fw-semibold text-slate-700">Template Version</label>
-                <select name="template_version" id="templateSelect" class="form-select select2">
+                <label for="templateSelect" class="form-label fw-semibold text-slate-700 small mb-1">Template Version</label>
+                <select name="template_version" id="templateSelect" class="form-select form-select-sm select2">
                   <option value="default" {% if template_version == 'default' or not template_version %}selected{% endif %}>Default</option>
                   <option value="neb11" {% if template_version == 'neb11' %}selected{% endif %}>NEB Grade 11</option>
                 </select>
+              </div>
+
+              <!-- PDF Formatting Options -->
+              <div class="col-12">
+                <hr class="my-0" style="border-color: var(--color-border);">
+                <div class="text-muted small fw-bold mt-2 mb-1 text-uppercase" style="letter-spacing: 0.5px;"><i class="bi bi-palette me-1"></i> PDF Formatting</div>
+              </div>
+
+              <div class="col-12">
+                <label for="examTitle" class="form-label fw-semibold text-slate-700 small mb-1">Exam Title (Optional)</label>
+                <input type="text" name="exam_title" id="examTitle" class="form-control form-control-sm" value="{{ exam_title|default:'' }}" placeholder="e.g., First Term Examination">
+              </div>
+              
+              <div class="col-6">
+                <label for="fontSize" class="form-label fw-semibold text-slate-700 small mb-1">School Font Size</label>
+                <input type="number" name="font_size" id="fontSize" class="form-control form-control-sm" value="{{ font_size|default:'22' }}" step="0.5" min="6" max="24">
+              </div>
+              <div class="col-6">
+                <label for="lineSpacing" class="form-label fw-semibold text-slate-700 small mb-1">Row Spacing</label>
+                <input type="number" name="line_spacing" id="lineSpacing" class="form-control form-control-sm" value="{{ line_spacing|default:'1.2' }}" step="0.1" min="0.8" max="3">
               </div>
             </form>
             
@@ -355,7 +376,7 @@
             <!-- Student Navigation -->
             <div class="d-flex gap-2 mb-3">
               {% if prev_student_id %}
-                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ prev_student_id }}&template_version={{ template_version|default:'default' }}" class="btn btn-outline-secondary flex-fill">
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ prev_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
                   <i class="bi bi-chevron-left me-1"></i>Prev
                 </a>
               {% else %}
@@ -365,7 +386,7 @@
               {% endif %}
               
               {% if next_student_id %}
-                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ next_student_id }}&template_version={{ template_version|default:'default' }}" class="btn btn-outline-secondary flex-fill">
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ next_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
                   Next<i class="bi bi-chevron-right ms-1"></i>
                 </a>
               {% else %}
@@ -377,15 +398,15 @@
 
             <!-- Print & Downloads -->
             <div class="d-grid gap-2">
-              <button type="button" class="btn btn-outline-dark" onclick="printMarksheetPDF('{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}?template_version={{ template_version|default:"default" }}')">
+              <button type="button" class="btn btn-outline-dark" onclick="printMarksheetPDF('{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}?template_version={{ template_version|default:"default" }}&exam_title={{ exam_title|default:""|urlencode }}&font_size={{ font_size|default:"10" }}&line_spacing={{ line_spacing|default:"1.2" }}')">
                 <i class="bi bi-printer-fill me-2"></i>Print Marksheet
               </button>
               {% if selected_student_id != 'all' %}
-              <a href="{% url 'marksheet_pdf' exam.id selected_student_id %}?template_version={{ template_version|default:'default' }}" class="btn btn-primary" target="_blank">
+              <a href="{% url 'marksheet_pdf' exam.id selected_student_id %}?template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-primary" target="_blank">
                 <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
               </a>
               {% else %}
-              <a href="{% url 'class_marksheets_pdf' exam.id class_obj.id %}?template_version={{ template_version|default:'default' }}" class="btn btn-primary" target="_blank">
+              <a href="{% url 'class_marksheets_pdf' exam.id class_obj.id %}?template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-primary" target="_blank">
                 <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
               </a>
               {% endif %}
@@ -400,7 +421,7 @@
     </div>
 
     <!-- Right Main Column (Loaded State/Placeholder) -->
-    <div class="col-lg-9 col-md-8 marksheet-right-col">
+    <div class="col-lg-9 col-md-8 marksheet-right-col" style="max-height: 100vh; overflow-y: auto;">
       {% if not exam or not selected_student_id %}
         <!-- Placeholder / Prompt State -->
         <div class="text-center p-5 bg-white border border-dashed rounded-3 shadow-sm mt-0 d-print-none" style="border-color: var(--color-border) !important; border-radius: var(--radius-lg) !important;">
@@ -526,7 +547,38 @@ $(document).ready(function() {
     checkAutoSubmit();
   });
 
-  $('#studentSelect, #templateSelect').on('change', function() {
+  $('#studentSelect').on('change', function() {
+    checkAutoSubmit();
+  });
+
+  const fontInput = document.getElementById('fontSize');
+  const lineInput = document.getElementById('lineSpacing');
+  const titleInput = document.getElementById('examTitle');
+  const templateSelect = document.getElementById('templateSelect');
+
+  // Restore values from local storage if they are not passed via URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has('font_size') && localStorage.getItem('marksheet_font_size')) {
+    fontInput.value = localStorage.getItem('marksheet_font_size');
+  }
+  if (!urlParams.has('line_spacing') && localStorage.getItem('marksheet_line_spacing')) {
+    lineInput.value = localStorage.getItem('marksheet_line_spacing');
+  }
+  if (!urlParams.has('exam_title') && localStorage.getItem('marksheet_exam_title') !== null) {
+    titleInput.value = localStorage.getItem('marksheet_exam_title');
+  }
+  if (!urlParams.has('template_version') && localStorage.getItem('marksheet_template_version')) {
+    templateSelect.value = localStorage.getItem('marksheet_template_version');
+    if (window.jQuery && $(templateSelect).data('select2')) {
+      $(templateSelect).trigger('change.select2');
+    }
+  }
+
+  $('#examTitle, #fontSize, #lineSpacing, #templateSelect').on('change blur', function() {
+    localStorage.setItem('marksheet_font_size', fontInput.value);
+    localStorage.setItem('marksheet_line_spacing', lineInput.value);
+    localStorage.setItem('marksheet_exam_title', titleInput.value);
+    localStorage.setItem('marksheet_template_version', templateSelect.value);
     checkAutoSubmit();
   });
 

@@ -264,12 +264,28 @@ def marksheet_pdf(request, exam_id, student_id):
     ).select_related('subject', 'subject_result')
 
     template_version = request.GET.get('template_version', 'default')
+    exam_title = request.GET.get('exam_title', '')
+    try:
+        font_size = float(request.GET.get('font_size', 10.0))
+    except ValueError:
+        font_size = 10.0
+    try:
+        line_spacing = float(request.GET.get('line_spacing', 1.2))
+    except ValueError:
+        line_spacing = 1.2
+
     if template_version == 'neb11':
         from apps.reports.pdf_generators import NEB11MarksheetPDFGenerator
-        generator = NEB11MarksheetPDFGenerator(school, exam, student, result, mark_entries)
+        generator = NEB11MarksheetPDFGenerator(
+            school, exam, student, result, mark_entries,
+            base_font_size=font_size, line_spacing=line_spacing, exam_title=exam_title
+        )
     else:
         from apps.reports.pdf_generators import MarksheetPDFGenerator
-        generator = MarksheetPDFGenerator(school, exam, student, result, mark_entries)
+        generator = MarksheetPDFGenerator(
+            school, exam, student, result, mark_entries,
+            base_font_size=font_size, line_spacing=line_spacing, exam_title=exam_title
+        )
         
     pdf_bytes = generator.generate()
 
@@ -319,12 +335,28 @@ def class_marksheets_pdf(request, exam_id, class_id):
         student_mark_map[me.student_id].append(me)
 
     template_version = request.GET.get('template_version', 'default')
+    exam_title = request.GET.get('exam_title', '')
+    try:
+        font_size = float(request.GET.get('font_size', 10.0))
+    except ValueError:
+        font_size = 10.0
+    try:
+        line_spacing = float(request.GET.get('line_spacing', 1.2))
+    except ValueError:
+        line_spacing = 1.2
+
     if template_version == 'neb11':
         from apps.reports.pdf_generators import NEB11ClassMarksheetsPDFGenerator
-        generator = NEB11ClassMarksheetsPDFGenerator(school, exam, cls, student_results, student_mark_map)
+        generator = NEB11ClassMarksheetsPDFGenerator(
+            school, exam, cls, student_results, student_mark_map,
+            base_font_size=font_size, line_spacing=line_spacing, exam_title=exam_title
+        )
     else:
         from apps.reports.pdf_generators import ClassMarksheetsPDFGenerator
-        generator = ClassMarksheetsPDFGenerator(school, exam, cls, student_results, student_mark_map)
+        generator = ClassMarksheetsPDFGenerator(
+            school, exam, cls, student_results, student_mark_map,
+            base_font_size=font_size, line_spacing=line_spacing, exam_title=exam_title
+        )
         
     pdf_bytes = generator.generate()
 
@@ -743,6 +775,9 @@ def marksheet_select(request):
         selected_student_id = int(student_id) if student_id and student_id.isdigit() else None
 
     template_version = request.GET.get('template_version', 'default')
+    exam_title = request.GET.get('exam_title', '')
+    font_size = request.GET.get('font_size', '10')
+    line_spacing = request.GET.get('line_spacing', '1.2')
 
     context = {
         'exams': exams,
@@ -752,6 +787,9 @@ def marksheet_select(request):
         'selected_class_id': int(class_id) if class_id and class_id.isdigit() else None,
         'selected_student_id': selected_student_id,
         'template_version': template_version,
+        'exam_title': exam_title,
+        'font_size': font_size,
+        'line_spacing': line_spacing,
         'school': school,
     }
 
