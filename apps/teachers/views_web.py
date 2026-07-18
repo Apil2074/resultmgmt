@@ -778,12 +778,40 @@ def teacher_dashboard(request):
             'attendance_tracked': bool(attendance_list),
         })
 
+    # ── SUBJECT AVERAGES: computed for ALL teachers with assigned subjects ──
+    is_class_teacher_dashboard = bool(my_classes_info)
+    subject_teacher_averages = []
+    if my_subject_list:
+        from apps.marks.models import MarkEntry as ME
+        from django.db.models import Avg as DAvg
+        for item in my_subject_list:
+            sub = item['subject']
+            cls_obj = item['class_obj']
+            avg = ME.objects.filter(
+                subject=sub,
+                student__class_obj=cls_obj,
+                session=active_session,
+            ).aggregate(th_avg=DAvg('theory_obtained'), in_avg=DAvg('internal_obtained'))
+            th_avg = float(avg['th_avg'] or 0)
+            in_avg = float(avg['in_avg'] or 0)
+            total_avg = th_avg + in_avg
+            full = float((sub.theory_full_marks or 0) + (sub.practical_full_marks or 0))
+            pct = round((total_avg / full * 100), 1) if full > 0 else 0
+            subject_teacher_averages.append({
+                'label': f"{cls_obj.full_name} — {sub.name}",
+                'avg': round(total_avg, 1),
+                'full': full,
+                'pct': pct,
+            })
+
     return render(request, 'teachers/teacher_portal/dashboard.html', {
         'teacher': teacher,
         'my_classes_info': my_classes_info,
         'my_subjects_info': my_subjects_info,
         'my_subject_list': my_subject_list,
         'class_analytics': class_analytics,
+        'is_class_teacher_dashboard': is_class_teacher_dashboard,
+        'subject_teacher_averages': subject_teacher_averages,
         'total_classes': total_classes,
         'total_students': total_students,
         'total_subjects': total_subjects,

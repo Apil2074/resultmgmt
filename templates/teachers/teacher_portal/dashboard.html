@@ -459,19 +459,48 @@
 {% if grade_labels_json and grade_labels_json != '[]' or top_performers %}
 <div class="td-section-label"><i class="bi bi-bar-chart-line-fill text-primary"></i> Grade Analytics</div>
 <div class="row g-3 mb-4">
-  <!-- Grade Distribution -->
-  <div class="col-lg-5">
+  <!-- Left col: My Subject Averages (all teachers) + Grade Distribution (class teachers only) -->
+  <div class="col-lg-5 d-flex flex-column gap-3">
+
+    <!-- My Subject Averages — shown for ALL teachers with assigned subjects -->
+    {% if subject_teacher_averages %}
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-graph-up text-primary"></i>
+        <span class="card-title mb-0">My Subject Averages</span>
+      </div>
+      <div class="card-body p-3" style="max-height:260px;overflow-y:auto;">
+        {% for sa in subject_teacher_averages %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span style="font-size:.82rem;font-weight:600;color:#0f172a;">{{ sa.label }}</span>
+            <span style="font-size:.78rem;color:#64748b;">{{ sa.avg }}/{{ sa.full }}&nbsp;<strong style="color:{% if sa.pct >= 60 %}#10b981{% elif sa.pct >= 40 %}#f59e0b{% else %}#ef4444{% endif %};">{{ sa.pct }}%</strong></span>
+          </div>
+          <div style="height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden;">
+            <div style="height:100%;width:{{ sa.pct }}%;background:{% if sa.pct >= 60 %}linear-gradient(90deg,#10b981,#34d399){% elif sa.pct >= 40 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};border-radius:99px;transition:width .6s;"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Grade Distribution — class teachers only -->
+    {% if is_class_teacher_dashboard %}
     <div class="td-chart-card">
       <div class="card-header d-flex align-items-center justify-content-between">
         <div class="card-title mb-0"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Grade Distribution</div>
       </div>
-      <div class="card-body" style="height:240px;padding:1.25rem;">
+      <div class="card-body" style="height:220px;padding:1.25rem;">
         <div style="position:relative;height:100%;width:100%;">
           <canvas id="gradeDistributionChart"></canvas>
         </div>
       </div>
     </div>
+    {% endif %}
+
   </div>
+
 
   <!-- Per-subject top performers -->
   <div class="col-lg-7">
