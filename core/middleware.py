@@ -32,7 +32,7 @@ class SchoolRequiredMiddleware:
                 'login', 'logout', 'change_password', 'profile', 'dashboard',
                 'api_login', 'api_logout', 'api_change_password', 'api_me',
                 'super_schools', 'create_school_and_admin', 'subscription_expired', 
-                'edit_school', 'reset_school_admin_password', 'forgot_password',
+                'edit_school', 'delete_school', 'reset_school_admin_password', 'forgot_password',
                 'send_notification', 'mark_notification_read',
                 'super_notifications', 'super_subscriptions', 'super_analytics',
                 'super_reports', 'super_settings',
