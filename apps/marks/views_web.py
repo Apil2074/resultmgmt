@@ -39,10 +39,27 @@ def mark_entry(request, exam_id, class_id):
     students = Student.objects.filter(class_obj=cls, school=school, is_active=True)
     subjects = Subject.objects.filter(class_obj=cls, school=school).select_related().order_by('order')
 
+    is_class_teacher = False
+    assigned_subject_ids = []
+    
     if request.user.is_teacher:
-        if not hasattr(request.user, 'teacher_profile') or cls.class_teacher != request.user.teacher_profile:
-            messages.error(request, 'You are not the class teacher for this class.')
+        if hasattr(request.user, 'teacher_profile'):
+            teacher_profile = request.user.teacher_profile
+            is_class_teacher = (cls.class_teacher == teacher_profile)
+            assigned_subject_ids = list(teacher_profile.subject_assignments.filter(subject__class_obj=cls).values_list('subject_id', flat=True))
+            
+            if not is_class_teacher and not assigned_subject_ids:
+                messages.error(request, 'You do not have access to enter marks for this class.')
+                return redirect('dashboard')
+        else:
+            messages.error(request, 'Teacher profile not found.')
             return redirect('dashboard')
+    else:
+        is_class_teacher = True
+
+    # For subject-only teachers, restrict visible subjects to only assigned ones
+    if request.user.is_teacher and not is_class_teacher:
+        subjects = subjects.filter(id__in=assigned_subject_ids)
 
     # Load optional enrollments
     from apps.subjects.models import StudentSubjectEnrollment, Subject
@@ -100,6 +117,7 @@ def mark_entry(request, exam_id, class_id):
         'students': students,
         'subjects': subjects,
         'available_classes': available_classes,
+        'is_class_teacher': is_class_teacher,
     })
 
 
@@ -131,8 +149,16 @@ def save_mark(request):
     if exam_class.is_locked:
         return JsonResponse({'error': 'Exam is locked for this class'}, status=403)
 
-    if request.user.is_teacher and (not hasattr(request.user, 'teacher_profile') or subject.class_obj.class_teacher != request.user.teacher_profile):
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    if request.user.is_teacher:
+        if not hasattr(request.user, 'teacher_profile'):
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+            
+        teacher_profile = request.user.teacher_profile
+        is_class_teacher = (subject.class_obj.class_teacher == teacher_profile)
+        is_assigned_subject = teacher_profile.subject_assignments.filter(subject=subject).exists()
+        
+        if not is_class_teacher and not is_assigned_subject:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
 
     if subject.subject_type == Subject.SubjectType.OPTIONAL:
         from apps.subjects.models import StudentSubjectEnrollment

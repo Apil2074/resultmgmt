@@ -10,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import transaction
+from django.db import models as db_models
 
 from apps.accounts.models import User
 from apps.classes.models import Class
@@ -500,13 +501,16 @@ def teacher_dashboard(request):
     active_session = request.user.school.get_active_session() if hasattr(request.user, 'school') and request.user.school else None
     
     from apps.classes.models import Class
-    classes_qs = Class.objects.filter(class_teacher=teacher)
-    if active_session:
-        classes_qs = classes_qs.filter(session=active_session)
-        
-    classes_info = []
+    from django.db.models import Q
     from apps.exams.models import ExamClass
-    for cls in classes_qs:
+    
+    # 1. My Classes (Class Teacher)
+    my_classes_qs = Class.objects.filter(class_teacher=teacher)
+    if active_session:
+        my_classes_qs = my_classes_qs.filter(session=active_session)
+        
+    my_classes_info = []
+    for cls in my_classes_qs:
         subjects = cls.subjects.all()
         latest_ec = ExamClass.objects.filter(
             class_obj=cls, 
@@ -516,11 +520,47 @@ def teacher_dashboard(request):
             latest_ec = latest_ec.filter(exam__session=active_session)
         latest_ec = latest_ec.order_by('-exam__created_at').first()
         
-        classes_info.append({
+        my_classes_info.append({
             'class_obj': cls,
             'subjects': subjects,
             'latest_exam_id': latest_ec.exam_id if latest_ec else None
         })
+
+    # 2. My Subjects (Assigned Subjects)
+    assigned_class_ids = teacher.subject_assignments.values_list('subject__class_obj_id', flat=True).distinct()
+    assigned_classes_qs = Class.objects.filter(id__in=assigned_class_ids)
+    if active_session:
+        assigned_classes_qs = assigned_classes_qs.filter(session=active_session)
+        
+    my_subjects_info = []
+    my_subject_list = []  # flat list: [{class_obj, subject, latest_exam_id}]
+    for cls in assigned_classes_qs:
+        assigned_subject_ids = teacher.subject_assignments.filter(subject__class_obj=cls).values_list('subject_id', flat=True)
+        subjects = cls.subjects.filter(id__in=assigned_subject_ids)
+        
+        latest_ec = ExamClass.objects.filter(
+            class_obj=cls, 
+            exam__status='DRAFT'
+        )
+        if active_session:
+            latest_ec = latest_ec.filter(exam__session=active_session)
+        latest_ec = latest_ec.order_by('-exam__created_at').first()
+        
+        my_subjects_info.append({
+            'class_obj': cls,
+            'subjects': subjects,
+            'latest_exam_id': latest_ec.exam_id if latest_ec else None
+        })
+        for sub in subjects:
+            my_subject_list.append({
+                'class_obj': cls,
+                'subject': sub,
+                'latest_exam_id': latest_ec.exam_id if latest_ec else None
+            })
+
+    classes_qs = Class.objects.filter(
+        Q(id__in=my_classes_qs.values_list('id')) | Q(id__in=assigned_classes_qs.values_list('id'))
+    ).distinct()
 
         
     # Calculate KPIs
@@ -529,7 +569,12 @@ def teacher_dashboard(request):
     from apps.results.models import StudentResult
     from django.db.models import Avg
 
-    total_classes = len(classes_dict)
+    assignments = teacher.subject_assignments.all()
+    if active_session:
+        assignments = assignments.filter(subject__session=active_session)
+    class_ids = classes_qs.values_list('id', flat=True)
+
+    total_classes = classes_qs.count()
     total_subjects = assignments.count()
     primary_subject = assignments.first().subject.name if assignments.exists() else "None"
     
@@ -572,7 +617,9 @@ def teacher_dashboard(request):
     from apps.marks.models import MarkEntry
     
     top_performers = []
-    for cls_obj, subjects in classes_dict.items():
+    for info in my_classes_info + my_subjects_info:
+        cls_obj = info['class_obj']
+        subjects = info['subjects']
         for subject in subjects:
             top_marks = MarkEntry.objects.filter(
                 student__class_obj=cls_obj, 
@@ -599,11 +646,144 @@ def teacher_dashboard(request):
     
     # Sort top performers by class level, then subject
     top_performers.sort(key=lambda x: (x['class'].numeric_level, x['class'].name, x['subject'].name))
-        
+
+    # ── NEW CLASS TEACHER ANALYTICS ──
+    from apps.marks.models import MarkEntry
+    from django.db.models import Avg, DecimalField
+    from django.db.models.functions import Coalesce
+
+    # Only compute detailed analytics for class teacher classes
+    class_analytics = []
+    for info in my_classes_info:
+        cls_obj = info['class_obj']
+        cls_students = list(Student.objects.filter(class_obj=cls_obj, school=request.user.school, is_active=True).order_by('roll_number'))
+        cls_subjects = list(cls_obj.subjects.all().order_by('order'))
+
+        # --- Subject-wise average ---
+        subject_averages = []
+        for subject in cls_subjects:
+            avg = MarkEntry.objects.filter(
+                student__class_obj=cls_obj,
+                subject=subject,
+                session=active_session
+            ).aggregate(
+                th_avg=Avg('theory_obtained'),
+                in_avg=Avg('internal_obtained'),
+            )
+            th_avg = float(avg['th_avg'] or 0)
+            in_avg = float(avg['in_avg'] or 0)
+            total_avg = th_avg + in_avg
+            full = float((subject.theory_full_marks or 0) + (subject.practical_full_marks or 0))
+            pct = round((total_avg / full * 100), 1) if full > 0 else 0
+            subject_averages.append({
+                'subject': subject,
+                'avg': round(total_avg, 1),
+                'pct': pct,
+                'full': full,
+            })
+
+        # --- Top 3 students by GPA ---
+        # --- Top 3/5 students by GPA ---
+        # Find the latest published exam for this class
+        from apps.exams.models import ExamClass as EC
+        latest_ec_qs = EC.objects.filter(
+            class_obj=cls_obj,
+            exam__status='PUBLISHED',
+        )
+        if active_session:
+            latest_ec_qs = latest_ec_qs.filter(exam__session=active_session)
+        latest_ec_obj = latest_ec_qs.order_by('-exam__created_at').first()
+
+        top_students = []
+        if latest_ec_obj:
+            results_qs = StudentResult.objects.filter(
+                student__class_obj=cls_obj,
+                exam=latest_ec_obj.exam,
+                overall_gpa__isnull=False,
+            ).select_related('student').order_by(
+                db_models.F('class_rank').asc(nulls_last=True),
+                db_models.F('overall_gpa').desc(nulls_last=True),
+            )[:5]
+            for idx, r in enumerate(results_qs):
+                top_students.append({
+                    'rank': r.class_rank if r.class_rank else idx + 1,
+                    'student': r.student,
+                    'gpa': float(r.overall_gpa),
+                    'grade': r.final_grade,
+                    'is_pass': r.is_pass,
+                })
+
+        # --- At-risk students (GPA < 2.0 or is_pass=False) ---
+        at_risk_qs = StudentResult.objects.filter(
+            student__class_obj=cls_obj,
+        )
+        if latest_ec_obj:
+            at_risk_qs = at_risk_qs.filter(exam=latest_ec_obj.exam)
+        elif active_session:
+            at_risk_qs = at_risk_qs.filter(session=active_session)
+        at_risk = at_risk_qs.filter(
+            db_models.Q(is_pass=False) | db_models.Q(overall_gpa__lt=2.0)
+        ).select_related('student').order_by(
+            db_models.F('overall_gpa').asc(nulls_last=True)
+        )[:10]
+        at_risk_list = [{
+            'student': r.student,
+            'gpa': float(r.overall_gpa) if r.overall_gpa is not None else None,
+            'grade': r.final_grade,
+            'failed_subjects': r.failed_subjects,
+        } for r in at_risk]
+
+        # --- Attendance summary ---
+        # Get the latest exam in this class
+        latest_entries = MarkEntry.objects.filter(
+            student__class_obj=cls_obj,
+            session=active_session,
+            total_days__isnull=False,
+            total_days__gt=0,
+        ).values('student_id', 'present_days', 'total_days').distinct()
+
+        attendance_data = {}
+        for entry in latest_entries:
+            sid = entry['student_id']
+            if sid not in attendance_data:
+                attendance_data[sid] = entry
+
+        total_days_val = None
+        attendance_list = []
+        for sid, entry in attendance_data.items():
+            pd = entry['present_days'] or 0
+            td = entry['total_days'] or 0
+            if td > 0:
+                if total_days_val is None:
+                    total_days_val = td
+                pct = round(pd / td * 100, 1)
+                attendance_list.append({'student_id': sid, 'present': pd, 'total': td, 'pct': pct})
+
+        # map student_id -> name
+        student_map = {s.id: s for s in cls_students}
+        for a in attendance_list:
+            a['student'] = student_map.get(a['student_id'])
+
+        low_attendance = sorted([a for a in attendance_list if a['pct'] < 75], key=lambda x: x['pct'])
+        avg_attendance = round(sum(a['pct'] for a in attendance_list) / len(attendance_list), 1) if attendance_list else None
+
+        class_analytics.append({
+            'class_obj': cls_obj,
+            'subject_averages': subject_averages,
+            'top_students': top_students,
+            'at_risk': at_risk_list,
+            'low_attendance': low_attendance,
+            'avg_attendance': avg_attendance,
+            'total_days': total_days_val,
+            'attendance_tracked': bool(attendance_list),
+        })
+
     return render(request, 'teachers/teacher_portal/dashboard.html', {
         'teacher': teacher,
-        'classes_dict': classes_dict,
-        'classes_info': classes_info,
+        'my_classes_info': my_classes_info,
+        'my_subjects_info': my_subjects_info,
+        'my_subject_list': my_subject_list,
+        'class_analytics': class_analytics,
         'total_classes': total_classes,
         'total_students': total_students,
         'total_subjects': total_subjects,

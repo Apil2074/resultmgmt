@@ -232,7 +232,7 @@ input[type=number]::-webkit-outer-spin-button {
             <div data-bs-toggle="tooltip" title="Credit Hours determine the overall weight of this subject in GPA calculation" style="font-size:0.7rem; font-weight:normal; color:var(--color-text-muted); opacity:0.8; margin-top:4px; cursor:help;">TH: {{ subject.theory_credit_hour|floatformat:"-2" }}{% if subject.has_practical %}, IN: {{ subject.practical_credit_hour|default:0|floatformat:"-2" }}{% endif %} <i class="bi bi-question-circle"></i></div>
           </th>
           {% endfor %}
-          {% if not request.user.is_teacher %}
+          {% if not request.user.is_teacher or is_class_teacher %}
           <th colspan="1" style="background:var(--color-bg); color:var(--color-text-muted); text-align:center;">
             Attendance
             <div class="d-flex align-items-center justify-content-center mt-1" style="font-size: 0.7rem; font-weight: normal;">
@@ -275,7 +275,7 @@ input[type=number]::-webkit-outer-spin-button {
             {% endif %}
             <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">Special</th>
           {% endfor %}
-          {% if not request.user.is_teacher %}
+          {% if not request.user.is_teacher or is_class_teacher %}
           <th>Present Days</th>
           {% endif %}
         </tr>
@@ -340,7 +340,7 @@ input[type=number]::-webkit-outer-spin-button {
           {% endfor %}
 
           <!-- Attendance -->
-          {% if not request.user.is_teacher %}
+          {% if not request.user.is_teacher or is_class_teacher %}
           <td>
             <input type="number" class="mark-input" min="0" placeholder="Days"
               value="{{ student.present_days_val }}"

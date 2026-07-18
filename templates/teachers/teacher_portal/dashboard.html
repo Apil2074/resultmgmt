@@ -187,54 +187,277 @@
   </div>
 </div>
 
-<!-- ── KPI CARDS ── -->
-<div class="td-kpi-row">
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:#6366f1;"></div>
-    <div class="td-kpi-icon" style="background:#eef2ff;color:#6366f1;"><i class="bi bi-journal-bookmark-fill"></i></div>
-    <div class="td-kpi-val">{{ total_classes }}</div>
-    <div class="td-kpi-lbl">My Classes</div>
-    <div class="td-kpi-sub">Active this session</div>
-  </div>
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:#0ea5e9;"></div>
-    <div class="td-kpi-icon" style="background:#f0f9ff;color:#0ea5e9;"><i class="bi bi-people-fill"></i></div>
-    <div class="td-kpi-val">{{ total_students }}</div>
-    <div class="td-kpi-lbl">Total Students</div>
-    <div class="td-kpi-sub">Across all classes</div>
-  </div>
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:#8b5cf6;"></div>
-    <div class="td-kpi-icon" style="background:#faf5ff;color:#8b5cf6;"><i class="bi bi-book-fill"></i></div>
-    <div class="td-kpi-val">{{ total_subjects }}</div>
-    <div class="td-kpi-lbl">Subjects</div>
-    <div class="td-kpi-sub" title="{{ primary_subject }}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">{{ primary_subject }}</div>
-  </div>
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:{% if pending_marks > 0 %}#ef4444{% else %}#22c55e{% endif %};"></div>
-    <div class="td-kpi-icon" style="background:{% if pending_marks > 0 %}#fef2f2;color:#ef4444{% else %}#f0fdf4;color:#22c55e{% endif %};"><i class="bi bi-{% if pending_marks > 0 %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %}"></i></div>
-    <div class="td-kpi-val" style="color:{% if pending_marks > 0 %}#ef4444{% else %}#22c55e{% endif %};">{{ pending_marks }}</div>
-    <div class="td-kpi-lbl">Pending Marks</div>
-    <div class="td-kpi-sub">{% if pending_marks > 0 %}Action required{% else %}All up to date{% endif %}</div>
-  </div>
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:#f59e0b;"></div>
-    <div class="td-kpi-icon" style="background:#fffbeb;color:#f59e0b;"><i class="bi bi-patch-check-fill"></i></div>
-    <div class="td-kpi-val">{{ published_percentage }}%</div>
-    <div class="td-kpi-lbl">Published</div>
-    <div class="td-kpi-sub">Results released</div>
-  </div>
-  <div class="td-kpi">
-    <div class="td-kpi-accent" style="background:#10b981;"></div>
-    <div class="td-kpi-icon" style="background:#ecfdf5;color:#10b981;"><i class="bi bi-star-fill"></i></div>
-    <div class="td-kpi-val">{{ avg_gpa }}</div>
-    <div class="td-kpi-lbl">Average GPA</div>
-    <div class="td-kpi-sub">Across my students</div>
-  </div>
-</div>
 
-<!-- ── ANALYTICS ROW ── -->
-<div class="td-section-label"><i class="bi bi-bar-chart-line-fill text-primary"></i> Analytics</div>
+<!-- ── MY CLASS & MY SUBJECTS CARDS ── -->
+{% if my_classes_info or my_subject_list %}
+<div class="td-section-label"><i class="bi bi-person-workspace text-primary"></i> My Teaching Info</div>
+<div class="row g-3 mb-4">
+
+  <!-- My Class Card -->
+  {% if my_classes_info %}
+  <div class="col-md-6">
+    <div class="td-class-card h-100">
+      <div class="td-class-header">
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <div style="width:36px;height:36px;background:#eef2ff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-person-video3" style="color:#6366f1;font-size:1rem;"></i>
+          </div>
+          <div class="td-class-name">My Class</div>
+        </div>
+        <span class="badge rounded-pill" style="background:#eef2ff;color:#6366f1;font-size:.72rem;">Class Teacher</span>
+      </div>
+      <div class="px-3 pb-3">
+        {% for info in my_classes_info %}
+        {% with cls=info.class_obj latest_exam_id=info.latest_exam_id %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .75rem;background:#f8fafc;border-radius:10px;margin-bottom:.5rem;border:1px solid #e2e8f0;">
+          <div style="display:flex;align-items:center;gap:.6rem;">
+            <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#818cf8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.8rem;flex-shrink:0;">
+              {{ cls.numeric_level }}
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:.9rem;color:#0f172a;">{{ cls.full_name }}</div>
+              <div style="font-size:.72rem;color:#94a3b8;">{{ cls.session.name }}</div>
+            </div>
+          </div>
+          {% if latest_exam_id %}
+          <a href="{% url 'mark_entry' latest_exam_id cls.id %}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
+            <i class="bi bi-pencil-square me-1"></i>Enter Marks
+          </a>
+          {% else %}
+          <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
+            <i class="bi bi-pencil-square me-1"></i>Enter Marks
+          </a>
+          {% endif %}
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- My Subjects Card -->
+  {% if my_subject_list %}
+  <div class="{% if my_classes_info %}col-md-6{% else %}col-12{% endif %}">
+    <div class="td-class-card h-100">
+      <div class="td-class-header">
+        <div style="display:flex;align-items:center;gap:.6rem;">
+          <div style="width:36px;height:36px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-book-half" style="color:#10b981;font-size:1rem;"></i>
+          </div>
+          <div class="td-class-name">My Subjects</div>
+        </div>
+        <span class="badge rounded-pill" style="background:#f0fdf4;color:#10b981;font-size:.72rem;">{{ my_subject_list|length }} subject{{ my_subject_list|length|pluralize }}</span>
+      </div>
+      <div class="px-3 pb-3">
+        {% for item in my_subject_list %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.55rem .75rem;background:#f8fafc;border-radius:10px;margin-bottom:.5rem;border:1px solid #e2e8f0;">
+          <div style="display:flex;align-items:center;gap:.6rem;">
+            <div style="width:24px;height:24px;background:#e0f2fe;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#0ea5e9;font-weight:700;font-size:.72rem;flex-shrink:0;">
+              {{ forloop.counter }}
+            </div>
+            <div>
+              <div style="font-weight:600;font-size:.88rem;color:#0f172a;">{{ item.class_obj.full_name }} — {{ item.subject.name }}</div>
+              <div style="font-size:.7rem;color:#94a3b8;">{{ item.subject.code }}</div>
+            </div>
+          </div>
+          {% if item.latest_exam_id %}
+          <a href="{% url 'mark_entry' item.latest_exam_id item.class_obj.id %}#subject-col-{{ item.subject.id }}" class="btn btn-sm rounded-pill px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
+            <i class="bi bi-pencil-square" style="font-size:.7rem;"></i>
+          </a>
+          {% else %}
+          <a href="{% url 'mark_entry_select' %}?class_obj={{ item.class_obj.id }}" class="btn btn-sm rounded-pill px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
+            <i class="bi bi-pencil-square" style="font-size:.7rem;"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% else %}
+<div class="td-section-label"><i class="bi bi-person-workspace text-primary"></i> My Teaching Info</div>
+<div class="text-center py-5 text-muted rounded-3 border mb-4" style="background:#f8fafc;">
+  <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-50"></i>
+  You have not been assigned to any classes or subjects yet.
+</div>
+{% endif %}
+
+<!-- ── CLASS ANALYTICS (class teachers only) ── -->
+{% for analytics in class_analytics %}
+{% with cls=analytics.class_obj %}
+<div class="td-section-label"><i class="bi bi-bar-chart-line-fill text-primary"></i> Analytics — {{ cls.full_name }}</div>
+
+<div class="row g-3 mb-4">
+
+  <!-- Subject-wise Average -->
+  <div class="col-lg-6">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-graph-up text-primary"></i>
+        <span class="card-title mb-0">Subject-wise Average</span>
+      </div>
+      <div class="card-body p-3">
+        {% if analytics.subject_averages %}
+          {% for sa in analytics.subject_averages %}
+          <div class="mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span style="font-size:.82rem;font-weight:600;color:#0f172a;">{{ sa.subject.name }}</span>
+              <span style="font-size:.78rem;color:#64748b;">{{ sa.avg }} / {{ sa.full }} &nbsp;<strong style="color:{% if sa.pct >= 60 %}#10b981{% elif sa.pct >= 40 %}#f59e0b{% else %}#ef4444{% endif %};">{{ sa.pct }}%</strong></span>
+            </div>
+            <div style="height:7px;background:#f1f5f9;border-radius:99px;overflow:hidden;">
+              <div style="height:100%;width:{{ sa.pct }}%;background:{% if sa.pct >= 60 %}linear-gradient(90deg,#10b981,#34d399){% elif sa.pct >= 40 %}linear-gradient(90deg,#f59e0b,#fbbf24){% else %}linear-gradient(90deg,#ef4444,#f87171){% endif %};border-radius:99px;transition:width .6s;"></div>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-muted py-4 small"><i class="bi bi-bar-chart d-block fs-3 mb-2 opacity-50"></i>No marks entered yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 3 Performers -->
+  <div class="col-lg-6">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-trophy-fill text-warning"></i>
+        <span class="card-title mb-0">Top Performers</span>
+      </div>
+      <div class="card-body p-0">
+        {% if analytics.top_students %}
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;">
+            <tr>
+              <th class="ps-3" style="width:50px;">Rank</th>
+              <th>Student</th>
+              <th class="text-center">Grade</th>
+              <th class="text-end pe-3">GPA</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ts in analytics.top_students %}
+            <tr>
+              <td class="ps-3">
+                <div class="td-rank-badge {% if ts.rank == 1 %}td-rank-1{% elif ts.rank == 2 %}td-rank-2{% elif ts.rank == 3 %}td-rank-3{% else %}td-rank-n{% endif %}">{{ ts.rank }}</div>
+              </td>
+              <td class="fw-semibold">{{ ts.student.name }}</td>
+              <td class="text-center"><span class="badge rounded-pill" style="background:#eef2ff;color:#6366f1;">{{ ts.grade }}</span></td>
+              <td class="text-end pe-3"><strong style="color:#10b981;">{{ ts.gpa }}</strong></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <div class="text-center text-muted py-4 small"><i class="bi bi-trophy d-block fs-3 mb-2 opacity-50 text-warning"></i>No results processed yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- At-Risk Students -->
+  <div class="col-lg-6">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+          <span class="card-title mb-0">At-Risk Students</span>
+        </div>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2" style="font-size:.7rem;">GPA &lt; 2.0 or Failed</span>
+      </div>
+      <div class="card-body p-0">
+        {% if analytics.at_risk %}
+        <table class="table table-hover align-middle mb-0 small">
+          <thead class="table-light" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;">
+            <tr>
+              <th class="ps-3">Student</th>
+              <th class="text-center">GPA</th>
+              <th class="text-center">Grade</th>
+              <th class="pe-3">Failed Subjects</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ar in analytics.at_risk %}
+            <tr>
+              <td class="ps-3 fw-semibold" style="color:#dc2626;">{{ ar.student.name }}</td>
+              <td class="text-center">
+                <span style="font-weight:700;color:#ef4444;">{{ ar.gpa|default:"—" }}</span>
+              </td>
+              <td class="text-center">
+                <span class="badge rounded-pill" style="background:#fef2f2;color:#ef4444;border:1px solid #fecaca;">{{ ar.grade|default:"—" }}</span>
+              </td>
+              <td class="pe-3" style="font-size:.75rem;color:#94a3b8;">
+                {% if ar.failed_subjects %}{{ ar.failed_subjects|join:", " }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <div class="text-center py-4 small" style="color:#10b981;"><i class="bi bi-check-circle-fill d-block fs-3 mb-2"></i>No at-risk students. Great job! 🎉</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Summary -->
+  <div class="col-lg-6">
+    <div class="td-chart-card">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-calendar-check-fill text-info"></i>
+          <span class="card-title mb-0">Attendance Summary</span>
+        </div>
+        {% if analytics.avg_attendance %}
+        <span class="badge rounded-pill" style="background:#f0f9ff;color:#0ea5e9;border:1px solid #bae6fd;font-size:.75rem;">Avg {{ analytics.avg_attendance }}%</span>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if analytics.attendance_tracked %}
+          {% if analytics.low_attendance %}
+          <div class="px-3 pt-2 pb-1" style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Below 75% Attendance</div>
+          <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;">
+              <tr>
+                <th class="ps-3">Student</th>
+                <th class="text-center">Present</th>
+                <th class="text-center">Total</th>
+                <th class="text-end pe-3">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in analytics.low_attendance %}
+              <tr>
+                <td class="ps-3 fw-semibold">{% if a.student %}{{ a.student.name }}{% else %}—{% endif %}</td>
+                <td class="text-center">{{ a.present }}</td>
+                <td class="text-center">{{ a.total }}</td>
+                <td class="text-end pe-3">
+                  <span style="font-weight:700;color:{% if a.pct < 50 %}#ef4444{% else %}#f59e0b{% endif %};">{{ a.pct }}%</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="text-center py-4 small" style="color:#10b981;"><i class="bi bi-check-circle-fill d-block fs-3 mb-2"></i>All students have ≥ 75% attendance. 👏</div>
+          {% endif %}
+        {% else %}
+          <div class="text-center text-muted py-4 small"><i class="bi bi-calendar-x d-block fs-3 mb-2 opacity-50"></i>No attendance data recorded yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- /row analytics -->
+{% endwith %}
+{% endfor %}
+
+<!-- ── OLD ANALYTICS (Grade Distribution + per-subject top performers) ── -->
+{% if grade_labels_json and grade_labels_json != '[]' or top_performers %}
+<div class="td-section-label"><i class="bi bi-bar-chart-line-fill text-primary"></i> Grade Analytics</div>
 <div class="row g-3 mb-4">
   <!-- Grade Distribution -->
   <div class="col-lg-5">
@@ -250,7 +473,7 @@
     </div>
   </div>
 
-  <!-- Top Performers -->
+  <!-- Per-subject top performers -->
   <div class="col-lg-7">
     <div class="td-chart-card">
       <div class="card-header d-flex align-items-center justify-content-between">
@@ -260,31 +483,25 @@
       <div class="card-body p-0">
         {% if top_performers %}
         {% regroup top_performers by class as classes_list %}
-        
         <nav class="px-3 pt-2">
           <div class="nav nav-tabs border-bottom-0 gap-2" id="nav-tab-performers" role="tablist">
             {% for cls_group in classes_list %}
-            <button class="nav-link {% if forloop.first %}active{% endif %} py-2 px-3 fw-medium" 
+            <button class="nav-link {% if forloop.first %}active{% endif %} py-2 px-3 fw-medium"
                     style="border-radius: 8px 8px 0 0; font-size: 0.85rem;"
-                    id="nav-perf-{{ cls_group.grouper.id }}-tab" 
-                    data-bs-toggle="tab" 
-                    data-bs-target="#nav-perf-{{ cls_group.grouper.id }}" 
-                    type="button" role="tab" 
-                    aria-controls="nav-perf-{{ cls_group.grouper.id }}" 
-                    aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                    id="nav-perf-{{ cls_group.grouper.id }}-tab"
+                    data-bs-toggle="tab"
+                    data-bs-target="#nav-perf-{{ cls_group.grouper.id }}"
+                    type="button" role="tab">
               {{ cls_group.grouper.name }}
             </button>
             {% endfor %}
           </div>
         </nav>
-        
         <div class="tab-content border-top" id="nav-tabContent-performers" style="max-height:264px;overflow-y:auto;">
           {% for cls_group in classes_list %}
-            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}" 
-               id="nav-perf-{{ cls_group.grouper.id }}" 
-               role="tabpanel" 
-               aria-labelledby="nav-perf-{{ cls_group.grouper.id }}-tab">
-               
+            <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+               id="nav-perf-{{ cls_group.grouper.id }}"
+               role="tabpanel">
             <div class="table-responsive border-0">
             <table class="table table-hover align-middle mb-0 small" style="min-width: 400px;">
               <thead class="table-light sticky-top" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;">
@@ -300,12 +517,10 @@
                   {% for leader in group.leaders %}
                   <tr>
                     <td class="ps-3">
-                      <div class="td-rank-badge {% if leader.rank == 1 %}td-rank-1{% elif leader.rank == 2 %}td-rank-2{% elif leader.rank == 3 %}td-rank-3{% else %}td-rank-n{% endif %}">
-                        {{ leader.rank }}
-                      </div>
+                      <div class="td-rank-badge {% if leader.rank == 1 %}td-rank-1{% elif leader.rank == 2 %}td-rank-2{% elif leader.rank == 3 %}td-rank-3{% else %}td-rank-n{% endif %}">{{ leader.rank }}</div>
                     </td>
-                    <td class="fw-semibold text-slate-800">{{ leader.student.name }}</td>
-                    <td class="text-muted"><span class="text-primary fw-semibold">{{ group.subject.name }}</span></td>
+                    <td class="fw-semibold">{{ leader.student.name }}</td>
+                    <td><span class="text-primary fw-semibold">{{ group.subject.name }}</span></td>
                     <td class="text-end pe-3">
                       <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2">{{ leader.score|floatformat:"0" }}</span>
                     </td>
@@ -315,11 +530,9 @@
               </tbody>
             </table>
             </div>
-            
           </div>
           {% endfor %}
         </div>
-        
         {% else %}
         <div class="text-center text-muted py-5">
           <i class="bi bi-trophy d-block fs-2 mb-2 text-warning opacity-50"></i>
@@ -330,54 +543,7 @@
     </div>
   </div>
 </div>
-
-<!-- ── MY CLASSES & SUBJECTS ── -->
-<div class="td-section-label"><i class="bi bi-journal-bookmark-fill text-primary"></i> My Classes & Subjects</div>
-<div class="row g-3">
-{% for info in classes_info %}
-  {% with cls=info.class_obj subjects=info.subjects latest_exam_id=info.latest_exam_id %}
-  <div class="col-md-6 col-lg-4">
-    <div class="td-class-card">
-      <div class="td-class-header">
-        <div>
-          <div class="td-class-name">{{ cls.full_name }}</div>
-          <div style="font-size:.72rem;color:#94a3b8;margin-top:.1rem;">{{ cls.session.name }}</div>
-        </div>
-        <span class="badge rounded-pill" style="background:#eef2ff;color:#6366f1;font-size:.72rem;">{{ subjects|length }} subj.</span>
-      </div>
-      <div class="px-3 py-2">
-        {% for sub in subjects %}
-        <div class="td-subj-row">
-          <div>
-            <div class="fw-medium text-slate-800" style="font-size:.9rem;">{{ sub.name }}</div>
-            <div class="td-subj-code">{{ sub.code }}</div>
-          </div>
-          {% if latest_exam_id %}
-          <a href="{% url 'mark_entry' latest_exam_id cls.id %}#subject-col-{{ sub.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.78rem;background:#eef2ff;color:#4f46e5;border:none;white-space:nowrap;">
-            <i class="bi bi-pencil-square me-1" style="font-size:.7rem;"></i>Marks
-          </a>
-          {% else %}
-          <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.78rem;background:#eef2ff;color:#4f46e5;border:none;white-space:nowrap;">
-            <i class="bi bi-pencil-square me-1" style="font-size:.7rem;"></i>Marks
-          </a>
-          {% endif %}
-        </div>
-        {% empty %}
-        <div class="text-muted small py-3 text-center">No subjects assigned.</div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-  {% endwith %}
-  {% empty %}
-  <div class="col-12">
-    <div class="text-center py-5 text-muted rounded-3 border" style="background:#f8fafc;">
-      <i class="bi bi-journal-x d-block fs-1 mb-2 opacity-50"></i>
-      You have not been assigned to any subjects yet.
-    </div>
-  </div>
-  {% endfor %}
-</div>
+{% endif %}
 
 {% endif %}
 {% endblock %}
