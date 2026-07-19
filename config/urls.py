@@ -1,5 +1,5 @@
 """
-URL configuration for E-Naitja project
+URL configuration for E-Natija project
 """
 from django.contrib import admin
 from django.urls import path, include

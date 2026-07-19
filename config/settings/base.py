@@ -1,5 +1,5 @@
 """
-Django Base Settings for E-Naitja
+Django Base Settings for E-Natija
 """
 import os
 from pathlib import Path
