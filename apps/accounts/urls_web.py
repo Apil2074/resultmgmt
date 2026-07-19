@@ -1,8 +1,9 @@
 from django.urls import path
-from .views_web import LoginView, logout_view, ChangePasswordView, profile_view, ForgotPasswordView, ResetPasswordConfirmView, LandingPageView, send_notification, send_teacher_notification, mark_notification_read, delete_notification, RegisterDemoView
+from .views_web import LoginView, logout_view, ChangePasswordView, profile_view, ForgotPasswordView, ResetPasswordConfirmView, LandingPageView, send_notification, send_teacher_notification, mark_notification_read, delete_notification, RegisterDemoView, DemoActivationView
 
 urlpatterns = [
     path('register/', RegisterDemoView.as_view(), name='register_demo'),
+    path('activate-demo/<str:uidb64>/<str:token>/', DemoActivationView.as_view(), name='activate_demo'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', logout_view, name='logout'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),

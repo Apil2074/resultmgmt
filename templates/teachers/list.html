@@ -3,6 +3,40 @@
 {% block page_title %}👨‍🏫 Teachers{% endblock %}
 
 {% block content %}
+<style>
+.btn-stylish-actions {
+    background-color: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 4px !important;
+    transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.btn-stylish-actions:hover {
+    background-color: #4f46e5;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4), 0 2px 4px -1px rgba(99, 102, 241, 0.2);
+    transform: translateY(-1px);
+}
+.btn-stylish-actions::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease-out, height 0.4s ease-out;
+}
+.btn-stylish-actions:active::after {
+    width: 200px;
+    height: 200px;
+    transition: 0s;
+}
+</style>
 {% if not active_session %}
 <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
@@ -114,22 +148,39 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <a href="{% url 'teacher_detail' teacher.pk %}" class="btn btn-sm btn-outline-info" title="View Profile"><i class="bi bi-person-lines-fill"></i></a>
-                            {% if user.is_school_admin or user.is_super_admin %}
-                            <a href="{% url 'teacher_edit' teacher.pk %}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
-                            
-                            {% if teacher.email %}
-                            <form method="POST" action="{% url 'teacher_send_password_reset' teacher.pk %}" class="d-inline" id="send-reset-form-{{ teacher.pk }}">
-                                {% csrf_token %}
-                                <button type="button" class="btn btn-sm btn-outline-secondary" title="Send Password Reset Email" onclick="confirmAction('Send password reset email to {{ teacher.email|escapejs }}?', () => document.getElementById('send-reset-form-{{ teacher.pk }}').submit())"><i class="bi bi-envelope-arrow-up"></i></button>
-                            </form>
-                            {% endif %}
+<div class="dropdown d-inline-block">
+    <button class="btn btn-sm dropdown-toggle shadow-sm btn-stylish-actions" type="button" id="teacherActions{{ teacher.pk }}" data-bs-toggle="dropdown" aria-expanded="false">
+        Actions
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="teacherActions{{ teacher.pk }}" style="min-width: 200px; font-size: 0.95rem;">
+        <li><a class="dropdown-item py-2" href="{% url 'teacher_detail' teacher.pk %}"><i class="bi bi-eye me-2 text-secondary"></i> View Detail</a></li>
+        {% if user.is_school_admin or user.is_super_admin %}
+        <li><hr class="dropdown-divider m-0"></li>
+        <li><a class="dropdown-item py-2" href="{% url 'teacher_edit' teacher.pk %}"><i class="bi bi-pencil-square me-2 text-secondary"></i> Edit</a></li>
+        <li><hr class="dropdown-divider m-0"></li>
+        <li>
+            <form method="POST" action="{% url 'teacher_delete' teacher.pk %}" id="delete-form-{{ teacher.pk }}">
+                {% csrf_token %}
+                <button type="button" class="dropdown-item py-2" onclick="confirmAction('Permanently delete {{ teacher.name|escapejs }}?', () => document.getElementById('delete-form-{{ teacher.pk }}').submit())">
+                    <i class="bi bi-trash me-2 text-secondary"></i> Delete
+                </button>
+            </form>
+        </li>
 
-                            <form method="POST" action="{% url 'teacher_delete' teacher.pk %}" class="d-inline" id="delete-form-{{ teacher.pk }}">
-                                {% csrf_token %}
-                                <button type="button" class="btn btn-sm btn-outline-danger" title="Delete" onclick="confirmAction('Permanently delete {{ teacher.name|escapejs }}?', () => document.getElementById('delete-form-{{ teacher.pk }}').submit())"><i class="bi bi-trash"></i></button>
-                            </form>
-                            {% endif %}
+        {% if teacher.email %}
+        <li><hr class="dropdown-divider m-0"></li>
+        <li>
+            <form method="POST" action="{% url 'teacher_send_password_reset' teacher.pk %}" id="send-reset-form-{{ teacher.pk }}">
+                {% csrf_token %}
+                <button type="button" class="dropdown-item py-2" onclick="confirmAction('Send password reset email to {{ teacher.email|escapejs }}?', () => document.getElementById('send-reset-form-{{ teacher.pk }}').submit())">
+                    <i class="bi bi-envelope-arrow-up me-2 text-secondary"></i> Send Password Reset
+                </button>
+            </form>
+        </li>
+        {% endif %}
+        {% endif %}
+    </ul>
+</div>
                         </td>
                     </tr>
                     {% empty %}

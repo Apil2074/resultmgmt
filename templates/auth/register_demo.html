@@ -637,11 +637,16 @@
     </div>
 
     <button type="submit" class="btn-primary" id="registerBtn">
-      Start Free Demo
+      Apply for Demo
     </button>
     
     <div style="text-align: center; margin-top: 1rem;">
         <a href="{% url 'login' %}" class="form-link">Already have an account? Sign In</a>
+    </div>
+    <div style="text-align: center; margin-top: 0.6rem;">
+        <a href="{% url 'landing' %}" class="form-link" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+            <i class="bi bi-house-door-fill"></i> Back to Home
+        </a>
     </div>
   </form>
 

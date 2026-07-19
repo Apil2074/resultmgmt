@@ -28,6 +28,10 @@ def class_list(request):
         action = request.POST.get('action')
 
         if action == 'create':
+            if school.is_demo and Class.objects.filter(school=school).count() >= 1:
+                messages.error(request, 'Demo accounts are limited to creating 1 class.')
+                return redirect('class_list')
+                
             name = request.POST.get('name', '').strip()
             section = request.POST.get('section', '').strip()
             numeric_level = request.POST.get('numeric_level', '0').strip()

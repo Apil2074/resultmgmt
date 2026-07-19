@@ -21,6 +21,7 @@ class School(models.Model):
     is_active = models.BooleanField(default=True)
     subscription_start_date = models.DateField(null=True, blank=True)
     subscription_end_date = models.DateField(null=True, blank=True)
+    is_demo = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

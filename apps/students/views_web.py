@@ -75,6 +75,10 @@ def student_create(request):
         classes = classes.filter(session=active_session)
 
     if request.method == 'POST':
+        if school.is_demo and Student.objects.filter(school=school).count() >= 10:
+            messages.error(request, 'Demo accounts are limited to adding 10 students.')
+            return redirect('student_list')
+            
         Student.objects.create(
             school=school,
             class_obj_id=request.POST.get('class_id'),
@@ -304,8 +308,10 @@ def student_import(request):
                                     found_cls = c
                                     break
                         if not found_cls:
-                            # Auto-create missing class
+                            # Auto-create missing class — but respect demo limits
                             if active_session:
+                                if school.is_demo and Class.objects.filter(school=school).count() >= 1:
+                                    raise ValueError(f"Demo accounts are limited to 1 class. '{class_name}' was not auto-created.")
                                 found_cls = Class.objects.create(
                                     school=school,
                                     session=active_session,
@@ -393,7 +399,9 @@ def student_import(request):
                         if address: student.address = address
                         student.save()
                     else:
-                        # Create new student
+                        # Create new student — but respect demo limits
+                        if school.is_demo and Student.objects.filter(school=school).count() >= 10:
+                            raise ValueError("Demo accounts are limited to 10 students. Import stopped.")
                         Student.objects.create(
                             school=school,
                             name=name,

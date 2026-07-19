@@ -165,60 +165,74 @@ class ForgotPasswordView(View):
             messages.error(request, "Please enter your email address.")
             return render(request, self.template_name)
 
-        # SECURITY: Always return the same success message regardless of whether the
-        # email is found. This prevents email enumeration attacks.
-        SAFE_SUCCESS_MSG = "If this email is registered, a password reset link has been sent to it."
+        # Check if the email belongs to an active Admin (School or Super)
+        user_to_reset = User.objects.filter(
+            email__iexact=email,
+            role__in=[User.Role.SCHOOL_ADMIN, User.Role.SUPER_ADMIN],
+            is_active=True
+        ).first()
 
-        user_to_reset = None
-        email_to_send_to = email
+        if not user_to_reset:
+            messages.error(request, "This email address is not registered as an Admin in our system.")
+            return render(request, self.template_name)
 
-        # 1. Try to find a School with this email
-        school = School.objects.filter(email__iexact=email, is_active=True).first()
-        if school:
-            user_to_reset = school.users.filter(role=User.Role.SCHOOL_ADMIN, is_active=True).first()
-        else:
-            # 2. Check if it's the Super Admin's personal email
-            user_to_reset = User.objects.filter(
-                email__iexact=email, role=User.Role.SUPER_ADMIN, is_active=True
-            ).first()
+        # Generate token and base64 encoded user ID
+        token = default_token_generator.make_token(user_to_reset)
+        uid = urlsafe_base64_encode(force_bytes(user_to_reset.pk))
+        
+        # Build absolute reset confirmation link
+        scheme = 'https' if request.is_secure() else 'http'
+        domain = request.get_host()
+        reset_link = f"{scheme}://{domain}/auth/reset-password/confirm/{uid}/{token}/"
 
-        if user_to_reset:
-            # Generate token and base64 encoded user ID
-            token = default_token_generator.make_token(user_to_reset)
-            uid = urlsafe_base64_encode(force_bytes(user_to_reset.pk))
-            
-            # Build absolute reset confirmation link
-            scheme = 'https' if request.is_secure() else 'http'
-            domain = request.get_host()
-            reset_link = f"{scheme}://{domain}/auth/reset-password/confirm/{uid}/{token}/"
+        subject = "Reset Your Password — E-Natija"
+        
+        html_message = f"""
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+            <div style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); padding: 30px 20px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: 1px;">E-Natija</h1>
+                <p style="color: #e0e7ff; margin: 8px 0 0 0; font-size: 15px; font-weight: 500;">Result Management Software</p>
+            </div>
+            <div style="padding: 35px 30px; background-color: #ffffff;">
+                <h3 style="color: #1f2937; margin-top: 0; font-size: 20px;">Hello {user_to_reset.get_full_name() or user_to_reset.username},</h3>
+                <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">
+                    We received a request to reset the password for your admin account on <strong>E-Natija</strong>.
+                </p>
+                <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">
+                    Please click the secure button below to choose a new password:
+                </p>
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="{reset_link}" style="background-color: #4f46e5; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Reset My Password</a>
+                </div>
+                <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin-bottom: 0;">
+                    <em>This link is valid for a limited time and can only be used once.</em><br><br>
+                    If you did not request a password reset, you can safely ignore this email; your password will remain unchanged.
+                </p>
+            </div>
+            <div style="background-color: #f8fafc; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px; border-top: 1px solid #f1f5f9;">
+                &copy; E-Natija. All rights reserved.
+            </div>
+        </div>
+        """
+        
+        from django.utils.html import strip_tags
+        plain_message = strip_tags(html_message.replace('<br>', '\n').replace('</div>', '\n').replace('</p>', '\n\n'))
 
-            subject = "Reset Your Password — Multi-School RMS"
-            body = (
-                f"Hello {user_to_reset.get_full_name() or user_to_reset.username},\n\n"
-                f"A password reset request was received for your admin account "
-                f"on Multi-School Result Management System.\n\n"
-                f"Please click the secure link below to reset your password:\n"
-                f"  {reset_link}\n\n"
-                f"This link is valid for a limited time and can only be used once.\n"
-                f"If you did not request this, please ignore this email; your password will remain unchanged.\n\n"
-                f"— Multi-School RMS"
+        try:
+            send_mail(
+                subject=subject,
+                message=plain_message,
+                from_email=django_settings.EMAIL_HOST_USER or "noreply@rms.local",
+                recipient_list=[user_to_reset.email],
+                fail_silently=False,
+                html_message=html_message
             )
-            try:
-                send_mail(
-                    subject,
-                    body,
-                    django_settings.EMAIL_HOST_USER or "noreply@rms.local",
-                    [email_to_send_to],
-                    fail_silently=False,
-                )
-            except Exception as exc:
-                # Log internally but do NOT expose SMTP errors to the user
-                logger.exception("ForgotPassword: Email send failed for user pk=%s: %s",
-                                 user_to_reset.pk, exc)
+        except Exception as exc:
+            # Log internally but do NOT expose SMTP errors to the user
+            logger.exception("ForgotPassword: Email send failed for user pk=%s: %s",
+                             user_to_reset.pk, exc)
 
-        # SECURITY: Always show the same message — no information about whether
-        # the email was found or not
-        messages.success(request, SAFE_SUCCESS_MSG)
+        messages.success(request, "A password reset link has been sent to your email address.")
         return render(request, self.template_name)
 
 
@@ -329,7 +343,8 @@ class RegisterDemoView(View):
                     address='Demo Address',
                     principal_name=admin_name,
                     subscription_start_date=today,
-                    subscription_end_date=today + timedelta(days=1)
+                    subscription_end_date=today + timedelta(days=1),
+                    is_demo=True
                 )
 
                 # Create Admin User
@@ -353,24 +368,44 @@ class RegisterDemoView(View):
                     role=User.Role.SCHOOL_ADMIN,
                     school=school,
                     phone=phone,
-                    is_active=True
+                    is_active=False
                 )
                 
-                # Auto login
-                user = authenticate(request, username=username, password=password)
-                if user:
-                    login(request, user)
-                    AuditLog.objects.create(
-                        school=user.school,
-                        user=user,
-                        action=AuditLog.Action.LOGIN,
-                        model_name='User',
-                        object_id=str(user.pk),
-                        object_repr=str(user),
-                        ip_address=get_trusted_client_ip(request),
+                from django.contrib.auth.tokens import default_token_generator
+                from django.utils.http import urlsafe_base64_encode
+                from django.utils.encoding import force_bytes
+                from django.core.mail import send_mail
+                from django.conf import settings as django_settings
+
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                scheme = 'https' if request.is_secure() else 'http'
+                domain = request.get_host()
+                activation_link = f"{scheme}://{domain}/auth/activate-demo/{uid}/{token}/"
+                
+                # Send activation email
+                send_mail(
+                    subject="Activate Your E-Natija Demo Account",
+                    message=f"Hello {user.first_name},\n\nThank you for applying for a demo.\nPlease click the link below to activate your account:\n{activation_link}\n\n— E-Natija Team",
+                    from_email=getattr(django_settings, 'EMAIL_HOST_USER', 'noreply@rms.local'),
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
+                
+                # Notify superadmins
+                superadmins = User.objects.filter(role=User.Role.SUPER_ADMIN, is_active=True).values_list('email', flat=True)
+                if superadmins:
+                    send_mail(
+                        subject="New Demo Tenant Registered",
+                        message=f"A new demo account was registered:\nSchool: {school.name}\nAdmin: {user.get_full_name()}\nEmail: {user.email}\nPhone: {user.phone}",
+                        from_email=getattr(django_settings, 'EMAIL_HOST_USER', 'noreply@rms.local'),
+                        recipient_list=list(superadmins),
+                        fail_silently=True,
                     )
-                    messages.success(request, f'Welcome! Your 1-day demo for {school.name} is active.')
-                    return redirect('dashboard')
+
+                messages.success(request, 'Your demo account has been created. Please check your email for the activation link.')
+                return redirect('login')
                     
         except Exception as e:
             logger.exception("Error during demo registration: %s", e)
@@ -508,3 +543,25 @@ def delete_notification(request, pk):
         
     # Redirect back to the referrer or dashboard
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+
+
+class DemoActivationView(View):
+    def get(self, request, uidb64, token):
+        from django.utils.http import urlsafe_base64_decode
+        from django.utils.encoding import force_str
+        from django.contrib.auth.tokens import default_token_generator
+        
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.filter(pk=uid).first()
+        except (TypeError, ValueError, OverflowError):
+            user = None
+
+        if user is not None and default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            messages.success(request, "Your demo account is now activated! You can log in.")
+            return redirect('login')
+        else:
+            messages.error(request, "The activation link is invalid or has expired.")
+            return redirect('login')
