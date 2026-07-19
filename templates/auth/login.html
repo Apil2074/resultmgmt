@@ -519,6 +519,11 @@
 </head>
 <body>
 
+<!-- Floating Home Button -->
+<a href="{% url 'landing' %}" style="position: absolute; top: 24px; left: 24px; z-index: 100; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--card-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-main); text-decoration: none; font-weight: 600; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(15, 23, 42, 0.08)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(15, 23, 42, 0.05)';">
+  <i class="bi bi-house-door-fill" style="color: var(--accent-color);"></i> Home
+</a>
+
 <div class="background-grid"></div>
 
 <!-- Floating School-Themed Graphic Assets -->

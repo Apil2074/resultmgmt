@@ -458,24 +458,26 @@
       <div class="an-card-title"><i class="bi bi-graph-up-arrow text-success"></i> Top Improvers</div>
       <p class="text-muted mb-3" style="font-size:.78rem;">Students with the biggest GPA gains from the previous exam</p>
       {% if top_improvers %}
-      <table class="table table-sm table-hover align-middle mb-0 an-table">
-        <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for s in top_improvers %}
-          <tr>
-            <td class="fw-semibold">{{ s.name }}</td>
-            <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
-            <td class="text-muted">{{ s.prev_gpa }}</td>
-            <td><span class="grade-chip bg-success bg-opacity-10 text-success">{{ s.curr_gpa }}</span></td>
-            <td><span class="fw-bold text-success">+{{ s.delta }}</span></td>
-            <td>
-              {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
-              {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 an-table text-nowrap">
+          <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for s in top_improvers %}
+            <tr>
+              <td class="fw-semibold">{{ s.name }}</td>
+              <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
+              <td class="text-muted">{{ s.prev_gpa }}</td>
+              <td><span class="grade-chip bg-success bg-opacity-10 text-success">{{ s.curr_gpa }}</span></td>
+              <td><span class="fw-bold text-success">+{{ s.delta }}</span></td>
+              <td>
+                {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
+                {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
       <div class="text-center text-muted py-4"><i class="bi bi-info-circle fs-2 d-block mb-2"></i>No comparable data yet</div>
       {% endif %}
@@ -488,24 +490,26 @@
       <div class="an-card-title"><i class="bi bi-graph-down-arrow text-danger"></i> Biggest Decliners</div>
       <p class="text-muted mb-3" style="font-size:.78rem;">Students with the sharpest GPA drops — may need urgent support</p>
       {% if biggest_decliners %}
-      <table class="table table-sm table-hover align-middle mb-0 an-table">
-        <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for s in biggest_decliners %}
-          <tr>
-            <td class="fw-semibold">{{ s.name }}</td>
-            <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
-            <td class="text-muted">{{ s.prev_gpa }}</td>
-            <td><span class="grade-chip bg-danger bg-opacity-10 text-danger">{{ s.curr_gpa }}</span></td>
-            <td><span class="fw-bold text-danger">{{ s.delta }}</span></td>
-            <td>
-              {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
-              {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 an-table text-nowrap">
+          <thead><tr><th>Student</th><th>Class</th><th>Prev</th><th>Now</th><th>Δ</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for s in biggest_decliners %}
+            <tr>
+              <td class="fw-semibold">{{ s.name }}</td>
+              <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
+              <td class="text-muted">{{ s.prev_gpa }}</td>
+              <td><span class="grade-chip bg-danger bg-opacity-10 text-danger">{{ s.curr_gpa }}</span></td>
+              <td><span class="fw-bold text-danger">{{ s.delta }}</span></td>
+              <td>
+                {% if s.is_pass %}<span class="badge bg-success bg-opacity-15 text-success">Pass</span>
+                {% else %}<span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% else %}
       <div class="text-center text-muted py-4"><i class="bi bi-info-circle fs-2 d-block mb-2"></i>No comparable data yet</div>
       {% endif %}
@@ -526,7 +530,6 @@
         <th>Students</th>
         <th>Avg GPA</th>
         <th>GPA Range</th>
-        <th>Avg Marks</th>
         <th>Passed</th>
         <th>Pass Rate</th>
       </tr>
@@ -540,7 +543,6 @@
           <span class="grade-chip {% if cls.avg_gpa >= 3.6 %}bg-success text-white{% elif cls.avg_gpa >= 2.8 %}bg-primary text-white{% elif cls.avg_gpa >= 2.0 %}bg-warning text-dark{% else %}bg-danger text-white{% endif %}">{{ cls.avg_gpa }}</span>
         </td>
         <td class="text-muted" style="font-size:.82rem;">{{ cls.min_gpa }} – {{ cls.max_gpa }}</td>
-        <td>{{ cls.avg_marks }}</td>
         <td>{{ cls.passed }}</td>
         <td>
           <div class="pbar-wrap">
@@ -552,7 +554,7 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-database-x fs-2 d-block mb-2"></i>No class data available.</td></tr>
+      <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-database-x fs-2 d-block mb-2"></i>No class data available.</td></tr>
       {% endfor %}
     </tbody>
   </table>

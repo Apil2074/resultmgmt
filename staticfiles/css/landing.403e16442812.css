@@ -186,7 +186,7 @@ body::before {
     display: flex;
     align-items: center;
     position: relative;
-    background-image: url('../img/students_exam.png');
+    background-image: url("../img/students_exam.5b84bf775f9e.png");
     background-size: cover;
     background-position: center;
     background-attachment: fixed; /* Parallax effect! */

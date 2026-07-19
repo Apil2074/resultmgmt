@@ -304,6 +304,82 @@ body::before {
     padding: 6rem 0;
 }
 
+/* Analytics Background Theme for Features Section */
+.features-analytics-bg {
+    position: relative;
+    overflow: hidden;
+    /* Subtle gradient wash */
+    background: linear-gradient(
+        160deg,
+        rgba(37, 99, 235, 0.04) 0%,
+        transparent 40%,
+        rgba(79, 70, 229, 0.04) 100%
+    );
+}
+
+.analytics-bg-decoration {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    color: var(--primary);
+    overflow: hidden;
+}
+
+/* Individual SVG decorations */
+.analytics-deco {
+    position: absolute;
+}
+
+.analytics-bars {
+    width: 260px;
+    bottom: -20px;
+    left: -30px;
+    opacity: 0.55;
+    transform: rotate(-5deg);
+}
+
+.analytics-line-chart {
+    width: 340px;
+    top: 40px;
+    right: -40px;
+    opacity: 0.45;
+    transform: rotate(3deg);
+}
+
+.analytics-heatmap {
+    width: 200px;
+    top: -20px;
+    left: 42%;
+    opacity: 0.4;
+    transform: rotate(-8deg);
+}
+
+.analytics-donut {
+    width: 150px;
+    bottom: 30px;
+    right: 8%;
+    opacity: 0.4;
+}
+
+/* Analytics card: accent top-border on hover */
+.analytics-card {
+    border-top: 2px solid transparent;
+    transition: border-color 0.25s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.analytics-card:hover {
+    border-top-color: var(--primary);
+}
+
+/* Calculator column header labels */
+.calc-col-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+}
+
 .section-title {
     font-family: var(--font-display);
     font-size: 2.25rem;

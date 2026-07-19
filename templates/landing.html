@@ -78,14 +78,15 @@
         <div class="container d-flex justify-content-center align-items-center">
             <div class="hero-content-card">
                 <div class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mb-4 d-inline-block">
-                    <i class="bi bi-stars me-1"></i> Next-Gen Education Platform
+                    <i class="bi bi-graph-up-arrow me-1"></i> Analytics-Powered Education Platform
                 </div>
                 <h1 class="hero-title text-center">
-                    Elevate Your School's <br>
-                    <span class="text-gradient" id="typed-text">Result Management</span><span class="typed-cursor">|</span>
+                    Turn Every Mark Into
+                    <br>
+                    <span class="text-gradient" id="typed-text">Actionable Insights</span><span class="typed-cursor">|</span>
                 </h1>
                 <p class="hero-subtitle text-center mx-auto">
-                    A centralized, multi-tenant platform to effortlessly manage grades, automate report cards, and provide transparent academic insights for teachers, students, and parents.
+                    From raw marks to rich performance dashboards — E-Naitja automates grading, tracks student progress with real-time analytics, and delivers instant report cards your teachers, parents, and students will love.
                 </p>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
                     <a href="{% url 'login' %}" class="btn-modern btn-outline-glass">
@@ -163,68 +164,129 @@
     </section>
 
     <!-- Features -->
-    <section id="features" class="features-section">
-        <div class="container">
-            <h2 class="section-title">Powerful Features <br><span class="text-gradient">Built for Modern Schools</span></h2>
+    <section id="features" class="features-section features-analytics-bg">
+        <!-- Analytics Background Decoration -->
+        <div class="analytics-bg-decoration" aria-hidden="true">
+            <!-- Bar Chart SVG -->
+            <svg class="analytics-deco analytics-bars" viewBox="0 0 200 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="80" width="20" height="50" rx="3" fill="currentColor" opacity="0.3"/>
+                <rect x="40" y="50" width="20" height="80" rx="3" fill="currentColor" opacity="0.45"/>
+                <rect x="70" y="30" width="20" height="100" rx="3" fill="currentColor" opacity="0.35"/>
+                <rect x="100" y="60" width="20" height="70" rx="3" fill="currentColor" opacity="0.5"/>
+                <rect x="130" y="20" width="20" height="110" rx="3" fill="currentColor" opacity="0.4"/>
+                <rect x="160" y="45" width="20" height="85" rx="3" fill="currentColor" opacity="0.45"/>
+                <line x1="5" y1="135" x2="195" y2="135" stroke="currentColor" stroke-width="1.5" opacity="0.3"/>
+            </svg>
+            <!-- Line Chart SVG -->
+            <svg class="analytics-deco analytics-line-chart" viewBox="0 0 260 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="10,100 50,70 90,80 130,40 170,55 210,20 250,35" stroke="currentColor" stroke-width="2.5" fill="none" opacity="0.4" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="10,100 50,70 90,80 130,40 170,55 210,20 250,35" stroke="currentColor" stroke-width="6" fill="none" opacity="0.08" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="50" cy="70" r="4" fill="currentColor" opacity="0.5"/>
+                <circle cx="130" cy="40" r="4" fill="currentColor" opacity="0.5"/>
+                <circle cx="210" cy="20" r="4" fill="currentColor" opacity="0.5"/>
+            </svg>
+            <!-- Heatmap SVG -->
+            <svg class="analytics-deco analytics-heatmap" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0"  y="0"  width="22" height="22" rx="3" fill="currentColor" opacity="0.12"/>
+                <rect x="26" y="0"  width="22" height="22" rx="3" fill="currentColor" opacity="0.28"/>
+                <rect x="52" y="0"  width="22" height="22" rx="3" fill="currentColor" opacity="0.45"/>
+                <rect x="78" y="0"  width="22" height="22" rx="3" fill="currentColor" opacity="0.55"/>
+                <rect x="104" y="0" width="22" height="22" rx="3" fill="currentColor" opacity="0.35"/>
+                <rect x="130" y="0" width="22" height="22" rx="3" fill="currentColor" opacity="0.2"/>
+                <rect x="0"  y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.3"/>
+                <rect x="26" y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.5"/>
+                <rect x="52" y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.65"/>
+                <rect x="78" y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.4"/>
+                <rect x="104" y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.25"/>
+                <rect x="130" y="26" width="22" height="22" rx="3" fill="currentColor" opacity="0.5"/>
+                <rect x="0"  y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.45"/>
+                <rect x="26" y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.2"/>
+                <rect x="52" y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.35"/>
+                <rect x="78" y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.6"/>
+                <rect x="104" y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.45"/>
+                <rect x="130" y="52" width="22" height="22" rx="3" fill="currentColor" opacity="0.15"/>
+                <rect x="0"  y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.2"/>
+                <rect x="26" y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.38"/>
+                <rect x="52" y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.55"/>
+                <rect x="78" y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.3"/>
+                <rect x="104" y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.5"/>
+                <rect x="130" y="78" width="22" height="22" rx="3" fill="currentColor" opacity="0.4"/>
+            </svg>
+            <!-- Donut / Pie Chart SVG -->
+            <svg class="analytics-deco analytics-donut" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="60" cy="60" r="45" stroke="currentColor" stroke-width="16" stroke-dasharray="180 103" stroke-dashoffset="0" opacity="0.45"/>
+                <circle cx="60" cy="60" r="45" stroke="currentColor" stroke-width="16" stroke-dasharray="80 203" stroke-dashoffset="-183" opacity="0.25"/>
+                <circle cx="60" cy="60" r="45" stroke="currentColor" stroke-width="16" stroke-dasharray="43 240" stroke-dashoffset="-263" opacity="0.35"/>
+                <circle cx="60" cy="60" r="28" stroke="currentColor" stroke-width="1" opacity="0.15"/>
+            </svg>
+        </div>
+
+        <div class="container" style="position:relative;z-index:2;">
+            <div class="text-center mb-3">
+                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2">
+                    <i class="bi bi-bar-chart-line-fill me-1"></i> Data-Driven Insights
+                </span>
+            </div>
+            <h2 class="section-title">Powerful Analytics & Reports <br><span class="text-gradient">That Drive Better Decisions</span></h2>
             
             <div class="row g-4">
                 <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
+                    <div class="feature-card analytics-card">
                         <div class="feature-icon">
-                            <i class="bi bi-buildings"></i>
+                            <i class="bi bi-graph-up-arrow"></i>
                         </div>
-                        <h3 class="feature-title">Multi-Tenant Architecture</h3>
-                        <p class="feature-text">Manage multiple schools from a single super-admin dashboard. Each school gets its own isolated environment, admins, and custom settings.</p>
+                        <h3 class="feature-title">Performance Analytics Dashboard</h3>
+                        <p class="feature-text">Visualize class-wide performance trends with interactive bar charts and line graphs. Instantly spot top performers, struggling students, and subject-level patterns.</p>
                     </div>
                 </div>
                 
                 <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="bi bi-calculator"></i>
-                        </div>
-                        <h3 class="feature-title">Automated Grading</h3>
-                        <p class="feature-text">Input raw marks and let the system automatically calculate grades, GPAs, and aggregate scores based on your school's unique grading rules.</p>
-                    </div>
-                </div>
-                
-                <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
+                    <div class="feature-card analytics-card">
                         <div class="feature-icon">
                             <i class="bi bi-file-earmark-bar-graph"></i>
                         </div>
                         <h3 class="feature-title">Dynamic Reports & Ledgers</h3>
-                        <p class="feature-text">Generate comprehensive mark ledgers and individual student grade sheets instantly. Export to print-ready formats with a single click.</p>
+                        <p class="feature-text">Generate comprehensive mark ledgers and individual student grade sheets instantly. Export to print-ready formats with a single click, complete with visual grade breakdowns.</p>
                     </div>
                 </div>
                 
                 <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
+                    <div class="feature-card analytics-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-grid-3x3-gap-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Grade Distribution Heatmaps</h3>
+                        <p class="feature-text">Identify knowledge gaps across subjects with color-coded heatmaps. Understand exactly which topics need more attention at a class or student level.</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card analytics-card">
                         <div class="feature-icon">
                             <i class="bi bi-person-lines-fill"></i>
                         </div>
                         <h3 class="feature-title">Public Student Portal</h3>
-                        <p class="feature-text">Students and parents can securely check their academic results online using their Date of Birth and Roll Number without requiring accounts.</p>
+                        <p class="feature-text">Students and parents can securely check their academic results online using their Date of Birth and Roll Number — no account required.</p>
                     </div>
                 </div>
                 
                 <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
+                    <div class="feature-card analytics-card">
                         <div class="feature-icon">
-                            <i class="bi bi-shield-lock"></i>
+                            <i class="bi bi-calculator"></i>
                         </div>
-                        <h3 class="feature-title">Role-Based Access Control</h3>
-                        <p class="feature-text">Granular permissions for Super Admins, School Admins, and Teachers. Ensure staff only have access to the classes and subjects they manage.</p>
+                        <h3 class="feature-title">Automated Grading & GPA</h3>
+                        <p class="feature-text">Input raw marks and the system automatically computes grades, GPA, CGPA, and aggregate scores based on your school's unique grading boundaries.</p>
                     </div>
                 </div>
                 
                 <div class="col-md-6 col-lg-4">
-                    <div class="feature-card">
+                    <div class="feature-card analytics-card">
                         <div class="feature-icon">
                             <i class="bi bi-diagram-3"></i>
                         </div>
                         <h3 class="feature-title">Subject & Exam Management</h3>
-                        <p class="feature-text">Easily configure subjects (theory/practical splits), link them to specific classes, and schedule term-wise examinations effortlessly.</p>
+                        <p class="feature-text">Easily configure subjects (theory/practical splits), link them to specific classes, and schedule term-wise examinations — then track results with rich analytics.</p>
                     </div>
                 </div>
             </div>
@@ -277,76 +339,110 @@
                         <i class="bi bi-calculator me-1"></i> Interactive Widget
                     </span>
                     <h2 class="hero-title mb-4" style="font-size: 2.5rem; line-height: 1.2; text-align: left;">
-                        Test Our Grading Logic <br><span class="text-gradient">In Real-Time</span>
+                        Calculate Your GPA <br><span class="text-gradient">From Obtained Marks</span>
                     </h2>
                     <p class="text-muted mb-4 fs-5">
-                        Input course credits and expected grades to instantly see how our automated system computes cumulative grade points and averages.
+                        Enter your obtained marks and full marks for each subject. The simulator instantly converts them to grade points, computes your term GPA, and running CGPA.
                     </p>
                     <ul class="list-unstyled d-flex flex-column gap-3 mb-0">
-                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Supports GPA scaling models.</span></li>
-                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Weighted average computation.</span></li>
-                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Instant grade points matching.</span></li>
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Marks-to-GPA conversion (out of 4.0 scale).</span></li>
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Default credit hour: 3 per subject.</span></li>
+                        <li class="d-flex align-items-center gap-2"><i class="bi bi-patch-check text-primary fs-5"></i> <span>Live CGPA across all added subjects.</span></li>
                     </ul>
                 </div>
                 <div class="col-lg-6">
                     <div class="feature-card calculator-card">
-                        <h4 class="mb-4 text-center">Live GPA Simulator</h4>
+                        <h4 class="mb-1 text-center">Live GPA Simulator</h4>
+                        <p class="text-muted text-center mb-4" style="font-size:0.82rem;">Enter obtained marks &amp; full marks. Credit hours default to 3.</p>
+
+                        <!-- Column Headers -->
+                        <div class="row g-2 mb-2 calc-header">
+                            <div class="col-4"><span class="calc-col-label">Subject</span></div>
+                            <div class="col-2"><span class="calc-col-label">Got</span></div>
+                            <div class="col-2"><span class="calc-col-label">Full</span></div>
+                            <div class="col-2"><span class="calc-col-label">Cr.</span></div>
+                            <div class="col-2"><span class="calc-col-label">GP</span></div>
+                        </div>
+
                         <div id="calculator-rows">
-                            <div class="row g-2 mb-3 calc-row">
-                                <div class="col-6">
-                                    <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Mathematics" value="Mathematics">
+                            <div class="row g-2 mb-2 calc-row align-items-center">
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm bg-transparent text-current" placeholder="Mathematics" value="Mathematics">
                                 </div>
-                                <div class="col-3">
-                                    <select class="form-select bg-transparent text-current credit-select">
-                                        <option value="4" selected>4 Cr.</option>
-                                        <option value="3">3 Cr.</option>
-                                        <option value="2">2 Cr.</option>
-                                        <option value="1">1 Cr.</option>
-                                    </select>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current obtained-marks" placeholder="75" value="75" min="0">
                                 </div>
-                                <div class="col-3">
-                                    <select class="form-select bg-transparent text-current grade-select">
-                                        <option value="4.0" selected>A</option>
-                                        <option value="3.6">A-</option>
-                                        <option value="3.2">B+</option>
-                                        <option value="2.8">B</option>
-                                        <option value="2.4">C+</option>
-                                        <option value="2.0">C</option>
-                                        <option value="0.0">F</option>
-                                    </select>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current full-marks" placeholder="100" value="100" min="1">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current credit-input" value="3" min="1" max="6">
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="gp-display fw-bold text-primary" style="font-size:0.9rem;">—</span>
                                 </div>
                             </div>
-                            <div class="row g-2 mb-3 calc-row">
-                                <div class="col-6">
-                                    <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Science" value="Science">
+                            <div class="row g-2 mb-2 calc-row align-items-center">
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm bg-transparent text-current" placeholder="Science" value="Science">
                                 </div>
-                                <div class="col-3">
-                                    <select class="form-select bg-transparent text-current credit-select">
-                                        <option value="4">4 Cr.</option>
-                                        <option value="3" selected>3 Cr.</option>
-                                        <option value="2">2 Cr.</option>
-                                        <option value="1">1 Cr.</option>
-                                    </select>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current obtained-marks" placeholder="68" value="68" min="0">
                                 </div>
-                                <div class="col-3">
-                                    <select class="form-select bg-transparent text-current grade-select">
-                                        <option value="4.0">A</option>
-                                        <option value="3.6" selected>A-</option>
-                                        <option value="3.2">B+</option>
-                                        <option value="2.8">B</option>
-                                        <option value="2.4">C+</option>
-                                        <option value="2.0">C</option>
-                                        <option value="0.0">F</option>
-                                    </select>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current full-marks" placeholder="100" value="100" min="1">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current credit-input" value="3" min="1" max="6">
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="gp-display fw-bold text-primary" style="font-size:0.9rem;">—</span>
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2 calc-row align-items-center">
+                                <div class="col-4">
+                                    <input type="text" class="form-control form-control-sm bg-transparent text-current" placeholder="English" value="English">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current obtained-marks" placeholder="82" value="82" min="0">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current full-marks" placeholder="100" value="100" min="1">
+                                </div>
+                                <div class="col-2">
+                                    <input type="number" class="form-control form-control-sm bg-transparent text-current credit-input" value="3" min="1" max="6">
+                                </div>
+                                <div class="col-2 text-center">
+                                    <span class="gp-display fw-bold text-primary" style="font-size:0.9rem;">—</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between mb-4">
-                            <button id="add-row-btn" class="btn-modern btn-outline-glass btn-sm py-1 px-2"><i class="bi bi-plus-circle"></i> Add Course</button>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4 mt-1">
+                            <button id="add-row-btn" class="btn-modern btn-outline-glass btn-sm py-1 px-2">
+                                <i class="bi bi-plus-circle"></i> Add Subject
+                            </button>
+                            <button id="remove-row-btn" class="btn-modern btn-outline-glass btn-sm py-1 px-2" style="color: var(--text-muted);">
+                                <i class="bi bi-dash-circle"></i> Remove
+                            </button>
                         </div>
-                        <div class="calculator-result-box p-3 rounded text-center">
-                            <div class="fs-6 text-muted uppercase tracking-wider mb-1">Simulated Term GPA</div>
-                            <div id="simulated-gpa" class="fs-1 fw-bold text-primary">3.83</div>
+
+                        <div class="calculator-result-box p-3 rounded">
+                            <div class="row text-center">
+                                <div class="col-6 border-end" style="border-color: rgba(37,99,235,0.2) !important;">
+                                    <div class="fs-6 text-muted mb-1" style="font-size:0.75rem !important; text-transform:uppercase; letter-spacing:0.08em;">Term GPA</div>
+                                    <div id="simulated-gpa" class="fw-bold text-primary" style="font-size:2.2rem; line-height:1;">—</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">(out of 4.0)</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fs-6 text-muted mb-1" style="font-size:0.75rem !important; text-transform:uppercase; letter-spacing:0.08em;">CGPA</div>
+                                    <div id="simulated-cgpa" class="fw-bold" style="font-size:2.2rem; line-height:1; color: var(--accent);">—</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Cumulative</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <span id="grade-letter-display" class="badge rounded-pill px-3 py-2" style="background: rgba(37,99,235,0.12); color: var(--primary); font-size:0.85rem; font-weight:700; letter-spacing:0.04em;">—</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -448,7 +544,15 @@
 
             // Typing Effect Script
             const typedTextSpan = document.getElementById("typed-text");
-            const textArray = ["Result Management", "Academic Reporting", "Grade Distribution", "Parent Portals"];
+            const textArray = [
+                "Actionable Insights",
+                "Performance Dashboards",
+                "Grade Analytics",
+                "GPA & CGPA Reports",
+                "Data-Driven Decisions",
+                "Instant Report Cards",
+                "Student Progress Tracking"
+            ];
             const typingSpeed = 100;
             const erasingSpeed = 60;
             const newTextDelay = 2000; // Delay between current and next text
@@ -480,63 +584,116 @@
             // Start typing effect loop
             setTimeout(erase, newTextDelay);
 
-            // GPA Calculator Logic
+            // =============================================
+            // GPA / CGPA Calculator Logic (Marks-Based)
+            // =============================================
             const calculatorRowsContainer = document.getElementById('calculator-rows');
             const addRowBtn = document.getElementById('add-row-btn');
+            const removeRowBtn = document.getElementById('remove-row-btn');
             const simulatedGpaText = document.getElementById('simulated-gpa');
+            const simulatedCgpaText = document.getElementById('simulated-cgpa');
+            const gradeLetterDisplay = document.getElementById('grade-letter-display');
+
+            /**
+             * Converts percentage to GPA on a 4.0 scale.
+             * Using NEB / common 4.0 scale thresholds.
+             */
+            function percentageToGradePoint(pct) {
+                if (pct >= 90) return 4.0;   // A+
+                if (pct >= 80) return 3.6;   // A
+                if (pct >= 70) return 3.2;   // B+
+                if (pct >= 60) return 2.8;   // B
+                if (pct >= 50) return 2.4;   // C+
+                if (pct >= 40) return 2.0;   // C
+                if (pct >= 35) return 1.6;   // D
+                return 0.0;                  // F (NG)
+            }
+
+            function gradePointToLetter(gp) {
+                if (gp >= 4.0) return 'A+ — Distinction';
+                if (gp >= 3.6) return 'A — Excellent';
+                if (gp >= 3.2) return 'B+ — Very Good';
+                if (gp >= 2.8) return 'B — Good';
+                if (gp >= 2.4) return 'C+ — Satisfactory';
+                if (gp >= 2.0) return 'C — Acceptable';
+                if (gp >= 1.6) return 'D — Partial';
+                return 'F — Not Graded';
+            }
+
+            function updateRowGP(row) {
+                const obtained = parseFloat(row.querySelector('.obtained-marks').value) || 0;
+                const full = parseFloat(row.querySelector('.full-marks').value) || 100;
+                const pct = full > 0 ? (obtained / full) * 100 : 0;
+                const gp = percentageToGradePoint(pct);
+                const gpDisplay = row.querySelector('.gp-display');
+                if (gpDisplay) gpDisplay.textContent = gp.toFixed(1);
+                return gp;
+            }
 
             function calculateGPA() {
+                const rows = document.querySelectorAll('.calc-row');
                 let totalCredits = 0;
                 let totalPoints = 0;
 
-                const creditSelects = document.querySelectorAll('.credit-select');
-                const gradeSelects = document.querySelectorAll('.grade-select');
+                rows.forEach(row => {
+                    const obtained = parseFloat(row.querySelector('.obtained-marks').value) || 0;
+                    const full     = parseFloat(row.querySelector('.full-marks').value)    || 100;
+                    const credit   = parseFloat(row.querySelector('.credit-input').value)  || 3;
+                    const pct = full > 0 ? (obtained / full) * 100 : 0;
+                    const gp  = percentageToGradePoint(pct);
 
-                for (let i = 0; i < creditSelects.length; i++) {
-                    const credit = parseFloat(creditSelects[i].value);
-                    const gradePoint = parseFloat(gradeSelects[i].value);
-                    
+                    // Update inline GP display
+                    const gpDisplay = row.querySelector('.gp-display');
+                    if (gpDisplay) gpDisplay.textContent = gp.toFixed(1);
+
                     totalCredits += credit;
-                    totalPoints += (gradePoint * credit);
-                }
+                    totalPoints  += gp * credit;
+                });
 
-                const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : "0.00";
-                simulatedGpaText.textContent = gpa;
+                const gpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+
+                // GPA = term GPA (all entered subjects this session)
+                simulatedGpaText.textContent  = gpa.toFixed(2);
+                // CGPA displayed as same value (cumulative equals term for single semester input)
+                simulatedCgpaText.textContent = gpa.toFixed(2);
+                gradeLetterDisplay.textContent = gradePointToLetter(gpa);
             }
 
-            // Listen to changes in inputs
-            calculatorRowsContainer.addEventListener('change', calculateGPA);
+            // Listen to all input changes inside the rows container
+            calculatorRowsContainer.addEventListener('input', calculateGPA);
 
-            // Add new row logic
+            // Add new row
             addRowBtn.addEventListener('click', () => {
                 const newRow = document.createElement('div');
-                newRow.className = 'row g-2 mb-3 calc-row';
+                newRow.className = 'row g-2 mb-2 calc-row align-items-center';
                 newRow.innerHTML = `
-                    <div class="col-6">
-                        <input type="text" class="form-control bg-transparent text-current" placeholder="e.g. Course name">
+                    <div class="col-4">
+                        <input type="text" class="form-control form-control-sm bg-transparent text-current" placeholder="Subject name">
                     </div>
-                    <div class="col-3">
-                        <select class="form-select bg-transparent text-current credit-select">
-                            <option value="4">4 Cr.</option>
-                            <option value="3" selected>3 Cr.</option>
-                            <option value="2">2 Cr.</option>
-                            <option value="1">1 Cr.</option>
-                        </select>
+                    <div class="col-2">
+                        <input type="number" class="form-control form-control-sm bg-transparent text-current obtained-marks" placeholder="0" value="" min="0">
                     </div>
-                    <div class="col-3">
-                        <select class="form-select bg-transparent text-current grade-select">
-                            <option value="4.0" selected>A</option>
-                            <option value="3.6">A-</option>
-                            <option value="3.2">B+</option>
-                            <option value="2.8">B</option>
-                            <option value="2.4">C+</option>
-                            <option value="2.0">C</option>
-                            <option value="0.0">F</option>
-                        </select>
+                    <div class="col-2">
+                        <input type="number" class="form-control form-control-sm bg-transparent text-current full-marks" placeholder="100" value="100" min="1">
+                    </div>
+                    <div class="col-2">
+                        <input type="number" class="form-control form-control-sm bg-transparent text-current credit-input" value="3" min="1" max="6">
+                    </div>
+                    <div class="col-2 text-center">
+                        <span class="gp-display fw-bold text-primary" style="font-size:0.9rem;">—</span>
                     </div>
                 `;
                 calculatorRowsContainer.appendChild(newRow);
                 calculateGPA();
+            });
+
+            // Remove last row
+            removeRowBtn.addEventListener('click', () => {
+                const rows = calculatorRowsContainer.querySelectorAll('.calc-row');
+                if (rows.length > 1) {
+                    rows[rows.length - 1].remove();
+                    calculateGPA();
+                }
             });
 
             // Initial calculation

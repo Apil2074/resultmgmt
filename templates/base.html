@@ -279,7 +279,7 @@
               <div class="user-role">{{ user.get_role_display }}</div>
             </div>
           </div>
-          <ul class="dropdown-menu dropdown-menu-end" style="background: var(--color-bg-light); border-color: var(--color-border);">
+          <ul class="dropdown-menu dropdown-menu-end" style="background: var(--color-bg-light); border-color: var(--color-border); z-index: 9999;">
             <li><a class="dropdown-item" href="{% url 'profile' %}" style="color: var(--color-text);">
               <i class="bi bi-person-fill me-2"></i>Profile
             </a></li>
