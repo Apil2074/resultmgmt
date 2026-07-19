@@ -3,8 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Naitja</title>
     
+    <!-- Primary Meta Tags -->
+    <title>E-Naitja | Advanced School Result Management System</title>
+    <meta name="title" content="E-Naitja | Advanced School Result Management System">
+    <meta name="description" content="E-Naitja automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <meta name="keywords" content="school management, result management, GPA calculator, student portal, report cards, education analytics">
+    <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+    <meta property="og:title" content="E-Naitja | Advanced School Result Management System">
+    <meta property="og:description" content="E-Naitja automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'images/school_favicon.png' %}">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
+    <meta property="twitter:title" content="E-Naitja | Advanced School Result Management System">
+    <meta property="twitter:description" content="E-Naitja automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'images/school_favicon.png' %}">
+
     <script>
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'light';
