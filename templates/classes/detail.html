@@ -86,7 +86,7 @@
       <div class="card-body p-1">
         <h6 class="text-muted small text-uppercase">Academic Session</h6>
         <h5 class="fw-bold text-slate-800 mb-2">{{ class_obj.session.name }}</h5>
-        <span class="badge bg-dark text-slate-600 px-3 py-1.5 rounded-pill border">
+        <span class="badge bg-light text-slate-600 px-3 py-1.5 rounded-pill border">
           Created: {{ class_obj.created_at|date:"Y-m-d" }}
         </span>
       </div>
@@ -114,11 +114,11 @@
   <!-- Student Tab / List -->
   <div class="col-lg-7 mb-4">
     <div class="card shadow-sm">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
           <i class="bi bi-people-fill text-primary me-2"></i>Students ({{ students.count }})
         </h5>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
           <button type="button" id="btnBulkDelete" class="btn btn-sm btn-danger" style="display:none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
             <i class="bi bi-trash-fill me-1"></i>Delete Selected
           </button>
@@ -192,9 +192,7 @@
                     <i class="bi bi-trash-fill"></i>
                   </a>
                   {% endif %}
-                  <a href="{% url 'student_detail' s.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
-                    <i class="bi bi-eye-fill"></i>
-                  </a>
+           
                 </div>
 
                 <!-- Map Subjects Modal for student {{ s.id }} -->
@@ -206,7 +204,7 @@
                       <div class="modal-header" style="border-bottom: 1px solid var(--color-border);">
                         <h5 class="modal-title fw-bold" id="mapSubjectsModalLabel{{ s.id }}">Map Optional Subjects for
                           {{ s.name }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        <button type="button" class="btn-dark btn-close" data-bs-dismiss="modal" aria-label="Close"
                           style="filter: invert(1);"></button>
                       </div>
                       <form method="POST">
@@ -601,7 +599,7 @@
             </div>
           </div>
 
-          <button type="button" class="btn btn-sm btn-outline-primary w-100 py-2 border-dashed" id="addSubjectRowBtn">
+          <button type="button" class="btn btn-success  py-2 border-dashed" id="addSubjectRowBtn">
             <i class="bi bi-plus-lg me-1"></i>Add Another Subject Row
           </button>
         </div>
@@ -667,7 +665,7 @@
         <h5 class="modal-title fw-bold" id="studentEditModalLabel">
           <i class="bi bi-pencil-square text-primary me-2"></i>Edit Student Details
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="studentEditModalBody">
         <div class="text-center py-4">
@@ -965,7 +963,7 @@
         <h5 class="modal-title fw-bold text-danger" id="bulkDeleteModalLabel">
           <i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Selected Students
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <p>Are you sure you want to permanently delete the selected students?</p>

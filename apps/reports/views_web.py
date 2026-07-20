@@ -16,6 +16,7 @@ def reports_index(request):
     exams = Exam.objects.filter(school=school, status=Exam.Status.PUBLISHED)
     if active_session:
         exams = exams.filter(session=active_session)
+    exams = exams.order_by('created_at')
     return render(request, 'reports/index.html', {'exams': exams})
 
 

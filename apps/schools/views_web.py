@@ -53,7 +53,17 @@ def dashboard(request):
             students_qs = students_qs.filter(class_obj__session=active_session)
             subjects_qs = subjects_qs.filter(class_obj__session=active_session)
             exams_qs = exams_qs.filter(session=active_session)
-            results_qs = results_qs.filter(exam__session=active_session)
+            
+            recent_exam = exams_qs.filter(status=Exam.Status.PUBLISHED).order_by('-start_date', '-created_at').first()
+            if not recent_exam:
+                recent_exam = exams_qs.order_by('-start_date', '-created_at').first()
+                
+            if recent_exam:
+                results_qs = results_qs.filter(exam=recent_exam)
+                ctx['dashboard_exam_name'] = recent_exam.name
+            else:
+                results_qs = StudentResult.objects.none()
+                ctx['dashboard_exam_name'] = None
 
         from apps.teachers.models import Teacher
         teachers_qs = Teacher.objects.filter(school=school)

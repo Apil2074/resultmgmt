@@ -158,7 +158,7 @@
     <div class="stat-card p-4">
       <div class="d-flex justify-content-between align-items-start">
         <div>
-          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Start Date (BS)</div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Exam Year (BS)</div>
           <div class="fw-bolder text-dark fs-4">{{ exam.start_date|default:"-" }}</div>
         </div>
         <div class="icon-box bg-primary-subtle text-primary">
@@ -171,7 +171,7 @@
     <div class="stat-card p-4">
       <div class="d-flex justify-content-between align-items-start">
         <div>
-          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">End Date (AD)</div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Exam Year (AD)</div>
           <div class="fw-bolder text-dark fs-4">{{ exam.end_date|default:"-" }}</div>
         </div>
         <div class="icon-box bg-info-subtle text-info">
@@ -185,7 +185,7 @@
       <div class="d-flex justify-content-between align-items-start">
         <div>
           <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Result Date</div>
-          <div class="fw-bolder text-dark fs-4">{{ exam.result_date|date:"M d, Y"|default:"-" }}</div>
+          <div class="fw-bolder text-dark fs-4">{{ exam.result_date|date:"Y-m-d"|default:"-" }}</div>
         </div>
         <div class="icon-box bg-success-subtle text-success">
           <i class="bi bi-flag-fill"></i>

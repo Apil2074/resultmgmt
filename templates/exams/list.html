@@ -189,33 +189,28 @@ document.addEventListener('change', function(e) {
         <div class="modal-body px-4 py-3">
           
           <div class="row g-3 mb-3">
-            <div class="col-md-6">
+            <div class="col-md-12">
               <label class="form-label fw-semibold fs-6 mb-1 small">Exam Name</label>
-              <input type="text" name="name" class="form-control form-control-sm" required placeholder="e.g. First Terminal">
+              <input type="text" name="name" class="form-control form-control-sm" required placeholder="e.g. First Terminal Examination">
               <div class="form-text mt-1 text-muted" style="font-size: 0.75rem;">
-                Use concise names such as "First Term". <strong class="text-primary">"Examination" is added automatically.</strong>
+                 <strong class="text-primary">Example: First Terminal Examination</strong>
               </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold fs-6 mb-1 small">Academic Session</label>
-              <select name="session_id" class="form-select form-select-sm" required>
-                {% for session in sessions %}
-                <option value="{{ session.id }}" {% if session.is_active %}selected{% endif %}>
-                  {{ session.name }}{% if session.is_active %} (Active){% endif %}
-                </option>
-                {% endfor %}
-              </select>
-            </div>
+            {% for session in sessions %}
+              {% if session.is_active %}
+                <input type="hidden" name="session_id" value="{{ session.id }}">
+              {% endif %}
+            {% endfor %}
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <label class="form-label fw-semibold fs-6 mb-1 small">Year of Exam in BS</label>
-              <input type="text" placeholder="YYYY" name="start_date" class="form-control form-control-sm" required>
+              <label class="form-label fw-semibold fs-6 mb-1 small">Exam Year (BS)</label>
+              <input type="text" placeholder="YYYY" name="start_date" class="form-control form-control-sm" required minlength="4" maxlength="4" pattern="\d{4}" title="Please enter exactly 4 digits">
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-semibold fs-6 mb-1 small">Year of Exam in AD</label>
-              <input type="text" placeholder="YYYY" name="end_date" class="form-control form-control-sm" required>
+              <label class="form-label fw-semibold fs-6 mb-1 small">Exam Year (AD)</label>
+              <input type="text" placeholder="YYYY" name="end_date" class="form-control form-control-sm" required minlength="4" maxlength="4" pattern="\d{4}" title="Please enter exactly 4 digits">
             </div>
             <div class="col-md-4">
               <div class="d-flex justify-content-between align-items-center mb-1">

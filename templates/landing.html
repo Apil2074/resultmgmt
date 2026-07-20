@@ -6,24 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Primary Meta Tags -->
-    <title>E-Natija | Advanced School Result Management System</title>
-    <meta name="title" content="E-Natija | Advanced School Result Management System">
-    <meta name="description" content="E-Natija automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <title>{{ app_name }} | Advanced School Result Management System</title>
+    <meta name="title" content="{{ app_name }} | Advanced School Result Management System">
+    <meta name="description" content="{{ app_name }} automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
     <meta name="keywords" content="school management, result management, GPA calculator, student portal, report cards, education analytics">
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
-    <meta property="og:title" content="E-Natija | Advanced School Result Management System">
-    <meta property="og:description" content="E-Natija automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <meta property="og:title" content="{{ app_name }} | Advanced School Result Management System">
+    <meta property="og:description" content="{{ app_name }} automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'images/school_favicon.png' %}">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
-    <meta property="twitter:title" content="E-Natija | Advanced School Result Management System">
-    <meta property="twitter:description" content="E-Natija automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
+    <meta property="twitter:title" content="{{ app_name }} | Advanced School Result Management System">
+    <meta property="twitter:description" content="{{ app_name }} automates grading, tracks student progress with real-time analytics, and delivers instant report cards for schools.">
     <meta property="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'images/school_favicon.png' %}">
 
     <script>
@@ -63,15 +63,16 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-md navbar-glass">
         <div class="container-fluid d-flex justify-content-between align-items-center px-0">
-            <a href="#" class="text-decoration-none">
+            <a href="#" class="text-decoration-none d-flex align-items-center gap-2">
+                <img src="{% if app_logo_url %}{{ app_logo_url }}{% else %}{% static 'images/school_favicon.png' %}{% endif %}" alt="{{ app_name }} Logo" style="height: 32px; width: auto; object-fit: contain;">
                 <div class="brand-logo">
-                    <span class="d-none d-sm-inline">E-Natija</span>
-                    <span class="d-inline d-sm-none">E-Natija</span>
+                    <span class="d-none d-sm-inline">{{ app_name }}</span>
+                    <span class="d-inline d-sm-none">{{ app_name }}</span>
                 </div>
             </a>
             
             <div class="d-flex align-items-center gap-2 order-md-last">
-                <button id="theme-toggle" class="btn-theme-toggle" aria-label="Toggle theme">
+                <button id="theme-toggle" class="btn-theme-toggle mx-2" aria-label="Toggle theme">
                     <i class="bi bi-sun-fill sun-icon"></i>
                     <i class="bi bi-moon-fill moon-icon"></i>
                 </button>
@@ -107,7 +108,7 @@
                     <span class="text-gradient" id="typed-text">Actionable Insights</span><span class="typed-cursor">|</span>
                 </h1>
                 <p class="hero-subtitle text-center mx-auto">
-                    From raw marks to rich performance dashboards — E-Natija automates grading, tracks student progress with real-time analytics, and delivers instant report cards your teachers, parents, and students will love.
+                    From raw marks to rich performance dashboards — {{ app_name }} automates grading, tracks student progress with real-time analytics, and delivers instant report cards your teachers, parents, and students will love.
                 </p>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
                     <a href="{% url 'login' %}" class="btn-modern btn-outline-glass">
@@ -533,7 +534,7 @@
 
     <footer class="footer">
         <div class="container">
-            <p class="mb-0">&copy; {% now "Y" %} E-Natija. All rights reserved.</p>
+            <p class="mb-0">&copy; {% now "Y" %} {{ app_name }}. All rights reserved.</p>
         </div>
     </footer>
 

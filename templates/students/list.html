@@ -93,26 +93,26 @@
               <div class="d-flex align-items-center gap-3">
                 <img src="{{ student.photo_url }}" width="40" height="40" style="border-radius:50%; object-fit:cover; border:2px solid #e2e8f0;" onerror="this.style.display='none'">
                 <div>
-                  <a href="{% url 'student_detail' student.pk %}" class="fw-bold text-slate-800 text-decoration-none d-block" style="font-size:0.95rem;">{{ student.name }}</a>
+                  <a href="{% url 'student_detail' student.pk %}" class="student-name-display fw-bold text-slate-800 text-decoration-none d-block" style="font-size:0.95rem;">{{ student.name }}</a>
                   {% if student.dob_bs %}
-                  <span class="text-muted" style="font-size:0.75rem;">DOB: {{ student.dob_bs }}</span>
+                  <span class="text-muted" style="font-size:0.75rem;">DOB: <span class="student-dob-display">{{ student.dob_bs }}</span></span>
                   {% endif %}
                 </div>
               </div>
             </td>
             <td>
-              <span class="badge bg-indigo-subtle text-indigo px-3 py-1.5 rounded-3 fw-semibold border border-indigo-subtle">
+              <span class="student-class-display badge bg-indigo-subtle text-indigo px-3 py-1.5 rounded-3 fw-semibold border border-indigo-subtle">
                 {{ student.class_obj.full_name }}
               </span>
             </td>
             <td class="d-none d-md-table-cell">
-              <div class="text-slate-800 fw-medium" style="font-size:0.9rem;">{{ student.registration_number|default:'—' }}</div>
+              <div class="student-reg-display text-slate-800 fw-medium" style="font-size:0.9rem;">{{ student.registration_number|default:'—' }}</div>
               {% if student.symbol_number %}
-              <div class="text-muted" style="font-size:0.75rem;">Sym: {{ student.symbol_number }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">Sym: <span class="student-symbol-display">{{ student.symbol_number }}</span></div>
               {% endif %}
             </td>
             <td class="d-none d-md-table-cell">
-              <div class="text-slate-700" style="font-size:0.9rem;"><i class="bi bi-telephone text-muted me-1"></i> {{ student.contact_number|default:'—' }}</div>
+              <div class="text-slate-700" style="font-size:0.9rem;"><i class="bi bi-telephone text-muted me-1"></i> <span class="student-contact-display">{{ student.contact_number|default:'—' }}</span></div>
             </td>
             <td class="text-end" style="padding-right: 20px;">
               <div class="dropdown">
@@ -300,7 +300,7 @@
         saveBtn.innerHTML = '<i class="bi bi-save me-2"></i>Save Changes';
       }
     });
-  });
+
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.student-checkbox');
     const btnBulkDelete = document.getElementById('btnBulkDelete');

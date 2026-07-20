@@ -31,12 +31,12 @@
           </div>
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label class="form-label">Year of Exam in BS</label>
-              <input type="text" placeholder="YYYY" name="start_date" class="form-control" value="{{ exam.start_date|default:'' }}" required>
+              <label class="form-label">Exam Year (BS)</label>
+              <input type="text" placeholder="YYYY" name="start_date" class="form-control" value="{{ exam.start_date|default:'' }}" required minlength="4" maxlength="4" pattern="\d{4}" title="Please enter exactly 4 digits">
             </div>
             <div class="col-md-6">
-              <label class="form-label">Year of Exam in AD</label>
-              <input type="text" placeholder="YYYY" name="end_date" class="form-control" value="{{ exam.end_date|default:'' }}" required>
+              <label class="form-label">Exam Year (AD)</label>
+              <input type="text" placeholder="YYYY" name="end_date" class="form-control" value="{{ exam.end_date|default:'' }}" required minlength="4" maxlength="4" pattern="\d{4}" title="Please enter exactly 4 digits">
             </div>
           </div>
           <div class="mb-3">

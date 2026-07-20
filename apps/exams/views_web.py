@@ -14,7 +14,7 @@ def exam_list(request):
     exams = Exam.objects.filter(school=school)
     if active_session:
         exams = exams.filter(session=active_session)
-    exams = exams.select_related('session').order_by('-created_at')
+    exams = exams.select_related('session').order_by('created_at')
 
     if request.method == 'POST':
         action = request.POST.get('action')
