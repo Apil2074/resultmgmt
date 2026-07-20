@@ -73,11 +73,11 @@
       <table class="table tb-table">
         <thead>
           <tr>
-            <th style="width: 40px; padding-left: 20px;">
+            <th class="d-none d-md-table-cell" style="width: 40px; padding-left: 20px;">
               <input type="checkbox" id="selectAll" class="form-check-input shadow-sm" style="border-radius:4px;">
             </th>
             <th style="width: 250px;">STUDENT</th>
-            <th class="d-none d-md-table-cell">CLASS</th>
+            <th>CLASS</th>
             <th class="d-none d-md-table-cell">REG. NUMBER</th>
             <th class="d-none d-md-table-cell">CONTACT</th>
             <th class="text-end" style="padding-right: 20px;">ACTIONS</th>
@@ -86,7 +86,7 @@
         <tbody>
         {% for student in students %}
           <tr>
-            <td style="padding-left: 20px;">
+            <td class="d-none d-md-table-cell" style="padding-left: 20px;">
               <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox form-check-input shadow-sm" style="border-radius:4px;">
             </td>
             <td>
@@ -100,7 +100,7 @@
                 </div>
               </div>
             </td>
-            <td class="d-none d-md-table-cell">
+            <td>
               <span class="badge bg-indigo-subtle text-indigo px-3 py-1.5 rounded-3 fw-semibold border border-indigo-subtle">
                 {{ student.class_obj.full_name }}
               </span>

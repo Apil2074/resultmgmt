@@ -1264,7 +1264,7 @@ select.form-control option { background: var(--color-bg-light); }
 @media (max-width: 768px) {
   .sidebar { transform: translateX(-100%); }
   .sidebar.open { transform: translateX(0); box-shadow: 2px 0 15px rgba(0,0,0,0.15); }
-  .main-content { margin-left: 0; width: 100vw; overflow-x: hidden; }
+  .main-content { margin-left: 0; width: 100%; overflow-x: clip; }
   .stats-grid { grid-template-columns: 1fr; }
   .td-kpi-row { grid-template-columns: repeat(2, 1fr); }
   .teacher-kpi-grid { grid-template-columns: repeat(2, 1fr); }
