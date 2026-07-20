@@ -40,7 +40,7 @@
   position: sticky;
   left: 0;
   background: var(--color-bg-card, #ffffff) !important;
-  z-index: 6;
+  z-index: 20;
   width: 60px;
   min-width: 60px;
   border-right: 1px solid var(--color-border, #e2e8f0) !important;
@@ -50,14 +50,14 @@
   position: sticky;
   left: 60px;
   background: var(--color-bg-card, #ffffff) !important;
-  z-index: 6;
+  z-index: 20;
   min-width: 160px;
   border-right: 2px solid var(--color-border, #cbd5e1) !important;
 }
 
 /* Ensure sticky elements stay on top of other cells when scrolling */
 th.sticky-roll, th.sticky-name {
-  z-index: 7 !important;
+  z-index: 30 !important;
 }
 
 /* Sticky header for table */
@@ -65,7 +65,7 @@ th.sticky-roll, th.sticky-name {
   position: sticky;
   top: 0;
   background: var(--color-bg-card);
-  z-index: 8;
+  z-index: 15;
 }
 
 /* Bold theory and internal inputs */
@@ -135,41 +135,27 @@ input[type=number]::-webkit-outer-spin-button {
 {% endblock %}
 
 {% block content %}
-<div class="page-header flex-column align-items-start gap-3">
-  <div class="d-flex justify-content-between w-100 align-items-start flex-wrap gap-3">
-    <div>
+<div class="page-header flex-column align-items-start gap-3 w-100 mb-4">
   
-      <div class="page-subtitle">
-        <strong>{{ exam.name }}</strong> &nbsp;|&nbsp; {{ class_obj.full_name }}
-        &nbsp;|&nbsp; {{ students.count }} students
-      </div>
-    </div>
-    {% if available_classes %}
-    <div>
-      <label class="form-label mb-1" style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 500;">Switch Class:</label>
-      <select class="form-select" onchange="if(this.value) window.location.href=this.value;" style="min-width: 250px;">
-        {% for c in available_classes %}
-        <option value="{% url 'mark_entry' exam.id c.id %}" {% if c.id == class_obj.id %}selected{% endif %}>
-          {{ c.full_name }}
-        </option>
-        {% endfor %}
-      </select>
-    </div>
-    {% endif %}
+  <div class="page-subtitle mb-0 fs-5 text-slate-700">
+    <strong class="fs-4 text-slate-900 fw-bold">{{ exam.name }}</strong> &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ class_obj.full_name }}
+    &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ students.count }} students
   </div>
-  <div class="d-flex justify-content-start align-items-center gap-2 flex-wrap w-100">
-    <a href="{% url 'grade_ledger' exam.id class_obj.id %}" class="btn btn-secondary">
-      <i class="bi bi-journal-text"></i> View Ledger
+
+  <div class="d-flex justify-content-between align-items-end flex-wrap w-100 gap-3">
+    <div class="d-flex justify-content-start align-items-center gap-2 flex-wrap">
+    <a href="{% url 'grade_ledger' exam.id class_obj.id %}" class="btn btn-outline-secondary fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm">
+      <i class="bi bi-journal-text me-2"></i> View Ledger
     </a>
-    <a href="{% url 'mark_entry_template' exam.id class_obj.id %}" class="btn-download-template">
-      <i class="bi bi-download"></i> Download Template
+    <a href="{% url 'mark_entry_template' exam.id class_obj.id %}" class="btn btn-outline-primary fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm transition-all hover-shadow">
+      <i class="bi bi-cloud-download me-2"></i> Download Template
     </a>
-    <a href="{% url 'bulk_mark_import' exam.id class_obj.id %}" class="btn btn-info">
-      <i class="bi bi-upload"></i> Bulk Import
+    <a href="{% url 'bulk_mark_import' exam.id class_obj.id %}" class="btn btn-primary fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm transition-all hover-shadow">
+      <i class="bi bi-cloud-upload me-2"></i> Bulk Import
     </a>
     {% if not exam_class.is_locked %}
-    <button class="btn btn-primary" id="saveAllBtn" onclick="saveAllPending()">
-      <i class="bi bi-save-fill"></i> Save Marks
+    <button class="btn btn-success fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm" id="saveAllBtn" onclick="saveAllPending()">
+      <i class="bi bi-save-fill me-2"></i> Save Marks
     </button>
     {% endif %}
     {% if request.user.can_manage_school %}
@@ -177,13 +163,13 @@ input[type=number]::-webkit-outer-spin-button {
         {% csrf_token %}
         {% if exam_class.is_locked %}
           <input type="hidden" name="action" value="unlock">
-          <button type="submit" class="btn btn-warning">
-            <i class="bi bi-unlock-fill"></i> Unlock Marks
+          <button type="submit" class="btn btn-warning fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm">
+            <i class="bi bi-unlock-fill me-2"></i> Unlock Marks
           </button>
         {% else %}
           <input type="hidden" name="action" value="lock">
-          <button type="submit" class="btn btn-danger">
-            <i class="bi bi-lock-fill"></i> Lock & Process Results
+          <button type="submit" class="btn btn-danger fw-bold px-3 py-2 d-inline-flex align-items-center shadow-sm">
+            <i class="bi bi-lock-fill me-2"></i> Lock & Process Results
           </button>
         {% endif %}
       </form>
@@ -192,6 +178,20 @@ input[type=number]::-webkit-outer-spin-button {
       <i class="bi bi-cloud-check-fill"></i>
       <span>All changes saved to cloud</span>
     </span>
+    </div>
+
+    {% if available_classes %}
+    <div class="ms-auto align-self-end">
+      <label class="form-label mb-1 fw-bold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">SWITCH CLASS:</label>
+      <select class="form-select shadow-sm" onchange="if(this.value) window.location.href=this.value;" style="min-width: 250px;">
+        {% for c in available_classes %}
+        <option value="{% url 'mark_entry' exam.id c.id %}" {% if c.id == class_obj.id %}selected{% endif %}>
+          {{ c.full_name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -226,7 +226,7 @@ input[type=number]::-webkit-outer-spin-button {
           <th class="sticky-name" rowspan="2">Student Name</th>
           {% for subject in subjects %}
           <th id="subject-col-{{ subject.id }}" colspan="{% if subject.has_practical %}3{% else %}2{% endif %}"
-              style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center;">
+              style="background:var(--color-sidebar-active); color:var(--color-gold); text-align:center; border-right: 2px solid #cbd5e1 !important;">
             {{ subject.name }}
             <span class="badge badge-gray ms-1" style="font-size:0.6rem;">{{ subject.get_subject_type_display }}</span>
             <div data-bs-toggle="tooltip" title="Credit Hours determine the overall weight of this subject in GPA calculation" style="font-size:0.7rem; font-weight:normal; color:var(--color-text-muted); opacity:0.8; margin-top:4px; cursor:help;">TH: {{ subject.theory_credit_hour|floatformat:"-2" }}{% if subject.has_practical %}, IN: {{ subject.practical_credit_hour|default:0|floatformat:"-2" }}{% endif %} <i class="bi bi-question-circle"></i></div>
@@ -258,7 +258,7 @@ input[type=number]::-webkit-outer-spin-button {
                      data-field="theory"
                      {% if exam_class.is_locked %}disabled{% endif %}
                      style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;"
-                     data-bs-toggle="tooltip" title="Full Marks (Theory)">
+                     data-bs-toggle="tooltip" title="{{ subject.name }} - Full Marks (Theory)">
             </th>
             {% if subject.has_practical %}
             <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
@@ -270,10 +270,10 @@ input[type=number]::-webkit-outer-spin-button {
                      data-field="internal"
                      {% if exam_class.is_locked %}disabled{% endif %}
                      style="width: 45px; height: 22px; font-size: 0.75rem; text-align: center; padding: 0; border: 1px solid var(--color-border); border-radius: 4px; display: inline-block;"
-                     data-bs-toggle="tooltip" title="Full Marks (Internal)">
+                     data-bs-toggle="tooltip" title="{{ subject.name }} - Full Marks (Internal)">
             </th>
             {% endif %}
-            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">Special</th>
+            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}" style="border-right: 2px solid #cbd5e1 !important;" title="{{ subject.name }} - Special Status">Special</th>
           {% endfor %}
           {% if not request.user.is_teacher or is_class_teacher %}
           <th>Present Days</th>
@@ -300,7 +300,7 @@ input[type=number]::-webkit-outer-spin-button {
                   data-max="{{ sm.subject.theory_full_marks }}"
                   {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
                   oninput="scheduleSave(this)"
-                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Theory Marks (Max: {{ sm.subject.theory_full_marks }}){% endif %}">
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}{{ sm.subject.name }} - Theory Marks (Max: {{ sm.subject.theory_full_marks }}){% endif %}">
                 <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-theory"></i>
               </div>
             </td>
@@ -316,19 +316,20 @@ input[type=number]::-webkit-outer-spin-button {
                   data-max="{{ sm.subject.practical_full_marks }}"
                   {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
                   oninput="scheduleSave(this)"
-                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}Internal Marks (Max: {{ sm.subject.practical_full_marks }}){% endif %}">
+                  title="{% if sm.is_restricted %}Subject not enrolled{% else %}{{ sm.subject.name }} - Internal Marks (Max: {{ sm.subject.practical_full_marks }}){% endif %}">
                 <i class="bi bi-check-circle-fill inline-save-indicator" id="save-ind-{{ student.id }}-{{ sm.subject.id }}-internal"></i>
               </div>
             </td>
             {% endif %}
-            <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
+            <td class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}" style="border-right: 2px solid #cbd5e1 !important;">
               <div style="position: relative; display: inline-block;">
                 <select class="special-select {% if sm.is_restricted %}restricted-input{% endif %}"
                   data-student="{{ student.id }}"
                   data-subject="{{ sm.subject.id }}"
                   data-field="special"
                   {% if exam_class.is_locked or sm.is_restricted %}disabled{% endif %}
-                  onchange="scheduleSave(this)">
+                  onchange="scheduleSave(this)"
+                  title="{{ sm.subject.name }} - Special Status">
                   <option value="" {% if sm.is_restricted %}disabled{% endif %}>—</option>
                   <option value="AB" {% if sm.me.special_value == 'AB' %}selected{% endif %}>AB</option>
                   <option value="WH" {% if sm.me.special_value == 'WH' %}selected{% endif %}>WH</option>

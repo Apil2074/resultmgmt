@@ -5,6 +5,17 @@ Schools context processor — injects school/session into all templates
 
 def school_context(request):
     context = {}
+
+    # --- App branding (always injected, even for anonymous users) ---
+    try:
+        from .models import SystemSetting
+        sys_settings = SystemSetting.get_settings()
+        context['app_name'] = sys_settings.app_name or 'E-Natija'
+        context['app_logo_url'] = sys_settings.app_logo.url if sys_settings.app_logo else None
+    except Exception:
+        context['app_name'] = 'E-Natija'
+        context['app_logo_url'] = None
+
     if request.user.is_authenticated:
         if hasattr(request.user, 'school') and request.user.school:
             school = request.user.school

@@ -4,7 +4,7 @@
 
 {% block content %}
 {% if not active_session %}
-<div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
+<div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4 rounded-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
   <div>
     <strong>No Active Academic Session!</strong>
@@ -12,72 +12,75 @@
   </div>
 </div>
 {% endif %}
+
 <div class="row">
   <!-- Class List Card -->
   <div class="{% if user.is_school_admin or user.is_super_admin %}col-lg-8{% else %}col-lg-12{% endif %} mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+      <div class="card-header bg-white py-4 border-0 d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
-          <i class="bi bi-list-nested text-primary me-2"></i>Class List
+          <i class="bi bi-building text-primary me-2"></i>Classes Directory
         </h5>
-        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill">
-          Total: {{ classes|length }}
+        <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fw-semibold">
+          {{ classes|length }} active classes
         </span>
       </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th style="width: 40px;"></th>
-              <th>Class Name</th>
-              <th>Section</th>
-              <th>Session</th>
-              <th>Class Teacher</th>
-              <th>Students</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="classesTableBody">
+      <div class="table-responsive" style="min-height: 400px;">
+        <table class="table tb-table mb-0">
+        <thead>
+          <tr>
+            <th style="width: 40px; padding-left: 20px;" class="d-none d-md-table-cell"></th>
+            <th>CLASS NAME</th>
+            <th class="d-none d-md-table-cell">SECTION</th>
+            <th class="d-none d-md-table-cell">TEACHER</th>
+            <th class="d-none d-md-table-cell">STUDENTS</th>
+            <th class="text-end" style="padding-right: 20px;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody id="classesTableBody">
             {% for c in classes %}
-            <tr data-id="{{ c.id }}">
-              <td class="drag-handle text-muted" style="cursor: move; width: 40px; text-align: center;">
-                <i class="bi bi-grip-vertical fs-5"></i>
-              </td>
-              <td>
-                <a href="{% url 'class_detail' c.slug %}" class="fw-semibold text-primary text-decoration-none">
-                  {{ c.prefixed_name }}
-                </a>
-              </td>
-              <td>
-                {% if c.section %}
-                <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1 rounded">{{ c.section }}</span>
-                {% else %}
-                <span class="text-muted">-</span>
-                {% endif %}
-              </td>
-              <td class="text-slate-600">{{ c.session.name }}</td>
-              <td>
-                {% if c.class_teacher %}
-                <div class="fw-medium text-slate-700">{{ c.class_teacher.name }}</div>
-                {% if c.class_teacher.contact_number %}
-                <div class="small text-muted"><i class="bi bi-telephone-fill me-1"></i>{{ c.class_teacher.contact_number }}</div>
-                {% endif %}
-                {% else %}
-                <span class="text-muted small italic">Not Assigned</span>
-                {% endif %}
-              </td>
-              <td>
-                <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill">
-                  {{ c.student_count }} Students
-                </span>
-              </td>
-              <td class="text-end">
-                <div class="d-inline-flex gap-2">
-                  <a href="{% url 'class_detail' c.slug %}" class="btn btn-sm btn-outline-primary" title="View Details">
-                    <i class="bi bi-eye-fill"></i>
-                  </a>
+          <tr data-id="{{ c.id }}">
+            <td class="drag-handle text-muted d-none d-md-table-cell" style="cursor: move; padding-left: 20px; text-align: center;">
+              <i class="bi bi-grip-vertical"></i>
+            </td>
+            <td>
+              <a href="{% url 'class_detail' c.slug %}" class="fw-bold text-slate-800 text-decoration-none" style="font-size:0.95rem;">
+                {{ c.prefixed_name }}
+              </a>
+            </td>
+            <td class="d-none d-md-table-cell">
+              {% if c.section %}
+              <span class="badge bg-indigo-subtle text-indigo px-3 py-1.5 rounded-3 fw-semibold border border-indigo-subtle">
+                {{ c.section }}
+              </span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell">
+              {% if c.class_teacher %}
+              <div class="fw-medium text-slate-800" style="font-size:0.9rem;">{{ c.class_teacher.name }}</div>
+              {% if c.class_teacher.contact_number %}
+              <div class="text-muted" style="font-size:0.75rem;"><i class="bi bi-telephone text-muted me-1"></i>{{ c.class_teacher.contact_number }}</div>
+              {% endif %}
+              {% else %}
+              <span class="badge bg-secondary-subtle text-secondary px-2 py-1 rounded-3">Not Assigned</span>
+              {% endif %}
+            </td>
+            <td class="d-none d-md-table-cell">
+              <span class="badge bg-emerald-subtle text-emerald px-3 py-1.5 rounded-3 fw-semibold border border-emerald-subtle">
+                {{ c.student_count }} Students
+              </span>
+            </td>
+            <td class="text-end" style="padding-right: 20px;">
+              <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-3 border-0 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px; font-size: 0.9rem;">
+                  <li><a class="dropdown-item py-2" href="{% url 'class_detail' c.slug %}"><i class="bi bi-eye text-primary me-2"></i> View Details</a></li>
                   {% if user.is_school_admin or user.is_super_admin %}
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-class"
+                  <li><button type="button" class="dropdown-item py-2 btn-edit-class"
                     data-class-id="{{ c.id }}" data-class-name="{{ c.name|escapejs }}"
                     data-class-section="{{ c.section|escapejs }}"
                     data-numeric-level="{{ c.numeric_level }}"
@@ -85,20 +88,17 @@
                     data-teacher-name="{% if c.class_teacher %}{{ c.class_teacher.name|escapejs }}{% endif %}"
                     data-teacher-phone="{% if c.class_teacher %}{{ c.class_teacher.contact_number|escapejs }}{% endif %}"
                     data-teacher-email="{% if c.class_teacher %}{{ c.class_teacher.email|escapejs }}{% endif %}"
-                    data-bs-toggle="modal" data-bs-target="#editClassModal" title="Edit Class">
-                    <i class="bi bi-pencil-fill"></i>
-                  </button>
-                  <button type="button" class="btn btn-sm btn-outline-danger btn-delete-class"
+                    data-bs-toggle="modal" data-bs-target="#editClassModal"><i class="bi bi-pencil text-warning me-2"></i> Edit</button></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><button type="button" class="dropdown-item py-2 text-danger btn-delete-class"
                     data-class-id="{{ c.id }}" data-class-name="{{ c.full_name|escapejs }}"
-                    data-student-count="{{ c.student_count }}" data-bs-toggle="modal" data-bs-target="#deleteClassModal"
-                    title="Delete Class">
-                    <i class="bi bi-trash-fill"></i>
-                  </button>
+                    data-student-count="{{ c.student_count }}" data-bs-toggle="modal" data-bs-target="#deleteClassModal"><i class="bi bi-trash me-2"></i> Delete</button></li>
                   {% endif %}
-                </div>
-              </td>
-            </tr>
-            {% empty %}
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
             <tr>
               <td colspan="7" class="text-center py-5 text-muted">
                 <i class="bi bi-building d-block fs-2 mb-2"></i>
@@ -115,8 +115,8 @@
   <!-- Add Class Form Sidebar -->
   {% if user.is_school_admin or user.is_super_admin %}
   <div class="col-lg-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white py-3">
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+      <div class="card-header bg-white py-4 border-0">
         <h5 class="card-title mb-0 fw-semibold text-slate-800">
           <i class="bi bi-plus-circle text-primary me-2"></i>Create New Class
         </h5>
@@ -169,7 +169,7 @@
             </div>
 
 
-          <button type="submit" class="btn btn-primary w-100 mt-3">
+          <button type="submit" class="btn btn-primary mt-3">
             <i class="bi bi-plus-lg me-2"></i>Create Class
           </button>
         </form>

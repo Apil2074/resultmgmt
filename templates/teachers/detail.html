@@ -3,6 +3,13 @@
 {% block page_title %}🧑‍🏫 Teacher Profile: {{ teacher.name }}{% endblock %}
 
 {% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+  <a href="{% url 'teacher_list' %}" class="btn bg-white rounded-circle shadow border border-secondary-subtle d-inline-flex justify-content-center align-items-center" style="width: 44px; height: 44px; color: #1e293b; transition: all 0.2s ease;" title="Go Back" onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.transform='scale(1.05)';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.transform='scale(1)';">
+    <i class="bi bi-arrow-left" style="font-size: 1.3rem;"></i>
+  </a>
+</div>
+
 <div class="row">
     <div class="col-md-4">
         <div class="card shadow-sm border-0 mb-4">
@@ -27,7 +34,7 @@
                 {% endif %}
 
                 {% if user.is_school_admin or user.is_super_admin %}
-                <div class="mt-4 d-grid gap-2">
+                <div class="mt-4 d-grid gap-1">
                     <a href="{% url 'teacher_edit' teacher.id %}" class="btn btn-outline-primary">
                         <i class="bi bi-pencil-square me-1"></i> Edit Profile
                     </a>

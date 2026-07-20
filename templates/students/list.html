@@ -12,124 +12,125 @@
   </div>
 </div>
 {% endif %}
-<div class="page-header">
-  <div>
-    <h1 class="page-title">👥 Students</h1>
-    <div class="page-subtitle">{{ students|length }} students found</div>
-  </div>
-  <div class="d-flex gap-2 flex-wrap">
-    {% if user.is_school_admin or user.is_super_admin %}
-      {% if active_session %}
-      <a href="{% url 'student_import' %}" class="btn btn-secondary">
-        <i class="bi bi-upload"></i> Import Excel
-      </a>
-      {% endif %}
-      <a href="{% url 'student_export' %}{% if class_id %}?class_id={{ class_id }}{% endif %}" class="btn btn-secondary">
-        <i class="bi bi-download"></i> Export Excel
-      </a>
-      {% if active_session %}
-      <a href="{% url 'student_create' %}" class="btn btn-primary">
-        <i class="bi bi-person-plus-fill"></i> Add Student
-      </a>
-      {% endif %}
-    {% endif %}
-  </div>
-</div>
-
-<!-- Search & Filter -->
-<div class="card mb-3">
-  <form method="GET" class="d-flex gap-3 flex-wrap align-items-end">
-    <div class="form-group mb-0" style="flex:1; min-width:200px;">
-      <label class="form-label">Search</label>
-      <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Name or roll number...">
+<!-- Modern Enterprise Header -->
+<div class="tb-container">
+  <div class="tb-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+      <div class="tb-hero-title">Students Directory</div>
+      <div class="tb-hero-sub">{{ students|length }} students enrolled</div>
     </div>
-    <div class="form-group mb-0" style="min-width:200px;">
-      <label class="form-label">Filter by Class</label>
-      <select name="class_id" class="form-control">
-        <option value="">All Classes</option>
-        {% for cls in classes %}
-        <option value="{{ cls.id }}" {% if class_id == cls.id|stringformat:"i" %}selected{% endif %}>
-          {{ cls.full_name }}
-        </option>
-        {% endfor %}
-      </select>
+    <div class="d-flex gap-2">
+      {% if user.is_school_admin or user.is_super_admin %}
+        {% if active_session %}
+        <a href="{% url 'student_import' %}" class="btn btn-light rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-upload text-primary"></i> Import
+        </a>
+        {% endif %}
+        <a href="{% url 'student_export' %}{% if class_id %}?class_id={{ class_id }}{% endif %}" class="btn btn-light rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-download text-primary"></i> Export
+        </a>
+        {% if active_session %}
+        <a href="{% url 'student_create' %}" class="btn btn-primary rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-person-plus-fill"></i> Add Student
+        </a>
+        {% endif %}
+      {% endif %}
     </div>
-    <button type="submit" class="btn btn-secondary">
-      <i class="bi bi-search"></i> Search
-    </button>
-    <a href="{% url 'student_list' %}" class="btn btn-secondary">Clear</a>
-  </form>
-</div>
-
-<!-- Students Table -->
-<form id="bulkDeleteForm" method="POST" action="{% url 'student_bulk_delete' %}">
-  {% csrf_token %}
-  <div class="d-flex mb-2">
-    <button type="button" id="btnBulkDelete" class="btn btn-danger" style="display:none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-      <i class="bi bi-trash-fill"></i> Delete Selected
-    </button>
   </div>
-<div class="table-container">
-  <div class="table-responsive">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th style="width: 40px;"><input type="checkbox" id="selectAll" class="form-check-input"></th>
-          <th>S.N.</th>
-          <th>Photo</th>
-          <th>Student Name</th>
-          <th>Class</th>
-          <th>Reg. Number</th>
-          <th>Contact</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for student in students %}
-        <tr>
-          <td><input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox form-check-input"></td>
-          <td><strong>{{ forloop.counter }}</strong></td>
-          <td>
-            <img src="{{ student.photo_url }}" width="32" height="32"
-              style="border-radius:50%; object-fit:cover; border:2px solid var(--color-border);"
-              onerror="this.style.display='none'">
-          </td>
-          <td>
-            <a href="{% url 'student_detail' student.pk %}" style="color:var(--color-text); font-weight:600; text-decoration:none;" class="student-name-display">
-              {{ student.name }}
-            </a>
-            {% if student.dob_bs %}<div style="font-size:0.7rem; color:var(--color-text-muted);">DOB: <span class="student-dob-display">{{ student.dob_bs }}</span></div>{% endif %}
-          </td>
-          <td><span class="badge badge-blue student-class-display">{{ student.class_obj.full_name }}</span></td>
-          <td style="color:var(--color-text-muted);">
-            <span class="student-reg-display">{{ student.registration_number|default:'—' }}</span>
-            {% if student.symbol_number %}
-            <div style="font-size:0.7rem; color:var(--color-text-muted);">
-              Symbol: <span class="student-symbol-display">{{ student.symbol_number }}</span>
-            </div>
-            {% endif %}
-          </td>
+
+  <!-- Filter & Actions Bar -->
+  <div class="tb-filter-bar d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <form method="GET" class="d-flex flex-wrap gap-3 align-items-center" style="flex:1;">
+      <div style="position:relative; width:250px;">
+        <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8;"></i>
+        <input type="text" name="q" class="form-control rounded-3" value="{{ q }}" placeholder="Search name or reg..." style="padding-left:36px; border:1px solid #e2e8f0; font-size:0.9rem;">
+      </div>
+      <div style="width:200px;">
+        <select name="class_id" class="form-select rounded-3" onchange="this.form.submit()" style="border:1px solid #e2e8f0; font-size:0.9rem;">
+          <option value="">All Classes</option>
+          {% for cls in classes %}
+          <option value="{{ cls.id }}" {% if class_id == cls.id|stringformat:"i" %}selected{% endif %}>
+            {{ cls.full_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if q or class_id %}
+      <a href="{% url 'student_list' %}" class="btn btn-light btn-sm rounded-3 fw-semibold text-muted">Clear</a>
+      {% endif %}
+    </form>
     
-          <td style="color:var(--color-text-muted);">
-            <span class="student-contact-display">{{ student.contact_number|default:'—' }}</span>
-          </td>
-          <td>
-            <div class="d-flex gap-1">
-              <a href="{% url 'student_detail' student.pk %}" class="btn btn-icon btn-secondary" data-tooltip="View">
-                <i class="bi bi-eye-fill"></i>
-              </a>
-              {% if user.is_school_admin or user.is_super_admin %}
-              <button type="button" class="btn btn-icon btn-secondary btn-edit-student" data-tooltip="Edit" data-url="{% url 'student_edit_modal' student.pk %}">
-                <i class="bi bi-pencil-fill"></i>
-              </button>
-              <a href="{% url 'student_delete' student.pk %}" class="btn btn-icon btn-danger" data-tooltip="Delete">
-                <i class="bi bi-trash-fill"></i>
-              </a>
+    <div>
+      <button type="button" id="btnBulkDelete" class="btn btn-danger rounded-3 shadow-sm fw-semibold" style="display:none;" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
+        <i class="bi bi-trash-fill"></i> Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <form id="bulkDeleteForm" method="POST" action="{% url 'student_bulk_delete' %}">
+    {% csrf_token %}
+    <div class="table-responsive" style="min-height: 400px;">
+      <table class="table tb-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; padding-left: 20px;">
+              <input type="checkbox" id="selectAll" class="form-check-input shadow-sm" style="border-radius:4px;">
+            </th>
+            <th style="width: 250px;">STUDENT</th>
+            <th class="d-none d-md-table-cell">CLASS</th>
+            <th class="d-none d-md-table-cell">REG. NUMBER</th>
+            <th class="d-none d-md-table-cell">CONTACT</th>
+            <th class="text-end" style="padding-right: 20px;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for student in students %}
+          <tr>
+            <td style="padding-left: 20px;">
+              <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox form-check-input shadow-sm" style="border-radius:4px;">
+            </td>
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                <img src="{{ student.photo_url }}" width="40" height="40" style="border-radius:50%; object-fit:cover; border:2px solid #e2e8f0;" onerror="this.style.display='none'">
+                <div>
+                  <a href="{% url 'student_detail' student.pk %}" class="fw-bold text-slate-800 text-decoration-none d-block" style="font-size:0.95rem;">{{ student.name }}</a>
+                  {% if student.dob_bs %}
+                  <span class="text-muted" style="font-size:0.75rem;">DOB: {{ student.dob_bs }}</span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell">
+              <span class="badge bg-indigo-subtle text-indigo px-3 py-1.5 rounded-3 fw-semibold border border-indigo-subtle">
+                {{ student.class_obj.full_name }}
+              </span>
+            </td>
+            <td class="d-none d-md-table-cell">
+              <div class="text-slate-800 fw-medium" style="font-size:0.9rem;">{{ student.registration_number|default:'—' }}</div>
+              {% if student.symbol_number %}
+              <div class="text-muted" style="font-size:0.75rem;">Sym: {{ student.symbol_number }}</div>
               {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% empty %}
+            </td>
+            <td class="d-none d-md-table-cell">
+              <div class="text-slate-700" style="font-size:0.9rem;"><i class="bi bi-telephone text-muted me-1"></i> {{ student.contact_number|default:'—' }}</div>
+            </td>
+            <td class="text-end" style="padding-right: 20px;">
+              <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-3 border-0 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px; font-size: 0.9rem;">
+                  <li><a class="dropdown-item py-2" href="{% url 'student_detail' student.pk %}"><i class="bi bi-eye text-primary me-2"></i> View Profile</a></li>
+                  {% if user.is_school_admin or user.is_super_admin %}
+                  <li><button type="button" class="dropdown-item py-2 btn-edit-student" data-url="{% url 'student_edit_modal' student.pk %}"><i class="bi bi-pencil text-warning me-2"></i> Edit</button></li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item py-2 text-danger" href="{% url 'student_delete' student.pk %}"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                  {% endif %}
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
         <tr>
           <td colspan="9" class="text-center" style="padding:40px;">
             <div class="empty-state">
@@ -143,10 +144,10 @@
         </tr>
         {% endfor %}
       </tbody>
-    </table>
-  </div>
+      </table>
+    </div>
+  </form>
 </div>
-</form>
 
 <!-- Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">

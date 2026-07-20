@@ -8,18 +8,89 @@
   <h4 class="mb-0 fw-bold text-slate-800">Global Settings</h4>
 </div>
 
+<!-- ── App Branding ─────────────────────────────────────────────── -->
+<div class="card sa-card p-4 mb-4">
+  <div class="card-body">
+    <h5 class="fw-bold mb-1 border-bottom pb-2">
+      <i class="bi bi-palette2 me-2 text-primary"></i>App Branding
+    </h5>
+    <p class="text-muted small mb-4">Customise the application name and logo displayed across the entire platform.</p>
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="branding">
+
+      <!-- Current logo preview -->
+      {% if settings.app_logo %}
+      <div class="mb-4 d-flex align-items-center gap-3">
+        <img src="{{ settings.app_logo.url }}"
+             alt="Current App Logo"
+             style="height:64px;width:64px;object-fit:contain;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;padding:6px;">
+        <div>
+          <div class="fw-medium text-slate-700 small mb-1">Current Logo</div>
+          <form method="POST" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="remove_logo">
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Remove the current logo?')">
+              <i class="bi bi-trash me-1"></i>Remove Logo
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- App Name -->
+      <div class="mb-3">
+        <label for="app_name" class="form-label fw-medium">App Name</label>
+        <input type="text"
+               class="form-control"
+               id="app_name"
+               name="app_name"
+               value="{{ settings.app_name }}"
+               placeholder="e.g. E-Natija"
+               maxlength="100"
+               required>
+        <div class="form-text">This name appears in the sidebar, page titles, and emails.</div>
+      </div>
+
+      <!-- App Logo -->
+      <div class="mb-3">
+        <label for="app_logo" class="form-label fw-medium">
+          App Logo <span class="text-muted fw-normal">(optional)</span>
+        </label>
+        <input class="form-control"
+               type="file"
+               id="app_logo"
+               name="app_logo"
+               accept="image/*">
+        <div class="form-text">Recommended: square PNG/SVG, at least 64x64 px. Shown in the sidebar.</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-2">
+        <i class="bi bi-check2-circle me-1"></i>Save Branding
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Subjects Guide ───────────────────────────────────────────── -->
 <div class="card sa-card p-4">
   <div class="card-body">
-    <h5 class="fw-bold mb-3 border-bottom pb-2">Subjects Guide</h5>
+    <h5 class="fw-bold mb-1 border-bottom pb-2">
+      <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Subjects Guide
+    </h5>
     <p class="text-muted small mb-4">Upload the official Subjects Guide PDF here. It will be available for download on the Subjects page.</p>
 
     <form method="POST" enctype="multipart/form-data">
         {% csrf_token %}
+        <input type="hidden" name="action" value="pdf">
         <div class="mb-3">
             <label for="subjects_guide_pdf" class="form-label fw-medium">Upload PDF *</label>
             <input class="form-control" type="file" id="subjects_guide_pdf" name="subjects_guide_pdf" accept="application/pdf" required>
         </div>
-        
+
         {% if settings.subjects_guide_pdf %}
             <div class="mb-3">
                 <p class="mb-1 fw-medium text-slate-700">Current File:</p>
@@ -28,7 +99,7 @@
                 </a>
             </div>
         {% endif %}
-        
+
         <button type="submit" class="btn btn-primary mt-3">
             <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload
         </button>
@@ -36,3 +107,4 @@
   </div>
 </div>
 {% endblock %}
+

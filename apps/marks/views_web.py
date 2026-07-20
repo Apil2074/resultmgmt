@@ -858,6 +858,39 @@ def mark_entry_select(request):
 
     return render(request, 'marks/entry_select.html', context)
 
+@login_required
+def exam_progress_ajax(request, exam_id):
+    from apps.exams.models import Exam
+    from apps.marks.models import MarkEntry
+    from apps.students.models import Student
+    from apps.subjects.models import Subject
+    from django.http import JsonResponse
+    
+    exam = get_object_or_404(Exam, pk=exam_id, school=request.user.school)
+    
+    exam_classes = exam.exam_classes.select_related('class_obj').all()
+    
+    total_expected = 0
+    for ec in exam_classes:
+        cls = ec.class_obj
+        num_students = Student.objects.filter(class_obj=cls, is_active=True).count()
+        num_subjects = Subject.objects.filter(class_obj=cls).count()
+        total_expected += (num_students * num_subjects)
+        
+    total_entered = MarkEntry.objects.filter(exam=exam).count()
+    
+    percentage = 0
+    if total_expected > 0:
+        percentage = round((total_entered / total_expected) * 100, 1)
+        if percentage > 100: percentage = 100
+        
+    return JsonResponse({
+        'exam_id': exam.id,
+        'total_expected': total_expected,
+        'total_entered': total_entered,
+        'percentage': percentage
+    })
+
 
 @login_required
 @require_POST

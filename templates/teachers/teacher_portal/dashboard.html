@@ -220,11 +220,11 @@
             </div>
           </div>
           {% if latest_exam_id %}
-          <a href="{% url 'mark_entry' latest_exam_id cls.id %}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
+          <a href="{% url 'mark_entry' latest_exam_id cls.id %}" class="btn btn-sm rounded-3 px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
             <i class="bi bi-pencil-square me-1"></i>Enter Marks
           </a>
           {% else %}
-          <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-pill px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
+          <a href="{% url 'mark_entry_select' %}?class_obj={{ cls.id }}" class="btn btn-sm rounded-3 px-3 fw-medium" style="font-size:.75rem;background:#6366f1;color:#fff;border:none;">
             <i class="bi bi-pencil-square me-1"></i>Enter Marks
           </a>
           {% endif %}
@@ -262,11 +262,11 @@
             </div>
           </div>
           {% if item.latest_exam_id %}
-          <a href="{% url 'mark_entry' item.latest_exam_id item.class_obj.id %}#subject-col-{{ item.subject.id }}" class="btn btn-sm rounded-pill px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
+          <a href="{% url 'mark_entry' item.latest_exam_id item.class_obj.id %}#subject-col-{{ item.subject.id }}" class="btn btn-sm rounded-3 px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
             <i class="bi bi-pencil-square" style="font-size:.7rem;"></i>
           </a>
           {% else %}
-          <a href="{% url 'mark_entry_select' %}?class_obj={{ item.class_obj.id }}" class="btn btn-sm rounded-pill px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
+          <a href="{% url 'mark_entry_select' %}?class_obj={{ item.class_obj.id }}" class="btn btn-sm rounded-3 px-2 fw-medium" style="font-size:.72rem;background:#f0fdf4;color:#10b981;border:1px solid #bbf7d0;white-space:nowrap;">
             <i class="bi bi-pencil-square" style="font-size:.7rem;"></i>
           </a>
           {% endif %}

@@ -458,12 +458,15 @@ def teacher_send_password_reset(request, pk):
                 reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
             )
             
+            from core.email_utils import teacher_password_reset_email
+            _subject, _plain, _html = teacher_password_reset_email(teacher.name, reset_url)
             send_mail(
-                subject='Password Reset Request',
-                message=f'Hello {teacher.name},\n\nPlease click the link below to set your new password:\n{reset_url}\n\nThis link is valid for a limited time.\n\nThank you.',
+                subject=_subject,
+                message=_plain,
                 from_email=getattr(settings, 'EMAIL_HOST_USER', None) or "noreply@rms.local",
                 recipient_list=[teacher.email],
                 fail_silently=False,
+                html_message=_html,
             )
             messages.success(request, f'Password reset email sent to {teacher.email}.')
             

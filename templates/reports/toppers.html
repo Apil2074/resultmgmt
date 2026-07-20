@@ -14,11 +14,11 @@
 <div class="mb-4">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <span class="small fw-bold text-slate-700 me-2"><i class="bi bi-funnel-fill text-primary"></i> Filter by Class:</span>
-    <a href="?class_id=" class="btn btn-sm {% if not selected_class_id %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill px-3">
+    <a href="?class_id=" class="btn btn-sm {% if not selected_class_id %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-3 px-3">
       All Classes
     </a>
     {% for cls in classes %}
-      <a href="?class_id={{ cls.id }}" class="btn btn-sm {% if selected_class_id == cls.id %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill px-3">
+      <a href="?class_id={{ cls.id }}" class="btn btn-sm {% if selected_class_id == cls.id %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-3 px-3">
         {{ cls.full_name }}
       </a>
     {% endfor %}
@@ -31,7 +31,7 @@
       <i class="bi bi-trophy-fill text-warning me-2"></i>Top Performers
     </h5>
     <div class="d-flex align-items-center gap-2">
-      <a href="{% url 'export_toppers_pdf' exam.id %}" class="btn btn-sm btn-danger px-3 rounded-pill">
+      <a href="{% url 'export_toppers_pdf' exam.id %}" class="btn btn-sm btn-danger px-3 rounded-3">
         <i class="bi bi-file-pdf-fill me-1"></i>Export Top 3 PDF
       </a>
       <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1.5 rounded-pill">
@@ -46,7 +46,7 @@
         <tr>
           <th style="width: 80px;">Rank</th>
           <th class="text-start">Student Name</th>
-          <th>Roll No</th>
+
           <th>Class Name</th>
           <th>GPA</th>
           <th>Grade</th>
@@ -58,20 +58,20 @@
         {% for topper in toppers %}
           <tr>
             <td>
-              {% if forloop.counter == 1 %}
+              {% if topper.display_rank == 1 %}
                 <span class="fs-5 text-warning"><i class="bi bi-trophy-fill"></i> 1</span>
-              {% elif forloop.counter == 2 %}
+              {% elif topper.display_rank == 2 %}
                 <span class="fs-6 text-secondary"><i class="bi bi-trophy-fill"></i> 2</span>
-              {% elif forloop.counter == 3 %}
+              {% elif topper.display_rank == 3 %}
                 <span class="text-amber-700" style="color: #b45309;"><i class="bi bi-trophy-fill"></i> 3</span>
               {% else %}
-                <span class="fw-bold text-slate-600">{{ forloop.counter }}</span>
+                <span class="fw-bold text-slate-600">{{ topper.display_rank }}</span>
               {% endif %}
             </td>
             <td class="text-start fw-semibold text-slate-800">
               {{ topper.student.name }}
             </td>
-            <td>{{ topper.student.roll_number }}</td>
+
             <td>
               <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1">
                 {{ topper.student.class_obj.full_name }}

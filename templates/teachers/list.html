@@ -1,42 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}Teachers{% endblock %}
-{% block page_title %}👨‍🏫 Teachers{% endblock %}
+{% block page_title %}Teachers{% endblock %}
 
 {% block content %}
-<style>
-.btn-stylish-actions {
-    background-color: #6366f1;
-    color: white;
-    border: none;
-    border-radius: 4px !important;
-    transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    overflow: hidden;
-}
-.btn-stylish-actions:hover {
-    background-color: #4f46e5;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4), 0 2px 4px -1px rgba(99, 102, 241, 0.2);
-    transform: translateY(-1px);
-}
-.btn-stylish-actions::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.25);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease-out, height 0.4s ease-out;
-}
-.btn-stylish-actions:active::after {
-    width: 200px;
-    height: 200px;
-    transition: 0s;
-}
-</style>
 {% if not active_session %}
 <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
@@ -46,192 +12,232 @@
   </div>
 </div>
 {% endif %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div></div>
-    {% if user.is_school_admin or user.is_super_admin %}
+
+<!-- Modern Enterprise Header -->
+<div class="tb-container">
+  <div class="tb-hero d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+      <div class="tb-hero-title">Teachers Directory</div>
+      <div class="tb-hero-sub">Manage faculty, assignments, and accounts</div>
+    </div>
     <div class="d-flex gap-2">
-        <button type="button" class="btn btn-outline-danger d-none" id="bulkDeleteBtn" onclick="confirmAction('Permanently delete selected teachers?', () => document.getElementById('bulkDeleteForm').submit())">
-            <i class="bi bi-trash-fill me-1"></i> Delete Selected
-        </button>
-        <a href="{% url 'teacher_spreadsheet_edit' %}" class="btn btn-outline-info">
-            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Spreadsheet Editor
+      {% if user.is_school_admin or user.is_super_admin %}
+        <a href="{% url 'teacher_spreadsheet_edit' %}" class="btn btn-light rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-table text-primary"></i> Spreadsheet Editor
         </a>
-        <a href="{% url 'teacher_import' %}" class="btn btn-outline-success">
-            <i class="bi bi-file-earmark-excel-fill me-1"></i> Import
+        <a href="{% url 'teacher_import' %}" class="btn btn-light rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-upload text-primary"></i> Import
         </a>
-        <a href="{% url 'teacher_create' %}" class="btn btn-primary">
-            <i class="bi bi-person-plus-fill me-1"></i> Add Teacher
+        <a href="{% url 'teacher_create' %}" class="btn btn-primary rounded-3 fw-semibold shadow-sm">
+          <i class="bi bi-person-plus-fill"></i> Add Teacher
         </a>
+      {% endif %}
     </div>
-    <form id="bulkDeleteForm" method="POST" action="{% url 'teacher_bulk_delete' %}">
-        {% csrf_token %}
-    </form>
-    {% endif %}
-</div>
+  </div>
 
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th style="width: 40px;">
-                            <input class="form-check-input" type="checkbox" id="selectAll">
-                        </th>
-                        <th>SN</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Contact</th>
-                        <th>Mapped Subjects</th>
-                        <th>Account</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for teacher in teachers %}
-                    <tr>
-                        <td>
-                            <input class="form-check-input teacher-checkbox" type="checkbox" name="teacher_ids" value="{{ teacher.pk }}" form="bulkDeleteForm">
-                        </td>
-                        <td>{{ forloop.counter }}</td>
-                        <td>
-                                <a href="{% url 'teacher_detail' teacher.pk %}" class="text-decoration-none text-dark d-flex align-items-center gap-2">
-                                    {% if teacher.photo %}
-                                    <img src="{{ teacher.photo.url }}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
-                                    {% elif teacher.user and teacher.user.profile_picture %}
-                                    <img src="{{ teacher.user.profile_picture.url }}" class="rounded-circle" style="width:32px; height:32px; object-fit:cover;">
-                                    {% else %}
-                                    <div class="rounded-circle bg-light text-secondary d-flex align-items-center justify-content-center"
-                                         style="width: 32px; height: 32px; font-weight: bold; font-size: 0.85rem;">
-                                        {{ teacher.name|first|upper }}
-                                    </div>
-                                    {% endif %}
-                                    <span class="fw-semibold text-primary hover-underline">{{ teacher.name }}</span>
-                                </a>
-                        </td>
-                        <td>
-                            {% if teacher.email %}
-                            <a href="mailto:{{ teacher.email }}" class="text-decoration-none text-muted" title="{{ teacher.email }}">
-                                <i class="bi bi-envelope-fill text-primary"></i> <span class="small">{{ teacher.email }}</span>
-                            </a>
-                            {% else %}
-                            <span class="text-muted">-</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ teacher.contact_number|default:"-" }}</td>
-                        <td>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-secondary text-white rounded-pill px-3 py-1">{{ teacher.subject_assignments.count }} Subjects</span>
-                                {% if user.is_school_admin or user.is_super_admin %}
-                                <a href="{% url 'teacher_subject_map' teacher.pk %}" class="text-decoration-none text-primary fw-medium small">Edit</a>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            {% if teacher.user %}
-                                <span class="badge bg-success">Active</span>
-                                <div class="small text-muted mb-1">{{ teacher.user.username }}</div>
-                                {% if user.is_school_admin or user.is_super_admin %}
-                                <form method="POST" action="{% url 'teacher_reset_password' teacher.pk %}" class="d-inline" onsubmit="return confirm('Reset password for {{ teacher.name }}?');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-1" style="font-size: 0.75rem;" title="Reset Password"><i class="bi bi-key-fill"></i> Reset</button>
-                                </form>
-                                {% endif %}
-                            {% else %}
-                                {% if user.is_school_admin or user.is_super_admin %}
-                                <form method="POST" action="{% url 'teacher_create_user' teacher.pk %}" class="d-inline" id="create-user-form-{{ teacher.pk }}">
-                                    {% csrf_token %}
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="confirmAction('Generate user account for {{ teacher.name|escapejs }}?', () => document.getElementById('create-user-form-{{ teacher.pk }}').submit())">Create Account</button>
-                                </form>
-                                {% endif %}
-                            {% endif %}
-                        </td>
-                        <td class="text-end">
-<div class="dropdown d-inline-block">
-    <button class="btn btn-sm dropdown-toggle shadow-sm btn-stylish-actions" type="button" id="teacherActions{{ teacher.pk }}" data-bs-toggle="dropdown" aria-expanded="false">
-        Actions
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="teacherActions{{ teacher.pk }}" style="min-width: 200px; font-size: 0.95rem;">
-        <li><a class="dropdown-item py-2" href="{% url 'teacher_detail' teacher.pk %}"><i class="bi bi-eye me-2 text-secondary"></i> View Detail</a></li>
-        {% if user.is_school_admin or user.is_super_admin %}
-        <li><hr class="dropdown-divider m-0"></li>
-        <li><a class="dropdown-item py-2" href="{% url 'teacher_edit' teacher.pk %}"><i class="bi bi-pencil-square me-2 text-secondary"></i> Edit</a></li>
-        <li><hr class="dropdown-divider m-0"></li>
-        <li>
-            <form method="POST" action="{% url 'teacher_delete' teacher.pk %}" id="delete-form-{{ teacher.pk }}">
-                {% csrf_token %}
-                <button type="button" class="dropdown-item py-2" onclick="confirmAction('Permanently delete {{ teacher.name|escapejs }}?', () => document.getElementById('delete-form-{{ teacher.pk }}').submit())">
-                    <i class="bi bi-trash me-2 text-secondary"></i> Delete
-                </button>
-            </form>
-        </li>
-
-        {% if teacher.email %}
-        <li><hr class="dropdown-divider m-0"></li>
-        <li>
-            <form method="POST" action="{% url 'teacher_send_password_reset' teacher.pk %}" id="send-reset-form-{{ teacher.pk }}">
-                {% csrf_token %}
-                <button type="button" class="dropdown-item py-2" onclick="confirmAction('Send password reset email to {{ teacher.email|escapejs }}?', () => document.getElementById('send-reset-form-{{ teacher.pk }}').submit())">
-                    <i class="bi bi-envelope-arrow-up me-2 text-secondary"></i> Send Password Reset
-                </button>
-            </form>
-        </li>
-        {% endif %}
-        {% endif %}
-    </ul>
-</div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
-                            No teachers found. Add one or import from Excel.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  <!-- Filter & Actions Bar -->
+  <div class="tb-filter-bar d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3" style="flex:1;">
+      <!-- Search form goes here if needed -->
     </div>
+    
+    <div>
+      <button type="button" id="btnBulkDelete" class="btn btn-danger rounded-3 shadow-sm fw-semibold" style="display:none;" onclick="confirmAction('Permanently delete selected teachers?', () => document.getElementById('bulkDeleteForm').submit())">
+        <i class="bi bi-trash-fill"></i> Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <form id="bulkDeleteForm" method="POST" action="{% url 'teacher_bulk_delete' %}">
+    {% csrf_token %}
+    <div class="table-responsive" style="min-height: 400px;">
+      <table class="table tb-table">
+        <thead>
+          <tr>
+            <th style="width: 40px; padding-left: 20px;">
+              <input type="checkbox" id="selectAll" class="form-check-input shadow-sm" style="border-radius:4px;">
+            </th>
+            <th style="width: 60px;" class="d-none d-md-table-cell">SN</th>
+            <th style="width: 250px;">TEACHER INFO</th>
+            <th class="d-none d-md-table-cell">CONTACT DETAILS</th>
+            <th class="text-center d-none d-md-table-cell">ASSIGNMENTS</th>
+            <th class="d-none d-md-table-cell">ACCOUNT STATUS</th>
+            <th class="text-end" style="padding-right: 20px;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for teacher in teachers %}
+          <tr>
+            <td style="padding-left: 20px;">
+              <input type="checkbox" name="teacher_ids" value="{{ teacher.pk }}" class="teacher-checkbox form-check-input shadow-sm" style="border-radius:4px;">
+            </td>
+            <td class="d-none d-md-table-cell"><div class="text-muted fw-medium" style="font-size:0.9rem;">{{ forloop.counter }}</div></td>
+            <td>
+              <div class="d-flex align-items-center gap-3">
+                {% if teacher.photo %}
+                <img src="{{ teacher.photo.url }}" width="40" height="40" style="border-radius:50%; object-fit:cover; border:2px solid #e2e8f0;">
+                {% elif teacher.user and teacher.user.profile_picture %}
+                <img src="{{ teacher.user.profile_picture.url }}" width="40" height="40" style="border-radius:50%; object-fit:cover; border:2px solid #e2e8f0;">
+                {% else %}
+                <div class="bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                     style="width: 40px; height: 40px; border-radius:50%; font-size:1.1rem; border:2px solid #e2e8f0;">
+                  {{ teacher.name|first|upper }}
+                </div>
+                {% endif %}
+                <div>
+                  <a href="{% url 'teacher_detail' teacher.pk %}" class="fw-bold text-slate-800 text-decoration-none d-block" style="font-size:0.95rem;">{{ teacher.name }}</a>
+                </div>
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell">
+              <div class="d-flex flex-column gap-1">
+                {% if teacher.email %}
+                <a href="mailto:{{ teacher.email }}" class="text-decoration-none text-slate-700 d-flex align-items-center gap-2" style="font-size:0.9rem;">
+                  <i class="bi bi-envelope text-muted"></i> 
+                  <span>{{ teacher.email }}</span>
+                </a>
+                {% else %}
+                <span class="text-muted" style="font-size:0.9rem;"><i class="bi bi-envelope text-muted me-2"></i>-</span>
+                {% endif %}
+                <div class="text-slate-700 d-flex align-items-center gap-2" style="font-size:0.9rem;">
+                  <i class="bi bi-telephone text-muted"></i>
+                  <span>{{ teacher.contact_number|default:"-" }}</span>
+                </div>
+              </div>
+            </td>
+            <td class="text-center d-none d-md-table-cell">
+              <div class="d-flex flex-column align-items-center justify-content-center gap-1">
+                <div class="d-inline-flex align-items-center bg-light border px-3 py-1.5 rounded-pill fw-semibold text-slate-700" style="font-size:0.8rem;">
+                  <i class="bi bi-journal-text me-2 opacity-75"></i> {{ teacher.subject_assignments.count }} Subjects
+                </div>
+                {% if user.is_school_admin or user.is_super_admin %}
+                <a href="{% url 'teacher_subject_map' teacher.pk %}" class="btn btn-sm btn-link text-primary text-decoration-none fw-bold p-0" style="font-size:0.75rem;">Manage</a>
+                {% endif %}
+              </div>
+            </td>
+            <td class="d-none d-md-table-cell">
+              {% if teacher.user %}
+                <div class="d-flex flex-column align-items-start gap-1">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle rounded-3 px-3 py-1.5 fw-semibold">
+                    <i class="bi bi-check-circle-fill me-1"></i> Active
+                  </span>
+                  <div class="text-muted fw-medium ms-1" style="font-size:0.75rem;">@{{ teacher.user.username }}</div>
+                  {% if user.is_school_admin or user.is_super_admin %}
+                  <form method="POST" action="{% url 'teacher_reset_password' teacher.pk %}" class="d-inline mt-1" onsubmit="return confirm('Reset password for {{ teacher.name|escapejs }}?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-warning rounded-2 py-0 px-2 fw-semibold shadow-sm" style="font-size: 0.75rem;"><i class="bi bi-key-fill me-1"></i> Reset Pwd</button>
+                  </form>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="d-flex flex-column align-items-start gap-2">
+                  <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-3 px-3 py-1.5 fw-semibold">
+                    No Account
+                  </span>
+                  {% if user.is_school_admin or user.is_super_admin %}
+                  <form method="POST" action="{% url 'teacher_create_user' teacher.pk %}" id="create-user-form-{{ teacher.pk }}">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-sm btn-primary rounded-3 py-1 px-3 fw-semibold shadow-sm" style="font-size: 0.8rem;" onclick="confirmAction('Generate user account for {{ teacher.name|escapejs }}?', () => document.getElementById('create-user-form-{{ teacher.pk }}').submit())">
+                      <i class="bi bi-person-plus-fill me-1"></i> Create
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              {% endif %}
+            </td>
+            <td class="text-end" style="padding-right: 20px;">
+              <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-3 border-0 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:32px; height:32px; padding:0; display:inline-flex; align-items:center; justify-content:center;">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px; font-size: 0.9rem;">
+                  <li><a class="dropdown-item py-2" href="{% url 'teacher_detail' teacher.pk %}"><i class="bi bi-person-vcard text-primary me-2"></i> View Profile</a></li>
+                  {% if user.is_school_admin or user.is_super_admin %}
+                  <li><a class="dropdown-item py-2" href="{% url 'teacher_edit' teacher.pk %}"><i class="bi bi-pencil text-warning me-2"></i> Edit Details</a></li>
+                  
+                  {% if teacher.email %}
+                  <li>
+                    <form method="POST" action="{% url 'teacher_send_password_reset' teacher.pk %}" id="send-reset-form-{{ teacher.pk }}">
+                      {% csrf_token %}
+                      <button type="button" class="dropdown-item py-2" onclick="confirmAction('Send password reset email to {{ teacher.email|escapejs }}?', () => document.getElementById('send-reset-form-{{ teacher.pk }}').submit())">
+                        <i class="bi bi-envelope-arrow-up text-info me-2"></i> Send Reset Link
+                      </button>
+                    </form>
+                  </li>
+                  {% endif %}
+                  
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form method="POST" action="{% url 'teacher_delete' teacher.pk %}" id="delete-form-{{ teacher.pk }}">
+                      {% csrf_token %}
+                      <button type="button" class="dropdown-item py-2 text-danger" onclick="confirmAction('Permanently delete {{ teacher.name|escapejs }}?', () => document.getElementById('delete-form-{{ teacher.pk }}').submit())">
+                        <i class="bi bi-trash me-2"></i> Delete Teacher
+                      </button>
+                    </form>
+                  </li>
+                  {% endif %}
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+        <tr>
+          <td colspan="9" class="text-center" style="padding:40px;">
+            <div class="empty-state">
+              <div class="empty-icon">👤</div>
+              <p>No teachers found</p>
+              {% if user.is_school_admin or user.is_super_admin %}
+              <div class="d-flex justify-content-center gap-3 mt-4">
+                <a href="{% url 'teacher_create' %}" class="btn btn-primary mt-2">Add Teacher</a>
+                <a href="{% url 'teacher_import' %}" class="btn btn-light mt-2 border">Import List</a>
+              </div>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    </div>
+  </form>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.teacher-checkbox');
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.teacher-checkbox');
+    const btnBulkDelete = document.getElementById('btnBulkDelete');
 
-        function updateBulkDeleteBtn() {
-            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
-            if (anyChecked) {
-                bulkDeleteBtn.classList.remove('d-none');
-            } else {
-                bulkDeleteBtn.classList.add('d-none');
-            }
-        }
+    function updateBulkDeleteBtn() {
+      const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+      if (anyChecked) {
+        btnBulkDelete.style.display = 'inline-block';
+      } else {
+        btnBulkDelete.style.display = 'none';
+      }
+    }
 
-        if (selectAll) {
-            selectAll.addEventListener('change', function() {
-                checkboxes.forEach(cb => {
-                    cb.checked = selectAll.checked;
-                });
-                updateBulkDeleteBtn();
-            });
-        }
-
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
         checkboxes.forEach(cb => {
-            cb.addEventListener('change', function() {
-                updateBulkDeleteBtn();
-                if (!this.checked && selectAll) {
-                    selectAll.checked = false;
-                } else if (Array.from(checkboxes).every(c => c.checked) && selectAll) {
-                    selectAll.checked = true;
-                }
-            });
+          cb.checked = selectAll.checked;
         });
+        updateBulkDeleteBtn();
+      });
+    }
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', function() {
+        updateBulkDeleteBtn();
+        if (!this.checked && selectAll) {
+          selectAll.checked = false;
+        } else if (Array.from(checkboxes).every(c => c.checked) && selectAll) {
+          selectAll.checked = true;
+        }
+      });
     });
+  });
 </script>
 {% endblock %}

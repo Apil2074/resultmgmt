@@ -1,5 +1,5 @@
 """
-Accounts App — Web views (login, logout, change password, profile)
+Accounts App ΓÇö Web views (login, logout, change password, profile)
 """
 import logging
 import secrets
@@ -165,15 +165,15 @@ class ForgotPasswordView(View):
             messages.error(request, "Please enter your email address.")
             return render(request, self.template_name)
 
-        # Check if the email belongs to an active Admin (School or Super)
+        # Check if the email belongs to any active user (Admin or Teacher)
         user_to_reset = User.objects.filter(
             email__iexact=email,
-            role__in=[User.Role.SCHOOL_ADMIN, User.Role.SUPER_ADMIN],
+            role__in=[User.Role.SCHOOL_ADMIN, User.Role.SUPER_ADMIN, User.Role.TEACHER],
             is_active=True
         ).first()
 
         if not user_to_reset:
-            messages.error(request, "This email address is not registered as an Admin in our system.")
+            messages.error(request, "This email address is not registered in our system.")
             return render(request, self.template_name)
 
         # Generate token and base64 encoded user ID
@@ -185,7 +185,7 @@ class ForgotPasswordView(View):
         domain = request.get_host()
         reset_link = f"{scheme}://{domain}/auth/reset-password/confirm/{uid}/{token}/"
 
-        subject = "Reset Your Password — E-Natija"
+        subject = "Reset Your Password - E-Natija"
         
         html_message = f"""
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -196,7 +196,7 @@ class ForgotPasswordView(View):
             <div style="padding: 35px 30px; background-color: #ffffff;">
                 <h3 style="color: #1f2937; margin-top: 0; font-size: 20px;">Hello {user_to_reset.get_full_name() or user_to_reset.username},</h3>
                 <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">
-                    We received a request to reset the password for your admin account on <strong>E-Natija</strong>.
+                    We received a request to reset the password for your account on <strong>E-Natija</strong>.
                 </p>
                 <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">
                     Please click the secure button below to choose a new password:
@@ -384,24 +384,31 @@ class RegisterDemoView(View):
                 domain = request.get_host()
                 activation_link = f"{scheme}://{domain}/auth/activate-demo/{uid}/{token}/"
                 
-                # Send activation email
+                # Send activation email (HTML)
+                from core.email_utils import demo_activation_email, superadmin_new_demo_email
+                _subj, _plain, _html = demo_activation_email(user.first_name, activation_link)
                 send_mail(
-                    subject="Activate Your E-Natija Demo Account",
-                    message=f"Hello {user.first_name},\n\nThank you for applying for a demo.\nPlease click the link below to activate your account:\n{activation_link}\n\n— E-Natija Team",
+                    subject=_subj,
+                    message=_plain,
                     from_email=getattr(django_settings, 'EMAIL_HOST_USER', 'noreply@rms.local'),
                     recipient_list=[user.email],
                     fail_silently=True,
+                    html_message=_html,
                 )
                 
-                # Notify superadmins
+                # Notify superadmins (HTML)
                 superadmins = User.objects.filter(role=User.Role.SUPER_ADMIN, is_active=True).values_list('email', flat=True)
                 if superadmins:
+                    _subj2, _plain2, _html2 = superadmin_new_demo_email(
+                        school.name, user.get_full_name(), user.email, user.phone or '—'
+                    )
                     send_mail(
-                        subject="New Demo Tenant Registered",
-                        message=f"A new demo account was registered:\nSchool: {school.name}\nAdmin: {user.get_full_name()}\nEmail: {user.email}\nPhone: {user.phone}",
+                        subject=_subj2,
+                        message=_plain2,
                         from_email=getattr(django_settings, 'EMAIL_HOST_USER', 'noreply@rms.local'),
                         recipient_list=list(superadmins),
                         fail_silently=True,
+                        html_message=_html2,
                     )
 
                 messages.success(request, 'Your demo account has been created. Please check your email for the activation link.')
@@ -550,16 +557,27 @@ class DemoActivationView(View):
         from django.utils.http import urlsafe_base64_decode
         from django.utils.encoding import force_str
         from django.contrib.auth.tokens import default_token_generator
-        
+        from django.utils import timezone
+
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.filter(pk=uid).first()
+            # SECURITY FIX: Only match accounts that are currently inactive.
+            # Filtering by is_active=False means:
+            #   - Already-active accounts cannot be affected by replayed links.
+            #   - Admin-disabled accounts (set to inactive after activation) cannot
+            #     be re-activated by a user replaying their original activation email.
+            user = User.objects.filter(pk=uid, is_active=False).first()
         except (TypeError, ValueError, OverflowError):
             user = None
 
         if user is not None and default_token_generator.check_token(user, token):
             user.is_active = True
-            user.save()
+            # SECURITY FIX: Burn the token by updating last_login.
+            # Django's token generator includes last_login in its HMAC signature,
+            # so updating it here invalidates this token immediately after first use,
+            # making the activation link strictly one-time-use.
+            user.last_login = timezone.now()
+            user.save(update_fields=['is_active', 'last_login'])
             messages.success(request, "Your demo account is now activated! You can log in.")
             return redirect('login')
         else:

@@ -243,7 +243,7 @@ class GradingEngine:
 def calculate_ranks(student_results):
     """
     Assign class_rank to a list of StudentResult objects.
-    Uses 'Dense Ranking' natively with Decimals to prevent precision bugs.
+    Uses 'Dense Ranking' (e.g., 1, 1, 2, 2, 3) natively with Decimals to prevent precision bugs.
     Failed students receive no rank.
     """
     passed_students = [r for r in student_results if getattr(r, 'is_pass', False)]
@@ -279,3 +279,4 @@ def calculate_ranks(student_results):
         sr.class_rank = None
 
     return sorted_passed + failed_students
+

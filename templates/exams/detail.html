@@ -1,259 +1,375 @@
 {% extends 'base.html' %}
 {% block title %}Exam Detail: {{ exam.name }}{% endblock %}
-{% block page_title %}📋 Exam Details: {{ exam.name }}{% endblock %}
+{% block page_title %}Exam Details{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stat-card {
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #fff;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+  }
+  .icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+  }
+  .table-custom {
+    border-collapse: separate !important;
+    border-spacing: 0 10px !important;
+    margin-top: -10px;
+  }
+  .table-custom tr {
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 12px;
+  }
+  .table-custom tr:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+  }
+  .table-custom td {
+    border: 1px solid rgba(0,0,0,0.04);
+    border-style: solid none;
+    padding: 1.25rem;
+    vertical-align: middle;
+  }
+  .table-custom td:first-child {
+    border-left-style: solid;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+  }
+  .table-custom td:last-child {
+    border-right-style: solid;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+  .table-custom thead th {
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 0 1.25rem 0.5rem 1.25rem;
+  }
+  .dropdown-menu-modern {
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 16px;
+    padding: 0.75rem;
+  }
+  .dropdown-menu-modern .dropdown-item {
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .dropdown-menu-modern .dropdown-item:hover {
+    background-color: #f8f9fa;
+  }
+  .btn-action-circle {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+  .btn-action-circle:hover {
+    background-color: #e2e8f0;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-  <!-- Exam Meta/Workflow Sidebar -->
-  <div class="col-lg-4 mb-4">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0 fw-semibold text-slate-800">
-          <i class="bi bi-info-circle text-primary me-2"></i>Status & Actions
-        </h5>
-        <div>
-          {% if user.is_school_admin or user.is_super_admin %}
-            {% if exam.is_editable or user.can_manage_school %}
-            <a href="{% url 'exam_delete' exam.id %}" class="btn btn-sm btn-outline-danger" title="Delete Exam"><i class="bi bi-trash"></i></a>
-            {% endif %}
-          {% endif %}
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="mb-4">
-          <div class="small text-muted mb-1">Status</div>
-          <span class="fs-6 badge {% if exam.status == 'PUBLISHED' %}bg-success text-white{% else %}bg-secondary text-white{% endif %} py-2 px-3 rounded-pill w-100 text-center">
-            {{ exam.get_status_display }}
-          </span>
-        </div>
+<!-- Back Button -->
+<div class="mb-3">
+  <a href="{% url 'exam_list' %}" class="btn bg-white rounded-circle shadow border border-secondary-subtle d-inline-flex justify-content-center align-items-center" style="width: 44px; height: 44px; color: #1e293b; transition: all 0.2s ease;" title="Go Back" onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.transform='scale(1.05)';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.transform='scale(1)';">
+    <i class="bi bi-arrow-left" style="font-size: 1.3rem;"></i>
+  </a>
+</div>
 
-        <div class="mb-4 text-slate-700">
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">Session:</div>
-            <div class="col-7 fw-medium">{{ exam.session.name }}</div>
-          </div>
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">Start Date:</div>
-            <div class="col-7 fw-medium">{{ exam.start_date|default:"-" }}</div>
-          </div>
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">End Date:</div>
-            <div class="col-7 fw-medium">{{ exam.end_date|default:"-" }}</div>
-          </div>
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">Result Date:</div>
-            <div class="col-7 fw-medium">{{ exam.result_date|date:"Y-m-d"|default:"-" }}</div>
-          </div>
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">Lock Status:</div>
-            <div class="col-7 fw-medium">
-              {% if exam.is_locked %}
-                <span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Locked</span>
-              {% else %}
-                <span class="text-success fw-semibold"><i class="bi bi-unlock-fill me-1"></i>Editable</span>
-              {% endif %}
-            </div>
-          </div>
-          <div class="row mb-2">
-            <div class="col-5 text-muted small">Type:</div>
-            <div class="col-7 fw-medium">
-              {% if exam.is_aggregate %}
-                <span class="badge bg-info">Aggregate Exam</span>
-              {% else %}
-                <span class="badge bg-secondary">Normal Exam</span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <!-- Workflow Transitions -->
-        {% if user.can_publish_results %}
-          <div class="border-top pt-3 mt-3">
-            <h6 class="fw-semibold text-slate-800 mb-3">Workflow Controls</h6>
-            
-            <form method="POST" action="{% url 'exam_workflow' exam.id %}" class="d-flex flex-column gap-2">
-              {% csrf_token %}
-              
-              {% if exam.status == 'DRAFT' %}
-                <button type="submit" name="action" value="publish" class="btn btn-success w-100">
-                  <i class="bi bi-patch-check-fill me-2"></i>Publish Results
-                </button>
-              {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
-                <button type="submit" name="action" value="unpublish" class="btn btn-outline-danger w-100">
-                  <i class="bi bi-x-circle-fill me-2"></i>Unpublish Exam
-                </button>
-              {% endif %}
-
-              {% if exam.is_editable %}
-                <a href="{% url 'exam_edit' exam.id %}" class="btn btn-outline-primary w-100 mt-2">
-                  <i class="bi bi-pencil me-2"></i>Edit Details
-                </a>
-              {% endif %}
-            </form>
-          </div>
-        {% endif %}
-
-
-      </div>
+<!-- Page Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+  <div>
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <h2 class="fw-bolder text-dark mb-0" style="letter-spacing: -0.5px;">{{ exam.name }}</h2>
+      <span class="badge {% if exam.status == 'PUBLISHED' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-secondary-subtle text-secondary border border-secondary-subtle{% endif %} rounded-pill px-3 py-2 fw-semibold">
+        {{ exam.get_status_display }}
+      </span>
+      {% if exam.is_aggregate %}
+        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-2 fw-semibold">Aggregate Exam</span>
+      {% endif %}
     </div>
-
-    {% if exam.is_aggregate %}
-    <div class="card shadow-sm mt-4">
-      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0 fw-semibold text-slate-800">
-          <i class="bi bi-diagram-3 text-primary me-2"></i>Aggregation Rules
-        </h5>
-        {% if exam.is_editable and user.can_manage_school %}
-        <a href="{% url 'exam_aggregation_rules' exam.id %}" class="btn btn-sm btn-outline-primary">Manage Rules</a>
-        {% endif %}
-      </div>
-      <div class="card-body p-0">
-        {% if aggregation_rules %}
-          <ul class="list-group list-group-flush mb-0">
-            {% for rule in aggregation_rules %}
-            <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-              <div>
-                <div class="fw-medium text-slate-800">{{ rule.source_exam.name }}</div>
-                <div class="small text-muted">{{ rule.source_exam.session.name }}</div>
-              </div>
-              <span class="badge bg-primary rounded-pill">{{ rule.weight_percentage }}%</span>
-            </li>
-            {% endfor %}
-          </ul>
-          
-          {% if user.is_school_admin or user.is_super_admin %}
-          <div class="p-3 border-top bg-light">
-            <form method="POST" action="{% url 'exam_generate_aggregate' exam.id %}">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-primary w-100" onclick="return confirm('This will clear existing marks and recalculate based on the rules. Continue?');">
-                <i class="bi bi-calculator-fill me-2"></i>Generate Aggregate Marks
-              </button>
-            </form>
-          </div>
-          {% endif %}
-        {% else %}
-          <div class="text-center py-4 text-muted">
-            <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
-            No rules defined. Add rules to generate marks.
-          </div>
-        {% endif %}
-      </div>
+    <div class="d-flex align-items-center text-muted fw-medium">
+      <i class="bi bi-calendar3 me-2 text-primary"></i> Session: {{ exam.session.name }}
     </div>
+  </div>
+  
+  <div class="d-flex flex-wrap gap-2">
+    {% if exam.is_editable %}
+      <a href="{% url 'exam_edit' exam.id %}" class="btn btn-white border shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center bg-white">
+        <i class="bi bi-pencil me-2 text-primary"></i>Edit Exam
+      </a>
+    {% endif %}
+    
+    {% if user.can_publish_results %}
+      <form method="POST" action="{% url 'exam_workflow' exam.id %}" class="m-0">
+        {% csrf_token %}
+        {% if exam.status == 'DRAFT' %}
+          <button type="submit" name="action" value="publish" class="btn btn-success shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center">
+            <i class="bi bi-patch-check-fill me-2"></i>Publish Results
+          </button>
+        {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
+          <button type="submit" name="action" value="unpublish" class="btn btn-outline-danger bg-white shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center">
+            <i class="bi bi-x-circle-fill me-2"></i>Unpublish
+          </button>
+        {% endif %}
+      </form>
+    {% endif %}
+
+    {% if user.is_school_admin or user.is_super_admin %}
+      {% if exam.is_editable or user.can_manage_school %}
+      <a href="{% url 'exam_delete' exam.id %}" class="btn btn-white bg-white text-danger border shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center" title="Delete Exam">
+        <i class="bi bi-trash3-fill me-2"></i>Delete
+      </a>
+      {% endif %}
     {% endif %}
   </div>
+</div>
 
-  <!-- Linked Classes Table -->
-  <div class="col-lg-8">
-    <div class="card shadow-sm">
-      <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0 fw-semibold text-slate-800">
-          <i class="bi bi-building text-primary me-2"></i>Included Classes
-        </h5>
+<!-- Key Metrics -->
+<div class="row g-4 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card p-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Start Date (BS)</div>
+          <div class="fw-bolder text-dark fs-4">{{ exam.start_date|default:"-" }}</div>
+        </div>
+        <div class="icon-box bg-primary-subtle text-primary">
+          <i class="bi bi-calendar-event-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card p-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">End Date (AD)</div>
+          <div class="fw-bolder text-dark fs-4">{{ exam.end_date|default:"-" }}</div>
+        </div>
+        <div class="icon-box bg-info-subtle text-info">
+          <i class="bi bi-calendar-check-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card p-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Result Date</div>
+          <div class="fw-bolder text-dark fs-4">{{ exam.result_date|date:"M d, Y"|default:"-" }}</div>
+        </div>
+        <div class="icon-box bg-success-subtle text-success">
+          <i class="bi bi-flag-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card p-4">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="text-muted small fw-bold text-uppercase tracking-wider mb-1" style="letter-spacing: 0.5px;">Lock Status</div>
+          <div class="fw-bolder {% if exam.is_locked %}text-danger{% else %}text-warning{% endif %} fs-4">
+            {% if exam.is_locked %}Locked{% else %}Editable{% endif %}
+          </div>
+        </div>
+        <div class="icon-box {% if exam.is_locked %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning{% endif %}">
+          <i class="bi {% if exam.is_locked %}bi-lock-fill{% else %}bi-unlock-fill{% endif %}"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  {% if exam.is_aggregate %}
+  <!-- Aggregation Rules Column -->
+  <div class="col-lg-4">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+      <h5 class="fw-bolder text-dark mb-0">Aggregation Rules</h5>
+      {% if exam.is_editable and user.can_manage_school %}
+      <a href="{% url 'exam_aggregation_rules' exam.id %}" class="btn btn-sm btn-white bg-white border fw-semibold rounded-3 px-3">Manage</a>
+      {% endif %}
+    </div>
+    
+    <div class="stat-card p-4">
+      {% if aggregation_rules %}
+        <div class="d-flex flex-column gap-3 mb-4">
+          {% for rule in aggregation_rules %}
+          <div class="d-flex justify-content-between align-items-center p-3 rounded-4 bg-light border border-light-subtle">
+            <div>
+              <div class="fw-bold text-dark">{{ rule.source_exam.name }}</div>
+              <div class="small text-muted fw-medium">{{ rule.source_exam.session.name }}</div>
+            </div>
+            <span class="badge bg-primary text-white rounded-pill px-3 py-2 fs-6 shadow-sm">{{ rule.weight_percentage }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        
         {% if user.is_school_admin or user.is_super_admin %}
+        <form method="POST" action="{% url 'exam_generate_aggregate' exam.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 shadow-sm fw-semibold" onclick="return confirm('This will clear existing marks and recalculate based on the rules. Continue?');">
+            <i class="bi bi-calculator-fill me-2"></i>Generate Aggregate Marks
+          </button>
+        </form>
+        {% endif %}
+      {% else %}
+        <div class="text-center py-5">
+          <div class="mb-3">
+            <i class="bi bi-diagram-3-fill text-primary" style="font-size: 3rem; opacity: 0.2;"></i>
+          </div>
+          <h6 class="fw-bold text-dark">No Rules Defined</h6>
+          <p class="text-muted small mb-0">Add rules to generate marks for this aggregate exam.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Included Classes Column -->
+  <div class="col-lg-{% if exam.is_aggregate %}8{% else %}12{% endif %}">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-3 gap-3">
+      <h5 class="fw-bolder text-dark mb-0">Included Classes</h5>
+      {% if user.is_school_admin or user.is_super_admin %}
         {% if exam.is_editable %}
-        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addClassesModal">
-          <i class="bi bi-plus-circle me-1"></i>Add Classes
+        <button type="button" class="btn btn-primary rounded-3 shadow-sm px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#addClassesModal">
+          <i class="bi bi-plus-lg me-2"></i>Add Classes
         </button>
         {% endif %}
-        {% endif %}
-      </div>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+      {% endif %}
+    </div>
+
+    <div class="table-responsive" style="overflow-x: auto; padding-bottom: 20px;">
+      <table class="table table-custom w-100 mb-0" style="min-width: 600px;">
+        <thead>
+          <tr>
+            <th>Class Name</th>
+            <th>Subjects</th>
+            <th>Enrolled</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ec in exam_classes %}
             <tr>
-              <th>Class Name</th>
-              <th>Subjects</th>
-              <th>Enrolled Students</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for ec in exam_classes %}
-              <tr>
-                <td>
-                  <a href="{% url 'class_detail' ec.class_obj.slug %}" class="fw-semibold text-decoration-none text-primary">
+              <td>
+                <div class="d-flex align-items-center">
+                  <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center me-3 fs-5" style="width: 44px; height: 44px; font-weight: bold;">
+                    {{ ec.class_obj.full_name|make_list|first }}
+                  </div>
+                  <a href="{% url 'class_detail' ec.class_obj.slug %}" class="fw-bold text-dark text-decoration-none fs-6">
                     {{ ec.class_obj.full_name }}
                   </a>
-                </td>
-                <td>
-                  <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1">
-                    {{ ec.class_obj.subjects.count }} Subjects
-                  </span>
-                </td>
-                <td>
-                  <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1">
-                    {{ ec.class_obj.student_count }} Students
-                  </span>
-                </td>
-                <td class="text-end">
-                  <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                      Manage Marks & Results
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                      {% if not exam.is_aggregate %}
-                      <!-- Marks entry -->
-                      <li>
-                        <a class="dropdown-item" href="{% url 'mark_entry' exam.id ec.class_obj.id %}">
-                          <i class="bi bi-pencil-square me-2 text-primary"></i>Enter Marks
-                        </a>
-                      </li>
-                      {% endif %}
-                      <!-- Excel import marks -->
-                      {% if user.is_school_admin or user.is_super_admin %}
-                      <li>
-                        <a class="dropdown-item" href="{% url 'bulk_mark_import' exam.id ec.class_obj.id %}">
-                          <i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Import Marks Excel
-                        </a>
-                      </li>
-                      <!-- Download template -->
-                      <li>
-                        <a class="dropdown-item" href="{% url 'mark_entry_template' exam.id ec.class_obj.id %}">
-                          <i class="bi bi-download me-2 text-warning"></i>Download Marks Template
-                        </a>
-                      </li>
-                      {% endif %}
-                      {% if ec.is_locked %}
-                      <li><hr class="dropdown-divider"></li>
-                      <!-- View grade ledger -->
-                      <li>
-                        <a class="dropdown-item" href="{% url 'grade_ledger' exam.id ec.class_obj.id %}">
-                          <i class="bi bi-table me-2 text-info"></i>View Grade Ledger
-                        </a>
-                      </li>
-                      <!-- Export grade ledger PDF -->
-                      <li>
-                        <a class="dropdown-item" href="{% url 'ledger_pdf' exam.id ec.class_obj.id %}" target="_blank">
-                          <i class="bi bi-file-pdf me-2 text-danger"></i>Export Ledger PDF
-                        </a>
-                      </li>
-                      {% endif %}
-                      
-                      {% if exam.is_editable and user.is_school_admin or exam.is_editable and user.is_super_admin %}
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <button type="button" class="dropdown-item text-danger btn-remove-class" 
-                                data-class-id="{{ ec.class_obj.id }}" 
-                                data-class-name="{{ ec.class_obj.full_name }}">
-                          <i class="bi bi-trash me-2 text-danger"></i>Remove from Exam
-                        </button>
-                      </li>
-                      {% endif %}
-                    </ul>
+                </div>
+              </td>
+              <td>
+                <div class="d-inline-flex align-items-center bg-light border px-3 py-1.5 rounded-pill fw-semibold text-secondary small">
+                  <i class="bi bi-book me-2 opacity-75"></i> {{ ec.class_obj.subjects.count }} Subjects
+                </div>
+              </td>
+              <td>
+                <div class="d-inline-flex align-items-center bg-light border px-3 py-1.5 rounded-pill fw-semibold text-secondary small">
+                  <i class="bi bi-people me-2 opacity-75"></i> {{ ec.class_obj.student_count }} Students
+                </div>
+              </td>
+              <td class="text-end">
+                <div class="dropdown">
+                  <button class="btn btn-light btn-action-circle border shadow-sm bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical text-secondary"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end dropdown-menu-modern">
+                    {% if not exam.is_aggregate %}
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" href="{% url 'mark_entry' exam.id ec.class_obj.id %}">
+                        <i class="bi bi-pencil-square me-3 text-primary fs-5"></i>Enter Marks
+                      </a>
+                    </li>
+                    {% endif %}
+                    {% if user.is_school_admin or user.is_super_admin %}
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" href="{% url 'bulk_mark_import' exam.id ec.class_obj.id %}">
+                        <i class="bi bi-file-earmark-spreadsheet me-3 text-success fs-5"></i>Import Marks
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" href="{% url 'mark_entry_template' exam.id ec.class_obj.id %}">
+                        <i class="bi bi-download me-3 text-warning fs-5"></i>Download Template
+                      </a>
+                    </li>
+                    {% endif %}
+                    {% if ec.is_locked %}
+                    <li><hr class="dropdown-divider mx-2"></li>
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" href="{% url 'grade_ledger' exam.id ec.class_obj.id %}">
+                        <i class="bi bi-table me-3 text-info fs-5"></i>Grade Ledger
+                      </a>
+                    </li>
+                    <li>
+                      <a class="dropdown-item d-flex align-items-center" href="{% url 'ledger_pdf' exam.id ec.class_obj.id %}" target="_blank">
+                        <i class="bi bi-file-pdf me-3 text-danger fs-5"></i>Export PDF
+                      </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if exam.is_editable and user.is_school_admin or exam.is_editable and user.is_super_admin %}
+                    <li><hr class="dropdown-divider mx-2"></li>
+                    <li>
+                      <button type="button" class="dropdown-item text-danger d-flex align-items-center btn-remove-class" 
+                              data-class-id="{{ ec.class_obj.id }}" 
+                              data-class-name="{{ ec.class_obj.full_name }}">
+                        <i class="bi bi-trash3 me-3 text-danger fs-5"></i>Remove Class
+                      </button>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-5 border-0 bg-transparent shadow-none">
+                <div class="mb-3 mt-3">
+                  <div class="d-inline-flex align-items-center justify-content-center bg-white border rounded-circle shadow-sm" style="width: 80px; height: 80px;">
+                    <i class="bi bi-folder-x text-muted fs-1 opacity-50"></i>
                   </div>
-                </td>
-              </tr>
-            {% empty %}
-              <tr>
-                <td colspan="4" class="text-center py-5 text-muted">
-                  <i class="bi bi-exclamation-triangle d-block fs-3 mb-2"></i>
-                  No classes assigned to this exam.
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+                </div>
+                <h5 class="fw-bold text-dark">No Classes Added</h5>
+                <p class="text-muted">This exam currently has no linked classes.</p>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -262,46 +378,47 @@
 <!-- Add Classes Modal -->
 <div class="modal fade" id="addClassesModal" tabindex="-1" aria-labelledby="addClassesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-semibold" id="addClassesModalLabel">
-          <i class="bi bi-plus-circle text-primary me-2"></i>Add Classes to Exam
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <h5 class="modal-title fw-bolder fs-4" id="addClassesModalLabel">
+          Add Classes
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="action" value="add_classes">
-        <div class="modal-body">
-          <p class="text-muted small mb-3">Select one or more classes from the current session ({{ exam.session.name }}) to add to this exam.</p>
+        <div class="modal-body px-4 py-4">
+          <p class="text-muted fw-medium mb-4">Select classes from the current session ({{ exam.session.name }}) to add to this exam.</p>
           
           {% if available_classes %}
-            <div class="list-group border rounded" style="max-height: 320px; overflow-y: auto;">
+            <div class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
               {% for cls in available_classes %}
-                <label class="list-group-item d-flex align-items-center justify-content-between cursor-pointer py-2.5">
+                <label class="d-flex align-items-center justify-content-between border rounded-4 p-3 cursor-pointer" style="transition: all 0.2s; cursor: pointer; background: #fff;" onmouseover="this.style.borderColor='#0d6efd'; this.style.backgroundColor='#f8fbff'" onmouseout="this.style.borderColor='var(--bs-border-color)'; this.style.backgroundColor='#fff'">
                   <div class="d-flex align-items-center">
-                    <input class="form-check-input me-3" type="checkbox" name="class_ids" value="{{ cls.id }}">
+                    <input class="form-check-input me-3 fs-4 mt-0" type="checkbox" name="class_ids" value="{{ cls.id }}">
                     <div>
-                      <span class="fw-semibold text-slate-800">{{ cls.full_name }}</span>
-                      <div class="small text-muted">{{ cls.student_count }} Students</div>
+                      <div class="fw-bold text-dark fs-6">{{ cls.full_name }}</div>
+                      <div class="small text-muted fw-semibold">{{ cls.student_count }} Students</div>
                     </div>
                   </div>
-                  <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1">{{ cls.subjects.count }} Subjects</span>
+                  <span class="badge bg-light text-secondary border rounded-pill px-3 py-2">{{ cls.subjects.count }} Subjects</span>
                 </label>
               {% endfor %}
             </div>
           {% else %}
-            <div class="text-center py-4 text-muted">
-              <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
-              No additional classes available in the active session.
+            <div class="text-center py-5 bg-light rounded-4">
+              <i class="bi bi-inbox fs-1 d-block mb-3 text-muted opacity-50"></i>
+              <h6 class="fw-bold text-dark">No Classes Available</h6>
+              <p class="text-muted small mb-0">All available classes have already been added.</p>
             </div>
           {% endif %}
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <div class="modal-footer border-0 px-4 pb-4 pt-0">
+          <button type="button" class="btn btn-light fw-bold rounded-3 px-3 py-1" data-bs-dismiss="modal">Cancel</button>
           {% if available_classes %}
-            <button type="submit" class="btn btn-primary px-4">
-              <i class="bi bi-check-circle me-1"></i>Add Selected Classes
+            <button type="submit" class="btn btn-primary fw-bold rounded-3 px-4 py-1 shadow-sm">
+              <i class="bi bi-plus-lg me-2"></i>Add Selected
             </button>
           {% endif %}
         </div>
@@ -310,28 +427,34 @@
   </div>
 </div>
 
-<!-- Remove Class Confirmation Modal -->
+<!-- Remove Class Modal -->
 <div class="modal fade" id="removeClassModal" tabindex="-1" aria-labelledby="removeClassModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-semibold text-danger" id="removeClassModalLabel">
-          <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Remove Class from Exam
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+      <div class="modal-header border-0 pt-4 px-4 pb-0">
+        <button type="button" class="btn-close bg-light rounded-circle p-2 ms-auto" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form method="POST">
         {% csrf_token %}
         <input type="hidden" name="action" value="remove_class">
         <input type="hidden" name="class_id" id="removeClassId">
-        <div class="modal-body">
-          <p>Are you sure you want to remove <strong id="removeClassObjName" class="text-slate-800"></strong> from this exam?</p>
-          <p class="text-danger small mb-0"><i class="bi bi-info-circle me-1"></i>Any marks entered for this class in this exam will be kept, but the class won't be listed as part of this exam.</p>
+        <div class="modal-body px-4 py-3">
+          <div class="text-center mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-3" style="width: 80px; height: 80px;">
+              <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
+            </div>
+            <h4 class="fw-bolder text-dark mb-2">Remove Class?</h4>
+            <p class="text-muted fs-6 mb-0">You are about to remove <strong id="removeClassObjName" class="text-dark"></strong> from this exam.</p>
+          </div>
+          <div class="bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-4 p-3 d-flex gap-3 align-items-start mb-2">
+            <i class="bi bi-info-circle-fill text-warning fs-5 mt-1"></i>
+            <small class="text-dark fw-medium">Any marks entered for this class in this exam will be kept in the database, but the class won't be listed as part of this exam anymore.</small>
+          </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-danger px-4">
-            <i class="bi bi-trash me-1"></i>Yes, Remove Class
+        <div class="modal-footer border-0 px-4 pb-4 d-flex gap-2 justify-content-center pt-0">
+          <button type="button" class="btn btn-light fw-bold rounded-3 px-4 py-1" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger fw-bold rounded-3 px-4 py-1 shadow-sm">
+            Yes, Remove
           </button>
         </div>
       </form>
@@ -339,7 +462,6 @@
   </div>
 </div>
 {% endif %}
-
 {% endblock %}
 
 {% block extra_js %}

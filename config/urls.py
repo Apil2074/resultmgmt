@@ -15,23 +15,11 @@ from apps.accounts.views_web import LandingPageView
 # we rely on the built-in is_staff/is_superuser flags on the User model.
 # The User model's save/create methods should enforce that ONLY SUPER_ADMIN gets is_staff=True.
 
-from django.core.management import call_command
-from django.http import HttpResponse
-
-def trigger_migration(request):
-    import traceback
-    try:
-        call_command('migrate')
-        with open('migrate_log.txt', 'w') as f:
-            f.write("Migration was successful!")
-        return HttpResponse("Migration triggered! Check migrate_log.txt in your file manager.")
-    except Exception as e:
-        with open('migrate_log.txt', 'w') as f:
-            f.write(traceback.format_exc())
-        return HttpResponse("Migration failed! Check migrate_log.txt in your file manager.")
+# REMOVED: trigger_migration endpoint was an unauthenticated HTTP route that allowed
+# any visitor to run `manage.py migrate` against the live database.
+# Run migrations via SSH/console: python manage.py migrate
 
 urlpatterns = [
-    path('setup-database/', trigger_migration, name='trigger_migration'),
     # Admin
     path('admin/', admin.site.urls),
 

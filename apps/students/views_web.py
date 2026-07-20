@@ -63,6 +63,8 @@ def student_list(request):
 def student_create(request):
     if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
         messages.error(request, 'Access denied.')
+        if request.user.is_teacher:
+            return redirect('teacher_dashboard')
         return redirect('student_list')
     school = request.user.school
     active_session = school.get_active_session() if school else None
@@ -117,6 +119,8 @@ def student_detail(request, pk):
 def student_edit(request, pk):
     if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
         messages.error(request, 'Access denied.')
+        if request.user.is_teacher:
+            return redirect('teacher_dashboard')
         return redirect('student_list')
     school = request.user.school
     active_session = school.get_active_session() if school else None
@@ -170,6 +174,8 @@ def student_edit(request, pk):
 def student_delete(request, pk):
     if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
         messages.error(request, 'Access denied.')
+        if request.user.is_teacher:
+            return redirect('teacher_dashboard')
         return redirect('student_list')
     school = request.user.school
     student = get_object_or_404(Student, pk=pk, school=school)
@@ -202,6 +208,8 @@ def parse_class_and_section(class_str):
 def student_import(request):
     if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
         messages.error(request, 'Access denied.')
+        if request.user.is_teacher:
+            return redirect('teacher_dashboard')
         return redirect('student_list')
     """Import students from Excel."""
     school = request.user.school

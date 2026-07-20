@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compare Exams | {{ school.name }}{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+  <a href="{% url 'exam_list' %}" class="btn bg-white rounded-circle shadow border border-secondary-subtle d-inline-flex justify-content-center align-items-center" style="width: 44px; height: 44px; color: #1e293b; transition: all 0.2s ease;" title="Go Back" onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.transform='scale(1.05)';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.transform='scale(1)';">
+    <i class="bi bi-arrow-left" style="font-size: 1.3rem;"></i>
+  </a>
+</div>
+
+<style>
+/* Modern, Minimal, Enterprise-grade Styles */
+.cmp-wrap { max-width: 1300px; margin: 0 auto; padding: 24px; font-family: 'Inter', sans-serif; }
+.cmp-header { margin-bottom: 24px; }
+.cmp-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; color: #1e293b; margin-bottom: 4px; }
+.cmp-subtitle { font-size: 0.95rem; color: #64748b; }
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+.kpi-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; margin-bottom: 8px; }
+.kpi-value { font-size: 1.75rem; font-weight: 700; color: #0f172a; display: flex; align-items: baseline; gap: 8px; }
+.kpi-trend { font-size: 0.85rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+.kpi-trend.up { background: #dcfce7; color: #166534; }
+.kpi-trend.down { background: #fee2e2; color: #991b1b; }
+.kpi-trend.flat { background: #f1f5f9; color: #475569; }
+
+/* Chart Cards */
+.chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+.chart-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.02); display: flex; flex-direction: column;}
+.chart-card.full-width { grid-column: 1 / -1; }
+.chart-header { margin-bottom: 20px; }
+.chart-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+.chart-desc { font-size: 0.85rem; color: #64748b; }
+.chart-container { position: relative; width: 100%; flex-grow: 1; min-height: 320px; }
+
+/* Custom Heatmap Matrix */
+.heatmap-grid { display: grid; gap: 4px; overflow-x: auto; margin-top: 10px; }
+.heatmap-cell { padding: 12px; border-radius: 6px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #fff; transition: opacity 0.2s; }
+.heatmap-cell:hover { opacity: 0.8; }
+.heatmap-label-row, .heatmap-label-col { font-size: 0.75rem; color: #64748b; font-weight: 600; text-align: center; align-self: center; }
+.heatmap-label-row { text-align: left; padding-right: 10px; }
+</style>
+
+<div class="cmp-wrap">
+    
+    <div class="cmp-header d-flex justify-content-between align-items-end">
+        <div>
+            <div class="cmp-title">Terminal Examination Comparison</div>
+            <div class="cmp-subtitle">
+                Comparing {{ exams|length }} examinations
+                {% if selected_class %} for <strong>{{ selected_class.full_name }}</strong>{% endif %}
+            </div>
+        </div>
+        <div>
+            <a href="javascript:history.back()" class="btn btn-light rounded-3 px-4 fw-bold shadow-sm" style="border: 1px solid #e2e8f0;">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Section -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-title">Pass Rate</div>
+            <div class="kpi-value">{{ kpis.pass_rate.value }}% 
+                <span class="kpi-trend {{ kpis.pass_rate.trend }}">
+                    {% if kpis.pass_rate.trend == 'up' %}↑{% elif kpis.pass_rate.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Average GPA</div>
+            <div class="kpi-value">{{ kpis.avg_gpa.value }} 
+                <span class="kpi-trend {{ kpis.avg_gpa.trend }}">
+                    {% if kpis.avg_gpa.trend == 'up' %}↑{% elif kpis.avg_gpa.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Failed Students</div>
+            <div class="kpi-value">{{ kpis.failed_students.value }} 
+                <span class="kpi-trend {{ kpis.failed_students.trend }}">
+                    {% if kpis.failed_students.trend == 'up' %}↑{% elif kpis.failed_students.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Top Grade (A/A+)</div>
+            <div class="kpi-value">{{ kpis.top_grade_count.value }} 
+                <span class="kpi-trend {{ kpis.top_grade_count.trend }}">
+                    {% if kpis.top_grade_count.trend == 'up' %}↑{% elif kpis.top_grade_count.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Highest GPA</div>
+            <div class="kpi-value">{{ kpis.highest_gpa.value }} 
+                <span class="kpi-trend {{ kpis.highest_gpa.trend }}">
+                    {% if kpis.highest_gpa.trend == 'up' %}↑{% elif kpis.highest_gpa.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Lowest GPA</div>
+            <div class="kpi-value">{{ kpis.lowest_gpa.value }} 
+                <span class="kpi-trend {{ kpis.lowest_gpa.trend }}">
+                    {% if kpis.lowest_gpa.trend == 'up' %}↑{% elif kpis.lowest_gpa.trend == 'down' %}↓{% else %}={% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">1. Pass / Fail Ratio</div>
+                <div class="chart-desc">Proportional representation of passing vs failing students.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="dumbbellChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">2. Grade Distribution</div>
+                <div class="chart-desc">Grouped bar chart showing occurrences of each final grade.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="gradeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="chart-grid">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <div class="chart-title">3. Subject Average Comparison</div>
+                <div class="chart-desc">Horizontal bar chart tracking average GPA per subject.</div>
+            </div>
+            <div class="chart-container" style="min-height: 400px;">
+                <canvas id="subjectAvgChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 3 -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">4. Average GPA by Class</div>
+                <div class="chart-desc">Clustered columns comparing class performance.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="classGpaChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">5. Pass Rate by Class</div>
+                <div class="chart-desc">Clustered bars showing pass percentages.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="classPassChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 4 -->
+    <div class="chart-grid">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <div class="chart-title">6. Subject Improvement (+/-)</div>
+                <div class="chart-desc">Diverging bar chart showing GPA difference between first and last selected exams.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="improvementChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 5 -->
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">7. Overall Subject Performance</div>
+                <div class="chart-desc">Radar chart overlaying subject averages.</div>
+            </div>
+            <div class="chart-container" style="display:flex; justify-content:center;">
+                <canvas id="radarChart" style="max-width:400px; max-height:400px;"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">9. Overall GPA Trend</div>
+                <div class="chart-desc">Line chart showing total average GPA progression.</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heatmap Row -->
+    <div class="chart-grid">
+        <div class="chart-card full-width">
+            <div class="chart-header">
+                <div class="chart-title">8. Class Performance Matrix</div>
+                <div class="chart-desc">Heatmap of average GPA across classes and exams. Darker green indicates higher GPA.</div>
+            </div>
+            <div id="heatmapContainer"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // ---------------------------------------------------------
+    // DATA PARSING
+    // ---------------------------------------------------------
+    const examNames = JSON.parse('{{ exam_names_json|escapejs }}');
+    const dumbbellData = JSON.parse('{{ dumbbell_data_json|escapejs }}');
+    const gradeData = JSON.parse('{{ grade_dist_data_json|escapejs }}');
+    const subAvgData = JSON.parse('{{ subject_avg_data_json|escapejs }}');
+    const classGpaData = JSON.parse('{{ class_gpa_data_json|escapejs }}');
+    const classPassData = JSON.parse('{{ class_pass_data_json|escapejs }}');
+    const improvementData = JSON.parse('{{ subject_improvement_json|escapejs }}');
+    const radarData = JSON.parse('{{ radar_data_json|escapejs }}');
+    const classNames = JSON.parse('{{ class_names_json|escapejs }}');
+    const heatmapMatrix = JSON.parse('{{ heatmap_matrix_json|escapejs }}');
+    const gpaTrend = JSON.parse('{{ gpa_trend_json|escapejs }}');
+
+    // Chart.js Global Defaults
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = "#64748b";
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } } },
+        scales: {
+            x: { grid: { display: false, drawBorder: false } },
+            y: { grid: { color: '#f1f5f9', drawBorder: false } }
+        }
+    };
+
+    // ---------------------------------------------------------
+    // 1. Dumbbell Chart (Stacked Horizontal for Pass/Fail Ratio)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('dumbbellChart'), {
+        type: 'bar',
+        data: {
+            labels: examNames,
+            datasets: [
+                { label: 'Pass %', data: dumbbellData.map(d => d.pass_pct), backgroundColor: '#10b981', borderRadius: 4 },
+                { label: 'Fail %', data: dumbbellData.map(d => d.fail_pct), backgroundColor: '#ef4444', borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: { stacked: true, max: 100, grid: { display: false } },
+                y: { stacked: true, grid: { display: false } }
+            },
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    // ---------------------------------------------------------
+    // 2. Grouped Bar Chart (Grade Distribution)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('gradeChart'), {
+        type: 'bar',
+        data: gradeData,
+        options: { ...commonOptions, plugins: { legend: { position: 'bottom' } } }
+    });
+
+    // ---------------------------------------------------------
+    // 3. Horizontal Bar Chart (Subject Average)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('subjectAvgChart'), {
+        type: 'bar',
+        data: subAvgData,
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                x: { grid: { color: '#f1f5f9' }, max: 4.0 },
+                y: { grid: { display: false } }
+            }
+        }
+    });
+
+    // ---------------------------------------------------------
+    // 4. Clustered Column Chart (GPA by Class)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('classGpaChart'), {
+        type: 'bar',
+        data: classGpaData,
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { max: 4.0, grid: { color: '#f1f5f9' } } } }
+    });
+
+    // ---------------------------------------------------------
+    // 5. Clustered Bar Chart (Pass Rate by Class)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('classPassChart'), {
+        type: 'bar',
+        data: classPassData,
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { max: 100, grid: { color: '#f1f5f9' } } } }
+    });
+
+    // ---------------------------------------------------------
+    // 6. Diverging Bar Chart (Subject Improvement)
+    // ---------------------------------------------------------
+    const impColors = improvementData.data.map(val => val >= 0 ? '#10b981' : '#ef4444');
+    new Chart(document.getElementById('improvementChart'), {
+        type: 'bar',
+        data: {
+            labels: improvementData.labels,
+            datasets: [{
+                label: 'GPA Difference (Last vs First Exam)',
+                data: improvementData.data,
+                backgroundColor: impColors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: { legend: { display: false } },
+            scales: { y: { grid: { color: '#f1f5f9' } } }
+        }
+    });
+
+    // ---------------------------------------------------------
+    // 7. Radar Chart (Overall Subject Performance)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('radarChart'), {
+        type: 'radar',
+        data: radarData,
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { r: { min: 0, max: 4.0, ticks: { display: false } } }
+        }
+    });
+
+    // ---------------------------------------------------------
+    // 9. Line Chart (Overall GPA Trend)
+    // ---------------------------------------------------------
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: examNames,
+            datasets: [{
+                label: 'Overall Average GPA',
+                data: gpaTrend,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { ...commonOptions, scales: { ...commonOptions.scales, y: { min: 0, max: 4.0 } } }
+    });
+
+    // ---------------------------------------------------------
+    // 8. Heatmap Generation (Vanilla JS + CSS Grid)
+    // ---------------------------------------------------------
+    const hmContainer = document.getElementById('heatmapContainer');
+    if (classNames.length > 0 && heatmapMatrix.length > 0) {
+        hmContainer.style.display = 'grid';
+        hmContainer.style.gridTemplateColumns = `max-content repeat(${classNames.length}, 1fr)`;
+        hmContainer.style.gap = '8px';
+        hmContainer.style.overflowX = 'auto';
+        hmContainer.style.paddingBottom = '8px';
+
+        // Top Left empty cell
+        const tl = document.createElement('div');
+        hmContainer.appendChild(tl);
+
+        // Column Headers (Class Names)
+        classNames.forEach(cn => {
+            const colLabel = document.createElement('div');
+            colLabel.className = 'heatmap-label-col';
+            colLabel.textContent = cn;
+            hmContainer.appendChild(colLabel);
+        });
+
+        // Rows (Exams)
+        heatmapMatrix.forEach(row => {
+            // Row Label
+            const rLabel = document.createElement('div');
+            rLabel.className = 'heatmap-label-row';
+            rLabel.textContent = row.exam;
+            hmContainer.appendChild(rLabel);
+
+            // Data Cells
+            row.data.forEach(val => {
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                
+                // Color scaling (GPA 0 to 4.0)
+                // We'll use a teal scale: #f0fdfa (light) to #0f766e (dark)
+                // For simplicity, we calculate an opacity overlay on a base color
+                let intensity = val / 4.0;
+                cell.style.backgroundColor = `rgba(16, 185, 129, ${intensity})`; // Emerald
+                cell.style.color = intensity > 0.5 ? '#fff' : '#0f172a';
+                
+                cell.textContent = val.toFixed(2);
+                cell.title = `GPA: ${val}`;
+                hmContainer.appendChild(cell);
+            });
+        });
+    } else {
+        hmContainer.innerHTML = '<p class="text-muted small">No class data available for heatmap.</p>';
+    }
+
+});
+</script>
+{% endblock %}

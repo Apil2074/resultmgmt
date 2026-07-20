@@ -411,6 +411,11 @@
     <div class="stat-value">{{ total_teachers|default:0 }}</div>
     <div class="stat-label">Teachers</div>
   </a>
+  <div class="stat-card text-dark" style="border-top: 4px solid var(--color-pink);">
+    <div class="stat-icon" style="color: var(--color-pink); background: rgba(236, 72, 153, 0.1);"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-value">{{ student_teacher_ratio|default:'N/A' }}</div>
+    <div class="stat-label">Student:Teacher</div>
+  </div>
   <a href="{% url 'subject_list' %}" class="stat-card purple text-decoration-none text-dark">
     <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
     <div class="stat-value">{{ total_subjects|default:0 }}</div>
@@ -434,6 +439,31 @@
 </div>
 
 <!-- Removed Advanced Analytics Row -->
+
+<!-- ── Attendance & Demographics Row ──────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-calendar-check-fill me-2" style="color:var(--color-emerald);"></i>Average Attendance by Class</div>
+      </div>
+      <div class="card-body chart-container" style="height:320px;">
+        <canvas id="attendanceChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-6">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-people-fill me-2" style="color:var(--color-blue);"></i>Gender Distribution by Class</div>
+      </div>
+      <div class="card-body chart-container" style="height:320px;">
+        <canvas id="genderChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── Detailed GPA Analytics Row ────────────────────────────── -->
 <div class="row g-3 mb-4">
@@ -552,55 +582,101 @@
   </div>
 </div>
 
-<!-- ── Recent Activity ─────────────────────────────────────── -->
+<!-- ── Activity & Birthdays ─────────────────────────────────────── -->
 <div class="row g-3">
-  <div class="col-12">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title"><i class="bi bi-activity me-2" style="color:var(--color-emerald);"></i>Recent Activity</div>
-        <a href="{% url 'audit_log' %}" class="btn btn-sm btn-secondary">Full Log</a>
+  <!-- Recent Activity -->
+  <div class="col-lg-8">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-activity me-2" style="color:var(--color-emerald);"></i>Recent Activity</div>
+        <a href="{% url 'audit_log' %}" class="btn btn-sm btn-outline-secondary">Full Log</a>
       </div>
-      {% if recent_activities %}
-      <div class="table-responsive">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Action</th>
-              <th>Object</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in recent_activities %}
-            <tr>
-              <td>
-                {% if log.user %}
-                  <div style="font-weight:600;">{{ log.user.get_full_name|default:log.user.username }}</div>
-                  <div style="font-size:0.7rem; color:var(--color-text-muted);">{{ log.user.get_role_display }}</div>
+      <div class="card-body p-0">
+        {% if recent_activities %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light text-uppercase" style="font-size: 0.75rem;">
+              <tr>
+                <th class="ps-3">User</th>
+                <th>Action</th>
+                <th>Object</th>
+                <th class="text-end pe-3">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in recent_activities %}
+              <tr>
+                <td class="ps-3">
+                  {% if log.user %}
+                    <div style="font-weight:600; font-size:0.85rem;">{{ log.user.get_full_name|default:log.user.username }}</div>
+                    <div style="font-size:0.7rem; color:var(--color-text-muted);">{{ log.user.get_role_display }}</div>
+                  {% else %}
+                    <div style="font-weight:600; font-size:0.85rem;">System</div>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge {% if log.action == 'CREATE' %}bg-success{% elif log.action == 'UPDATE' %}bg-primary{% elif log.action == 'DELETE' %}bg-danger{% elif log.action == 'PUBLISH' %}bg-warning text-dark{% else %}bg-secondary{% endif %} bg-opacity-10 text-dark border">
+                    {{ log.get_action_display }}
+                  </span>
+                </td>
+                <td style="color:var(--color-text-muted); font-size:0.85rem;">{{ log.model_name }} — {{ log.object_repr|truncatechars:35 }}</td>
+                <td class="text-end pe-3" style="font-size:0.75rem; color:var(--color-text-dim);">{{ log.timestamp|timesince }} ago</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-5 text-center">
+          <i class="bi bi-search fs-2 text-muted opacity-50"></i>
+          <p class="mt-2 text-muted mb-0">No activity yet</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Birthdays -->
+  <div class="col-lg-4">
+    <div class="card h-100 shadow-sm border-0" style="border-radius: var(--radius-md);">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="card-title mb-0 fw-bold"><i class="bi bi-gift-fill me-2" style="color:#EC4899;"></i>Upcoming Birthdays</div>
+      </div>
+      <div class="card-body p-0">
+        {% if upcoming_birthdays %}
+          <div class="list-group list-group-flush">
+            {% for bday in upcoming_birthdays %}
+            <div class="list-group-item d-flex align-items-center p-3 border-bottom-0 {% if not forloop.last %}border-bottom{% endif %}">
+              {% if bday.photo_url %}
+                <img src="{{ bday.photo_url }}" class="rounded-circle me-3 border" style="width:42px; height:42px; object-fit:cover;">
+              {% else %}
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3 bg-primary bg-opacity-10 text-primary fw-bold" style="width:42px; height:42px;">
+                  {{ bday.name|first|upper }}
+                </div>
+              {% endif %}
+              <div class="flex-grow-1">
+                <div class="fw-bold text-dark" style="font-size:0.9rem;">{{ bday.name }}</div>
+                <div class="text-muted" style="font-size:0.75rem;">{{ bday.role }} &bull; {{ bday.date|date:"M d" }}</div>
+              </div>
+              <div class="text-end ms-2">
+                {% if bday.days_left == 0 %}
+                  <span class="badge bg-danger rounded-pill shadow-sm">Today!</span>
+                {% elif bday.days_left == 1 %}
+                  <span class="badge bg-warning text-dark rounded-pill shadow-sm">Tomorrow</span>
                 {% else %}
-                  <div style="font-weight:600;">System</div>
-                  <div style="font-size:0.7rem; color:var(--color-text-muted);"></div>
+                  <span class="badge bg-light text-dark border rounded-pill">In {{ bday.days_left }} days</span>
                 {% endif %}
-              </td>
-              <td>
-                <span class="badge {% if log.action == 'CREATE' %}badge-green{% elif log.action == 'UPDATE' %}badge-blue{% elif log.action == 'DELETE' %}badge-red{% elif log.action == 'PUBLISH' %}badge-gold{% else %}badge-gray{% endif %}">
-                  {{ log.get_action_display }}
-                </span>
-              </td>
-              <td style="color:var(--color-text-muted);">{{ log.model_name }} — {{ log.object_repr|truncatechars:40 }}</td>
-              <td style="font-size:0.75rem; color:var(--color-text-dim);">{{ log.timestamp|timesince }} ago</td>
-            </tr>
+              </div>
+            </div>
             {% endfor %}
-          </tbody>
-        </table>
+          </div>
+        {% else %}
+          <div class="d-flex flex-column align-items-center justify-content-center h-100 py-5 text-muted">
+            <i class="bi bi-stars fs-1 mb-2" style="color:var(--color-gold); opacity:0.5;"></i>
+            <span>No birthdays this week</span>
+          </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <p>No activity yet</p>
-      </div>
-      {% endif %}
     </div>
   </div>
 </div>
@@ -673,6 +749,110 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 });
+
+// Average Attendance Chart (for school admins)
+const attendanceEl = document.getElementById('attendanceChart');
+if (attendanceEl) {
+  const attData = {{ class_attendance_data_json|default:'{}'|safe }};
+  const labels = Object.keys(attData);
+  const values = Object.values(attData);
+  
+  if (labels.length > 0) {
+    new Chart(attendanceEl, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Attendance %',
+          data: values,
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#10B981',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          y: { 
+            beginAtZero: true, 
+            max: 100,
+            ticks: { callback: function(value) { return value + '%'; } }
+          },
+          x: { grid: { display: false } }
+        },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return ' ' + context.parsed.y + '% Attendance';
+              }
+            }
+          }
+        },
+        interaction: { mode: 'index', intersect: false }
+      }
+    });
+  } else {
+    attendanceEl.parentElement.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted"><i class="bi bi-calendar-x fs-2 mb-2" style="opacity:0.5;"></i><span>No attendance data available</span></div>';
+  }
+}
+
+// Gender Distribution Chart (for school admins)
+const genderEl = document.getElementById('genderChart');
+if (genderEl) {
+  const genData = {{ gender_dist_data_json|default:'{}'|safe }};
+  
+  if (genData.labels && genData.labels.length > 0) {
+    const totalGenderCount = genData.male.reduce((a, b) => a + b, 0) + genData.female.reduce((a, b) => a + b, 0);
+    
+    if (totalGenderCount > 0) {
+      new Chart(genderEl, {
+        type: 'bar',
+        data: {
+          labels: genData.labels,
+          datasets: [
+            {
+              label: 'Female',
+              data: genData.female,
+              backgroundColor: '#EC4899', // Pink
+              borderRadius: 4,
+            },
+            {
+              label: 'Male',
+              data: genData.male,
+              backgroundColor: '#3B82F6', // Blue
+              borderRadius: 4,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+          },
+          plugins: { 
+            legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true, pointStyle: 'circle' } },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          interaction: { mode: 'index', intersect: false }
+        }
+      });
+    } else {
+      genderEl.parentElement.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted"><i class="bi bi-gender-ambiguous fs-2 mb-2" style="opacity:0.5;"></i><span>No gender data available</span></div>';
+    }
+  } else {
+    genderEl.parentElement.innerHTML = '<div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted"><i class="bi bi-people fs-2 mb-2" style="opacity:0.5;"></i><span>No student data available</span></div>';
+  }
+}
 
 // Grade Distribution Chart (for school admins)
 const gradeChartEl = document.getElementById('gradeChart');

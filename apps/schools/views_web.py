@@ -64,7 +64,16 @@ def dashboard(request):
         ctx['total_students'] = students_qs.count()
         ctx['total_subjects'] = subjects_qs.values('name').distinct().count()
         ctx['total_exams'] = exams_qs.count()
-        ctx['total_teachers'] = teachers_qs.distinct().count()
+        total_teachers = teachers_qs.distinct().count()
+        ctx['total_teachers'] = total_teachers
+        if total_teachers > 0:
+            ratio = ctx['total_students'] / total_teachers
+            if ratio.is_integer():
+                ctx['student_teacher_ratio'] = f"{int(ratio)}:1"
+            else:
+                ctx['student_teacher_ratio'] = f"{ratio:.1f}:1"
+        else:
+            ctx['student_teacher_ratio'] = "N/A"
         ctx['published_exams'] = exams_qs.filter(
             status=Exam.Status.PUBLISHED
         ).count()
@@ -140,6 +149,114 @@ def dashboard(request):
         ctx['perf_categories'] = perf_categories
         ctx['gpa_dist_stats_json'] = json.dumps(gpa_dist_stats)
         ctx['class_avg_data_json'] = json.dumps(class_avg_data)
+
+        # Average Attendance by Class
+        from apps.marks.models import MarkEntry
+        from django.db.models import Sum
+        
+        attendance_stats = MarkEntry.objects.filter(
+            exam__school=school,
+            exam__session=active_session,
+            present_days__isnull=False,
+            total_days__isnull=False,
+            total_days__gt=0
+        ).values('student__class_obj__name', 'student__class_obj__numeric_level').annotate(
+            total_present=Sum('present_days'),
+            total_working=Sum('total_days')
+        ).order_by('student__class_obj__numeric_level', 'student__class_obj__name')
+        
+        class_attendance_data = {}
+        for cstat in attendance_stats:
+            cname = cstat['student__class_obj__name']
+            if cname and cstat['total_working']:
+                pct = round((cstat['total_present'] / cstat['total_working']) * 100, 1)
+                class_attendance_data[cname] = pct
+        ctx['class_attendance_data_json'] = json.dumps(class_attendance_data)
+        
+        # Gender distribution by class
+        from django.db.models import Case, When, IntegerField
+        gender_stats = students_qs.values('class_obj__name', 'class_obj__numeric_level').annotate(
+            male_count=Sum(Case(When(gender='M', then=1), default=0, output_field=IntegerField())),
+            female_count=Sum(Case(When(gender='F', then=1), default=0, output_field=IntegerField())),
+        ).order_by('class_obj__numeric_level', 'class_obj__name')
+
+        gender_dist_data = {
+            'labels': [],
+            'male': [],
+            'female': []
+        }
+        for gstat in gender_stats:
+            cname = gstat['class_obj__name']
+            if cname:
+                gender_dist_data['labels'].append(cname)
+                gender_dist_data['male'].append(gstat['male_count'])
+                gender_dist_data['female'].append(gstat['female_count'])
+        
+        ctx['gender_dist_data_json'] = json.dumps(gender_dist_data)
+
+        # Upcoming Birthdays (Next 7 days)
+        from datetime import date, timedelta
+        from django.db.models import Q
+        
+        today = date.today()
+        upcoming_days = [(today + timedelta(days=i)) for i in range(7)]
+        month_day_pairs = [(d.month, d.day) for d in upcoming_days]
+        
+        birthday_q = Q()
+        for m, d in month_day_pairs:
+            birthday_q |= Q(date_of_birth__month=m, date_of_birth__day=d)
+            
+        upcoming_students = students_qs.filter(birthday_q).select_related('class_obj')
+        from apps.teachers.models import Teacher
+        upcoming_teachers = Teacher.objects.filter(school=school, user__is_active=True).filter(birthday_q).select_related('user')
+        
+        birthdays = []
+        for s in upcoming_students:
+            try:
+                bd_this_year = date(today.year, s.date_of_birth.month, s.date_of_birth.day)
+            except ValueError:
+                # Handle Feb 29 on non-leap years
+                bd_this_year = date(today.year, 3, 1)
+            
+            if bd_this_year < today:
+                try:
+                    bd_this_year = date(today.year + 1, s.date_of_birth.month, s.date_of_birth.day)
+                except ValueError:
+                    bd_this_year = date(today.year + 1, 3, 1)
+                    
+            days_left = (bd_this_year - today).days
+            birthdays.append({
+                'name': s.name,
+                'role': f'Student ({s.class_obj.name})',
+                'date': s.date_of_birth,
+                'days_left': days_left,
+                'photo_url': s.photo.url if s.photo else None
+            })
+            
+        for t in upcoming_teachers:
+            try:
+                bd_this_year = date(today.year, t.date_of_birth.month, t.date_of_birth.day)
+            except ValueError:
+                bd_this_year = date(today.year, 3, 1)
+                
+            if bd_this_year < today:
+                try:
+                    bd_this_year = date(today.year + 1, t.date_of_birth.month, t.date_of_birth.day)
+                except ValueError:
+                    bd_this_year = date(today.year + 1, 3, 1)
+                    
+            days_left = (bd_this_year - today).days
+            birthdays.append({
+                'name': t.user.get_full_name() or t.user.username,
+                'role': 'Teacher',
+                'date': t.date_of_birth,
+                'days_left': days_left,
+                'photo_url': t.photo.url if t.photo else None
+            })
+            
+        birthdays.sort(key=lambda x: x['days_left'])
+        ctx['upcoming_birthdays'] = birthdays
+
         ctx['pass_fail_stats'] = {
             'passed': passed_results,
             'failed': total_results - passed_results,
@@ -337,44 +454,39 @@ def create_school_and_admin(request):
                     object_repr=f"School: {school.name} & Admin: {user.username}"
                 )
                 
-                # 4. Send Welcome Notification
-                welcome_html = f"""
-                <div style="font-family: inherit; text-align: center; padding: 15px; border-radius: 8px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0;">
-                    <h3 style="color: #166534; margin-top: 0; font-weight: 700;">Welcome to ResultMgmt! 🚀</h3>
-                    <p style="color: #15803d; font-size: 14px; margin-bottom: 5px;">We are thrilled to have <strong>{school.name}</strong> on board.</p>
-                    <hr style="border: 0; border-top: 1px solid #86efac; margin: 12px 0;">
-                    <p style="color: #166534; font-size: 13px; margin-bottom: 15px;">Get started by setting up your academic sessions, classes, and adding your teachers.</p>
-                    <p style="color: #166534; font-size: 13px;">Your username: <strong>{user.username}</strong><br>Your password: <strong>{password}</strong></p>
-                    <a href="http://127.0.0.1:8000/dashboard/" style="display: inline-block; padding: 8px 20px; background-color: #16a34a; color: white; text-decoration: none; border-radius: 20px; font-weight: 600; font-size: 13px; box-shadow: 0 4px 6px rgba(22, 163, 74, 0.2);">Go to Dashboard</a>
-                </div>
-                """
+                # 4. Send Welcome Notification (in-app)
+                from core.email_utils import school_welcome_email
+                scheme = 'https' if request.is_secure() else 'http'
+                domain = request.get_host()
+                dashboard_url = f"{scheme}://{domain}/dashboard/"
+                _subject, _plain, welcome_html = school_welcome_email(
+                    school.name, user.username, password, dashboard_url
+                )
+
                 from apps.accounts.models import Notification
                 notification = Notification.objects.create(
-                    title="Welcome to ResultMgmt! 🎉",
+                    title=f"Welcome to E-Natija! 🎉",
                     message=welcome_html,
                     sender=request.user
                 )
                 notification.recipients.add(user)
-                
+
                 # 5. Send Email
                 from django.core.mail import send_mail
                 from django.conf import settings
-                from django.utils.html import strip_tags
-                
-                email_subject = "Welcome to ResultMgmt! 🎉"
-                plain_message = strip_tags(welcome_html)
+
                 from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@resultmgmt.com')
-                
+
                 try:
                     send_mail(
-                        subject=email_subject,
-                        message=plain_message,
+                        subject=_subject,
+                        message=_plain,
                         from_email=from_email,
                         recipient_list=[user.email],
                         fail_silently=True,
                         html_message=welcome_html
                     )
-                except Exception as e:
+                except Exception:
                     pass
                 
                 messages.success(request, f"Successfully created school '{school.name}' and admin user '{user.username}'.")
@@ -750,13 +862,38 @@ def super_settings(request):
     settings_obj = SystemSetting.get_settings()
     
     if request.method == 'POST':
-        if 'subjects_guide_pdf' in request.FILES:
-            settings_obj.subjects_guide_pdf = request.FILES['subjects_guide_pdf']
+        action = request.POST.get('action')
+
+        if action == 'branding':
+            app_name = request.POST.get('app_name', '').strip()
+            if app_name:
+                settings_obj.app_name = app_name
+            if 'app_logo' in request.FILES:
+                # Delete old logo file if it exists
+                if settings_obj.app_logo:
+                    settings_obj.app_logo.delete(save=False)
+                settings_obj.app_logo = request.FILES['app_logo']
             settings_obj.save()
-            messages.success(request, 'Subjects Guide PDF uploaded successfully.')
+            messages.success(request, 'App branding updated successfully.')
             return redirect('super_settings')
-            
+
+        elif action == 'remove_logo':
+            if settings_obj.app_logo:
+                settings_obj.app_logo.delete(save=False)
+                settings_obj.app_logo = None
+                settings_obj.save()
+            messages.success(request, 'App logo removed.')
+            return redirect('super_settings')
+
+        elif action == 'pdf':
+            if 'subjects_guide_pdf' in request.FILES:
+                settings_obj.subjects_guide_pdf = request.FILES['subjects_guide_pdf']
+                settings_obj.save()
+                messages.success(request, 'Subjects Guide PDF uploaded successfully.')
+                return redirect('super_settings')
+
     return render(request, 'schools/super_settings.html', {'settings': settings_obj})
+
 
 
 @login_required
@@ -768,10 +905,22 @@ def delete_school(request, school_id):
     school = get_object_or_404(School, pk=school_id)
     
     if request.method == 'POST':
+        from apps.accounts.models import User
         school_name = school.name
+
+        # Delete all users belonging to this school (school admins + teachers).
+        # Exclude SUPER_ADMIN accounts as a safety guard.
+        deleted_count, _ = User.objects.filter(
+            school=school
+        ).exclude(role=User.Role.SUPER_ADMIN).delete()
+
         school.delete()
-        messages.success(request, f"School '{school_name}' and all associated tenant data deleted successfully.")
+        messages.success(
+            request,
+            f"School '{school_name}' and {deleted_count} associated user(s) deleted successfully."
+        )
         return redirect('super_schools')
         
     return render(request, 'schools/super_school_confirm_delete.html', {'school': school})
+
 

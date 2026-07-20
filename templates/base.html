@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% block title %}E-Natija{% endblock %} | {% if school %}{{ school.name }}{% else %}E-Natija{% endif %}</title>
-  <meta name="description" content="{% block meta_description %}E-Natija{% endblock %}">
+  <title>{% block title %}{{ app_name }}{% endblock %} | {% if school %}{{ school.name }}{% else %}{{ app_name }}{% endif %}</title>
+  <meta name="description" content="{% block meta_description %}{{ app_name }}{% endblock %}">
 
   <!-- SECURITY: Provide CSRF token via meta tag since the cookie is now HttpOnly -->
   <meta name="csrf-token" content="{{ csrf_token }}">
@@ -52,9 +52,13 @@
 
     <!-- Logo -->
     <a class="sidebar-logo" href="{% url 'dashboard' %}">
-      <div class="logo-icon">R</div>
+      {% if app_logo_url %}
+        <img src="{{ app_logo_url }}" alt="{{ app_name }} Logo" class="logo-icon" style="object-fit: contain; background: white; padding: 2px;">
+      {% else %}
+        <div class="logo-icon">{{ app_name.0|upper }}</div>
+      {% endif %}
       <div class="logo-text">
-        <div class="brand-name">E-Natija</div>
+        <div class="brand-name">{{ app_name }}</div>
         <div class="brand-sub">Result Management</div>
       </div>
     </a>
@@ -185,17 +189,8 @@
           <i class="bi bi-chevron-left" id="desktopToggleIcon"></i>
         </button>
         <div class="d-flex align-items-center gap-2" style="min-width: 0;">
-          <script>
-            (function() {
-              const path = window.location.pathname.replace(/^\/|\/$/g, '');
-              const segments = path ? path.split('/') : [];
-              // If we are 2 or more levels deep (e.g. students/create/ or students/12/edit/), show a back button
-              if (segments.length >= 2) {
-                document.write('<a href="javascript:window.history.back();" class="btn btn-sm btn-outline-secondary border-0 p-1 me-1" title="Go Back"><i class="bi bi-chevron-left fs-5"></i></a>');
-              }
-            })();
-          </script>
-          <div class="d-md-none fw-bold text-primary" style="font-size: 1.2rem; font-family: 'Outfit', sans-serif;">E-Natija</div>
+
+          <div class="d-md-none fw-bold text-primary" style="font-size: 1.2rem; font-family: 'Outfit', sans-serif;">{{ app_name }}</div>
           <div class="topbar-title d-none d-md-block" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(0.9rem, 3vw, 1.25rem);">{% block page_title %}Dashboard{% endblock %}</div>
         </div>
       </div>
@@ -252,10 +247,7 @@
         </div>
         {% endif %}
 
-        <!-- Theme Toggle -->
-        <button class="btn btn-theme-toggle border-0 bg-transparent text-secondary" title="Toggle Theme" aria-label="Toggle Theme">
-          <i class="bi bi-moon-fill theme-toggle-icon"></i>
-        </button>
+        <!-- User Dropdown -->
 
         <!-- School Selector for Super Admin -->
         {% if user.is_super_admin %}

@@ -24,6 +24,8 @@ def class_list(request):
     if request.method == 'POST':
         if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
             messages.error(request, 'Access denied.')
+            if request.user.is_teacher:
+                return redirect('teacher_dashboard')
             return redirect('class_list')
         action = request.POST.get('action')
 

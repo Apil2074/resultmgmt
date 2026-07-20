@@ -4,6 +4,8 @@ Accounts App — Custom User Model with Role-Based Access Control
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
 
 
 class User(AbstractUser):
@@ -91,3 +93,19 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.title
+
+
+# ---------------------------------------------------------------------------
+# File cleanup signals — delete old images when replaced or record deleted
+# ---------------------------------------------------------------------------
+from core.signals import delete_old_image_on_change, delete_image_on_delete
+
+@receiver(pre_save, sender=User)
+def user_profile_picture_cleanup(sender, instance, **kwargs):
+    """Delete the old profile picture from storage when a new one is uploaded."""
+    delete_old_image_on_change(instance, 'profile_picture')
+
+@receiver(post_delete, sender=User)
+def user_profile_picture_delete(sender, instance, **kwargs):
+    """Delete the profile picture file when a user account is fully deleted."""
+    delete_image_on_delete(instance, 'profile_picture')

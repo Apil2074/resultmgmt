@@ -2,7 +2,7 @@ from django.urls import path
 from .views_web import (
     mark_entry, save_mark, save_marks_bulk, bulk_mark_import,
     mark_entry_template, save_full_marks, mark_entry_select, toggle_class_lock,
-    mark_entry_all_template, bulk_mark_all_import
+    mark_entry_all_template, bulk_mark_all_import, exam_progress_ajax
 )
 urlpatterns = [
     path('entry/select/', mark_entry_select, name='mark_entry_select'),
@@ -15,4 +15,5 @@ urlpatterns = [
     path('template-all/<int:exam_id>/', mark_entry_all_template, name='mark_entry_all_template'),
     path('import-all/<int:exam_id>/', bulk_mark_all_import, name='bulk_mark_all_import'),
     path('toggle-lock/<int:exam_id>/<int:class_id>/', toggle_class_lock, name='toggle_class_lock'),
+    path('exam-progress/<int:exam_id>/', exam_progress_ajax, name='exam_progress_ajax'),
 ]

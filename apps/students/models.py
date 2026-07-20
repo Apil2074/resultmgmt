@@ -218,3 +218,18 @@ def handle_student_deletion(sender, instance, **kwargs):
         except Exam.DoesNotExist:
             continue
 
+
+# ---------------------------------------------------------------------------
+# File cleanup signals — delete old student photos when replaced or deleted
+# ---------------------------------------------------------------------------
+from core.signals import delete_old_image_on_change, delete_image_on_delete
+
+@receiver(pre_save, sender=Student)
+def student_photo_cleanup(sender, instance, **kwargs):
+    """Delete the old student photo from storage when a new one is uploaded."""
+    delete_old_image_on_change(instance, 'photo')
+
+@receiver(post_delete, sender=Student)
+def student_photo_delete(sender, instance, **kwargs):
+    """Delete the student photo file when the student record is deleted."""
+    delete_image_on_delete(instance, 'photo')

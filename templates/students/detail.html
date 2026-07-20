@@ -3,6 +3,13 @@
 {% block page_title %}👤 Student Profile{% endblock %}
 
 {% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+  <a href="{% url 'student_list' %}" class="btn bg-white rounded-circle shadow border border-secondary-subtle d-inline-flex justify-content-center align-items-center" style="width: 44px; height: 44px; color: #1e293b; transition: all 0.2s ease;" title="Go Back" onmouseover="this.style.backgroundColor='#f1f5f9'; this.style.transform='scale(1.05)';" onmouseout="this.style.backgroundColor='#ffffff'; this.style.transform='scale(1)';">
+    <i class="bi bi-arrow-left" style="font-size: 1.3rem;"></i>
+  </a>
+</div>
+
 <div class="row">
   <!-- Profile details card -->
   <div class="col-lg-4 mb-4">

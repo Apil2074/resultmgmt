@@ -5,6 +5,7 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.db.models.functions import Length
+import json
 
 
 @login_required
@@ -36,9 +37,20 @@ def toppers_report(request, exam_id):
     if class_id:
         toppers = toppers.filter(student__class_obj_id=class_id)
         
-    toppers = toppers.order_by('class_rank')[:20]
+    toppers = toppers.order_by('-overall_gpa', '-percentage')[:20]
+    
+    # Calculate ranks based purely on GPA (competition rank)
+    toppers_list = list(toppers)
+    current_rank = 1
+    previous_gpa = None
+    for idx, t in enumerate(toppers_list):
+        if previous_gpa is not None and t.overall_gpa < previous_gpa:
+            current_rank = idx + 1
+        t.display_rank = current_rank
+        previous_gpa = t.overall_gpa
+
     return render(request, 'reports/toppers.html', {
-        'exam': exam, 'toppers': toppers,
+        'exam': exam, 'toppers': toppers_list,
         'classes': classes,
         'selected_class_id': int(class_id) if class_id and class_id.isdigit() else None,
     })
@@ -82,7 +94,22 @@ def exam_analytics(request, exam_id):
 
     school = request.user.school
     exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    
+    # Get all classes associated with this exam for the dropdown filter
+    all_classes = Class.objects.filter(
+        school=school, session=exam.session, exam_classes__exam=exam
+    ).distinct().order_by('numeric_level', 'name', 'section')
+
+    # Get class filter if provided
+    class_id = request.GET.get('class_id')
+    selected_class = None
+    if class_id:
+        selected_class = get_object_or_404(Class, pk=class_id, school=school)
+
     results = StudentResult.objects.filter(exam=exam, school=school).select_related('student', 'student__class_obj')
+    if selected_class:
+        results = results.filter(student__class_obj=selected_class)
+        
     total_students = results.count()
 
     # ── Core Pass/Fail ──────────────────────────────────────────────
@@ -214,8 +241,12 @@ def exam_analytics(request, exam_id):
 
     # ── Subject-wise average marks ────────────────────────────────────
     from django.db.models import F, ExpressionWrapper, FloatField
+    mark_entries = MarkEntry.objects.filter(exam=exam, school=school, special_value__isnull=True)
+    if selected_class:
+        mark_entries = mark_entries.filter(student__class_obj=selected_class)
+
     subject_avgs = (
-        MarkEntry.objects.filter(exam=exam, school=school, special_value__isnull=True)
+        mark_entries
         .values('subject__name', 'subject__code')
         .annotate(
             avg_theory=Avg('theory_obtained'),
@@ -227,6 +258,49 @@ def exam_analytics(request, exam_id):
     subj_labels = [f"{s['subject__code']}" for s in subject_avgs]
     subj_avg_data = [round((float(s['avg_theory'] or 0) + float(s['avg_internal'] or 0)), 1) for s in subject_avgs]
     subj_names = [s['subject__name'] for s in subject_avgs]
+
+    # ── Detail Analysis (Radar Chart Data) ───────────────────────────
+    # For individual student radar charts: mapping student ID -> data
+    student_radar_data = {}
+    students_for_radar = []
+    
+    # mark_entries is already filtered by exam, school, and selected_class (if any)
+    for me in mark_entries.select_related('student', 'subject', 'student__class_obj').order_by('student__name'):
+        sid = str(me.student_id)
+        if sid not in student_radar_data:
+            cls_name = me.student.class_obj.full_name if me.student.class_obj else 'Unknown Class'
+            cls_id = str(me.student.class_obj.id) if me.student.class_obj else '0'
+            student_radar_data[sid] = {
+                'id': sid,
+                'name': me.student.name,
+                'roll': me.student.roll_number or '-',
+                'class_name': cls_name,
+                'class_id': cls_id,
+                'labels': [],
+                'data': []
+            }
+            students_for_radar.append({
+                'id': sid, 
+                'name': me.student.name, 
+                'roll': me.student.roll_number or '-',
+                'class_name': cls_name,
+                'class_id': cls_id
+            })
+        
+        # Calculate percentage for the subject
+        th_obt = float(me.theory_obtained) if me.theory_obtained else 0.0
+        int_obt = float(me.internal_obtained) if me.internal_obtained else 0.0
+        tot_obt = th_obt + int_obt
+        
+        th_full = float(me.subject.theory_full_marks) if me.subject.theory_full_marks else 0.0
+        int_full = float(me.subject.practical_full_marks) if me.subject.practical_full_marks else 0.0
+        tot_full = th_full + int_full
+        
+        pct = round((tot_obt / tot_full * 100), 1) if tot_full > 0 else 0
+        
+        student_radar_data[sid]['labels'].append(me.subject.name)
+        student_radar_data[sid]['data'].append(pct)
+    students_for_radar.sort(key=lambda x: (int(x['roll']) if str(x['roll']).isdigit() else 99999, x['name']))
 
     # ── Bee-Swarm data: each student's GPA with class label ──────────
     swarm_data = []
@@ -323,21 +397,30 @@ def exam_analytics(request, exam_id):
     borderline_students.sort(key=lambda x: x['gpa'], reverse=True)
 
     # ── Top Improvers & Biggest Decliners ────────────────────────────
-    # Find most recent prior exam in the same session (excluding this one)
-    prior_exam = (
-        Exam.objects.filter(school=school, session=exam.session)
-        .exclude(pk=exam.pk)
-        .order_by('-start_date', '-created_at')
-        .first()
-    )
-    # Fallback: any prior exam for this school
-    if not prior_exam:
+    # Find most recent prior exam in the same session (occurring before this one)
+    prior_exam = None
+    if exam.start_date:
         prior_exam = (
-            Exam.objects.filter(school=school)
+            Exam.objects.filter(
+                school=school,
+                session=exam.session,
+                start_date__lt=exam.start_date
+            )
             .exclude(pk=exam.pk)
             .order_by('-start_date', '-created_at')
             .first()
         )
+        # Fallback: any prior exam for this school occurring before this one
+        if not prior_exam:
+            prior_exam = (
+                Exam.objects.filter(
+                    school=school,
+                    start_date__lt=exam.start_date
+                )
+                .exclude(pk=exam.pk)
+                .order_by('-start_date', '-created_at')
+                .first()
+            )
 
     top_improvers = []
     biggest_decliners = []
@@ -448,6 +531,14 @@ def exam_analytics(request, exam_id):
         'pct_bins': json.dumps(pct_bins),
         'pct_counts': json.dumps(pct_counts),
         'attendance_correlation_json': json.dumps(attendance_correlation_data),
+        # Detail Analysis Radar
+        'student_radar_data_json': json.dumps(student_radar_data),
+        'students_for_radar': students_for_radar,
+        'students_for_radar_json': json.dumps(students_for_radar),
+        # Class Filter context
+        'all_classes': all_classes,
+        'selected_class': selected_class,
+        'available_exams': Exam.objects.filter(school=school, session=exam.session, status='PUBLISHED').exclude(pk=exam.pk),
     })
 
 
@@ -623,3 +714,211 @@ def export_toppers_pdf(request, exam_id):
     return response
 
 
+
+
+@login_required
+def compare_analytics(request):
+    import json
+    from django.db.models import Avg, Count, Max, Min, Q
+    from apps.exams.models import Exam
+    from apps.classes.models import Class
+    from apps.results.models import StudentResult, SubjectResult
+    from apps.marks.models import MarkEntry
+
+    school = request.user.school
+    
+    exam_ids_str = request.GET.get('exams', '')
+    exam_ids = [int(eid) for eid in exam_ids_str.split(',') if eid.isdigit()]
+    class_id = request.GET.get('class_id')
+    
+    selected_class = None
+    if class_id and class_id.isdigit():
+        selected_class = get_object_or_404(Class, pk=class_id, school=school)
+        
+    exams = list(Exam.objects.filter(pk__in=exam_ids, school=school).order_by('start_date'))
+    if not exams:
+        return render(request, 'reports/compare_analytics.html', {'exams': exams})
+
+    # Base querysets
+    res_qs = StudentResult.objects.filter(exam__in=exams, school=school)
+    sub_qs = SubjectResult.objects.filter(mark_entry__exam__in=exams, mark_entry__student__school=school)
+    
+    if selected_class:
+        res_qs = res_qs.filter(student__class_obj=selected_class)
+        sub_qs = sub_qs.filter(mark_entry__student__class_obj=selected_class)
+
+    # --- 1. KPIs (Compare first exam vs last exam) ---
+    def get_exam_stats(exam_obj):
+        qs = res_qs.filter(exam=exam_obj)
+        total = qs.count()
+        if total == 0:
+            return {'pass_rate': 0, 'avg_gpa': 0, 'failed': 0, 'top': 0, 'high': 0, 'low': 0}
+        passed = qs.filter(is_pass=True).count()
+        failed = total - passed
+        avg = qs.aggregate(Avg('overall_gpa'))['overall_gpa__avg'] or 0
+        top = qs.filter(final_grade__in=['A+', 'A']).count()
+        high = qs.aggregate(Max('overall_gpa'))['overall_gpa__max'] or 0
+        low = qs.aggregate(Min('overall_gpa'))['overall_gpa__min'] or 0
+        return {
+            'pass_rate': (passed / total) * 100,
+            'avg_gpa': float(avg),
+            'failed': failed,
+            'top': top,
+            'high': float(high),
+            'low': float(low)
+        }
+
+    first_stats = get_exam_stats(exams[0])
+    last_stats = get_exam_stats(exams[-1]) if len(exams) > 1 else first_stats
+    
+    def calc_trend(v1, v2):
+        if v2 > v1: return 'up'
+        if v2 < v1: return 'down'
+        return 'flat'
+
+    kpis = {
+        'pass_rate': {'value': round(last_stats['pass_rate'], 1), 'trend': calc_trend(first_stats['pass_rate'], last_stats['pass_rate'])},
+        'avg_gpa': {'value': round(last_stats['avg_gpa'], 2), 'trend': calc_trend(first_stats['avg_gpa'], last_stats['avg_gpa'])},
+        'failed_students': {'value': last_stats['failed'], 'trend': calc_trend(first_stats['failed'], last_stats['failed'])},
+        'top_grade_count': {'value': last_stats['top'], 'trend': calc_trend(first_stats['top'], last_stats['top'])},
+        'highest_gpa': {'value': round(last_stats['high'], 2), 'trend': calc_trend(first_stats['high'], last_stats['high'])},
+        'lowest_gpa': {'value': round(last_stats['low'], 2), 'trend': calc_trend(first_stats['low'], last_stats['low'])},
+    }
+
+    # Helper maps
+    exam_names = [e.name for e in exams]
+
+    # --- 2. Dumbbell Chart (Pass / Fail Ratio) ---
+    dumbbell_data = []
+    for e in exams:
+        qs = res_qs.filter(exam=e)
+        t = qs.count()
+        p = qs.filter(is_pass=True).count()
+        dumbbell_data.append({
+            'exam': e.name,
+            'pass_pct': round((p/t*100) if t else 0, 1),
+            'fail_pct': round(((t-p)/t*100) if t else 0, 1)
+        })
+
+    # --- 3. Grouped Bar Chart (Grade Distribution) ---
+    grades = ['A+', 'A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'E']
+    grade_dist_data = {
+        'labels': grades,
+        'datasets': []
+    }
+    colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
+    for idx, e in enumerate(exams):
+        counts = []
+        for g in grades:
+            counts.append(res_qs.filter(exam=e, final_grade=g).count())
+        grade_dist_data['datasets'].append({
+            'label': e.name,
+            'data': counts,
+            'backgroundColor': colors[idx % len(colors)]
+        })
+
+    # --- 4. Horizontal Bar Chart (Subject Average Comparison) ---
+    # Get top subjects by participation
+    subs = list(sub_qs.values_list('mark_entry__subject__name', flat=True).distinct())
+    subject_avg_data = {
+        'labels': subs,
+        'datasets': []
+    }
+    for idx, e in enumerate(exams):
+        d = []
+        for s in subs:
+            a = sub_qs.filter(mark_entry__exam=e, mark_entry__subject__name=s).aggregate(Avg('gpa'))['gpa__avg'] or 0
+            d.append(float(round(a, 2)))
+        subject_avg_data['datasets'].append({
+            'label': e.name,
+            'data': d,
+            'backgroundColor': colors[idx % len(colors)]
+        })
+
+    # --- 5 & 6. Clustered Column Chart (Average GPA / Pass Rate by Class) ---
+    if not selected_class:
+        classes = list(Class.objects.filter(school=school).order_by('name'))
+        class_names = [c.name for c in classes]
+    else:
+        classes = [selected_class]
+        class_names = [selected_class.name]
+        
+    class_gpa_datasets = []
+    class_pass_datasets = []
+    heatmap_matrix = [] # for Heatmap later
+    
+    for idx, e in enumerate(exams):
+        gpas = []
+        passes = []
+        heat_row = []
+        for c in classes:
+            c_qs = res_qs.filter(exam=e, student__class_obj=c)
+            t = c_qs.count()
+            p = c_qs.filter(is_pass=True).count()
+            a = c_qs.aggregate(Avg('overall_gpa'))['overall_gpa__avg'] or 0
+            
+            gpas.append(float(round(a, 2)))
+            passes.append(round((p/t*100) if t else 0, 1))
+            heat_row.append(float(round(a, 2)))
+            
+        class_gpa_datasets.append({'label': e.name, 'data': gpas, 'backgroundColor': colors[idx % len(colors)]})
+        class_pass_datasets.append({'label': e.name, 'data': passes, 'backgroundColor': colors[idx % len(colors)]})
+        heatmap_matrix.append({'exam': e.name, 'data': heat_row})
+        
+    class_gpa_data = {'labels': class_names, 'datasets': class_gpa_datasets}
+    class_pass_data = {'labels': class_names, 'datasets': class_pass_datasets}
+
+    # --- 7. Diverging Bar Chart (Subject Improvement N vs 1) ---
+    subject_improvement = {'labels': [], 'data': []}
+    if len(exams) >= 2:
+        e_first = exams[0]
+        e_last = exams[-1]
+        for s in subs:
+            avg_f = float(sub_qs.filter(mark_entry__exam=e_first, mark_entry__subject__name=s).aggregate(Avg('gpa'))['gpa__avg'] or 0)
+            avg_l = float(sub_qs.filter(mark_entry__exam=e_last, mark_entry__subject__name=s).aggregate(Avg('gpa'))['gpa__avg'] or 0)
+            diff = float(round(avg_l - avg_f, 2))
+            subject_improvement['labels'].append(s)
+            subject_improvement['data'].append(diff)
+
+    # --- 8. Radar Chart (Overall Subject Performance) ---
+    # Re-use subject_avg_data logic but format for Radar (borderColor instead of backgroundColor)
+    radar_datasets = []
+    for idx, e in enumerate(exams):
+        d = subject_avg_data['datasets'][idx]['data']
+        col = colors[idx % len(colors)]
+        radar_datasets.append({
+            'label': e.name,
+            'data': d,
+            'borderColor': col,
+            'backgroundColor': f"{col}33",
+            'borderWidth': 2,
+            'pointBackgroundColor': col
+        })
+    radar_data = {'labels': subs, 'datasets': radar_datasets}
+
+    # --- 9. Heatmap (Class Performance Matrix) ---
+    # Data prepared in heatmap_matrix + class_names
+
+    # --- 10. Line Chart (Overall GPA Trend) ---
+    gpa_trend = []
+    for e in exams:
+        a = res_qs.filter(exam=e).aggregate(Avg('overall_gpa'))['overall_gpa__avg'] or 0
+        gpa_trend.append(float(round(a, 2)))
+
+    context = {
+        'exams': exams,
+        'selected_class': selected_class,
+        'exam_names_json': json.dumps(exam_names),
+        'kpis': kpis,
+        'dumbbell_data_json': json.dumps(dumbbell_data),
+        'grade_dist_data_json': json.dumps(grade_dist_data),
+        'subject_avg_data_json': json.dumps(subject_avg_data),
+        'class_gpa_data_json': json.dumps(class_gpa_data),
+        'class_pass_data_json': json.dumps(class_pass_data),
+        'subject_improvement_json': json.dumps(subject_improvement),
+        'radar_data_json': json.dumps(radar_data),
+        'class_names_json': json.dumps(class_names),
+        'heatmap_matrix_json': json.dumps(heatmap_matrix),
+        'gpa_trend_json': json.dumps(gpa_trend),
+    }
+    return render(request, 'reports/compare_analytics.html', context)

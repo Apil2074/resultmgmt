@@ -115,6 +115,11 @@ class TicketMessage(models.Model):
 class SystemSetting(models.Model):
     """Global system settings, e.g., for super admins to upload global documents."""
     subjects_guide_pdf = models.FileField(upload_to='system_docs/', null=True, blank=True)
+
+    # App branding — super admin can customise the name and logo shown across the app
+    app_name = models.CharField(max_length=100, default='E-Natija', blank=True)
+    app_logo = models.ImageField(upload_to='system_branding/', null=True, blank=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -125,3 +130,31 @@ class SystemSetting(models.Model):
     def get_settings(cls):
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+
+
+# ---------------------------------------------------------------------------
+# File cleanup signals — delete old images when replaced or record deleted
+# ---------------------------------------------------------------------------
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
+from core.signals import delete_old_image_on_change, delete_image_on_delete
+
+@receiver(pre_save, sender=School)
+def school_logo_cleanup(sender, instance, **kwargs):
+    """Delete the old school logo from storage when a new one is uploaded."""
+    delete_old_image_on_change(instance, 'logo')
+
+@receiver(post_delete, sender=School)
+def school_logo_delete(sender, instance, **kwargs):
+    """Delete the school logo file when the school record is deleted."""
+    delete_image_on_delete(instance, 'logo')
+
+@receiver(pre_save, sender=SystemSetting)
+def system_setting_logo_cleanup(sender, instance, **kwargs):
+    """Delete the old app logo from storage when a new one is uploaded."""
+    delete_old_image_on_change(instance, 'app_logo')
+
+@receiver(post_delete, sender=SystemSetting)
+def system_setting_logo_delete(sender, instance, **kwargs):
+    """Delete the app logo file when the system setting record is deleted."""
+    delete_image_on_delete(instance, 'app_logo')

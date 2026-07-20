@@ -128,7 +128,7 @@ class FailureCasesMitigationTest(TestCase):
         self.client = Client()
 
     def test_class_rank_skips_on_ties(self):
-        """Failure Case 1: Tie-breaker Ranking Bug. Ranks should skip (e.g. 1, 1, 3)."""
+        """Failure Case 1: Dense Ranking. Ranks do not skip on ties (e.g. 1, 1, 2)."""
         sr1 = StudentResult(school=self.school_a, exam=self.exam, student=self.student1, overall_gpa=Decimal("3.80"), total_marks_obtained=Decimal("450"), is_pass=True)
         sr2 = StudentResult(school=self.school_a, exam=self.exam, student=self.student2, overall_gpa=Decimal("3.80"), total_marks_obtained=Decimal("450"), is_pass=True)
         sr3 = StudentResult(school=self.school_a, exam=self.exam, student=self.student3, overall_gpa=Decimal("3.60"), total_marks_obtained=Decimal("420"), is_pass=True)
@@ -141,8 +141,8 @@ class FailureCasesMitigationTest(TestCase):
         
         self.assertEqual(ranks[self.student1.id], 1)
         self.assertEqual(ranks[self.student2.id], 1)
-        # Rank 2 is skipped, student 3 gets rank 3
-        self.assertEqual(ranks[self.student3.id], 3)
+        # Ranks are dense, student 3 gets rank 2
+        self.assertEqual(ranks[self.student3.id], 2)
 
     def test_subject_class_mismatch_rejected(self):
         """Failure Case 2: Subject-Class Consistency check in save_mark."""

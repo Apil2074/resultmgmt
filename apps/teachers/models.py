@@ -50,3 +50,21 @@ class TeacherSubject(models.Model):
 
     def __str__(self):
         return f"{self.teacher.name} - {self.subject.name}"
+
+
+# ---------------------------------------------------------------------------
+# File cleanup signals — delete old images when replaced or record deleted
+# ---------------------------------------------------------------------------
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
+from core.signals import delete_old_image_on_change, delete_image_on_delete
+
+@receiver(pre_save, sender=Teacher)
+def teacher_photo_cleanup(sender, instance, **kwargs):
+    """Delete the old teacher photo from storage when a new one is uploaded."""
+    delete_old_image_on_change(instance, 'photo')
+
+@receiver(post_delete, sender=Teacher)
+def teacher_photo_delete(sender, instance, **kwargs):
+    """Delete the teacher photo file when the teacher record is deleted."""
+    delete_image_on_delete(instance, 'photo')
