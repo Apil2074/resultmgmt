@@ -92,7 +92,7 @@
             <td class="d-none d-md-table-cell">
               <div class="d-flex flex-column gap-1">
                 {% if teacher.email %}
-                <a href="mailto:{{ teacher.email }}" class="text-decoration-none text-slate-700 d-flex align-items-center gap-2" style="font-size:0.9rem;">
+                <a href="javascript:void(0);" onclick="copyToClipboard('{{ teacher.email|escapejs }}', this)" class="text-decoration-none text-slate-700 d-flex align-items-center gap-2" style="font-size:0.9rem;" title="Click to copy">
                   <i class="bi bi-envelope text-muted"></i> 
                   <span>{{ teacher.email }}</span>
                 </a>
@@ -121,7 +121,9 @@
                   <span class="badge bg-success-subtle text-success border border-success-subtle rounded-3 px-3 py-1.5 fw-semibold">
                     <i class="bi bi-check-circle-fill me-1"></i> Active
                   </span>
-                  <div class="text-muted fw-medium ms-1" style="font-size:0.75rem;">@{{ teacher.user.username }}</div>
+                  <a href="javascript:void(0);" onclick="copyToClipboard('{{ teacher.user.username|escapejs }}', this)" class="text-decoration-none text-muted fw-medium ms-1 d-inline-flex align-items-center gap-1 mt-1" style="font-size:0.75rem;" title="Click to copy username">
+                    <i class="bi bi-person-badge text-muted"></i> @{{ teacher.user.username }}
+                  </a>
                   {% if user.is_school_admin or user.is_super_admin %}
                   <form method="POST" action="{% url 'teacher_reset_password' teacher.pk %}" class="d-inline mt-1" onsubmit="return confirm('Reset password for {{ teacher.name|escapejs }}?');">
                     {% csrf_token %}
@@ -205,6 +207,22 @@
 
 {% block extra_js %}
 <script>
+function copyToClipboard(text, element) {
+    navigator.clipboard.writeText(text).then(() => {
+        const icon = element.querySelector('i');
+        const oldClass = icon.className;
+        icon.className = 'bi bi-check-circle-fill text-success';
+        
+        // Optional: show a small bootstrap tooltip or toast if configured, 
+        // but changing the icon is a good visual indicator.
+        setTimeout(() => {
+            icon.className = oldClass;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+
   document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('.teacher-checkbox');
