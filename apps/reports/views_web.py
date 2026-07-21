@@ -838,7 +838,7 @@ def compare_analytics(request):
 
     # --- 5 & 6. Clustered Column Chart (Average GPA / Pass Rate by Class) ---
     if not selected_class:
-        classes = list(Class.objects.filter(school=school).order_by('name'))
+        classes = list(Class.objects.filter(school=school).order_by('numeric_level', 'name'))
         class_names = [c.name for c in classes]
     else:
         classes = [selected_class]

@@ -154,6 +154,7 @@
         <div class="td-hero-sub">
           <i class="bi bi-building me-1"></i>{{ teacher.school.name }}
           {% if active_session %}&nbsp;·&nbsp;<i class="bi bi-calendar3 me-1"></i>{{ active_session.name }}{% endif %}
+          {% if recent_exam_name %}&nbsp;·&nbsp;<i class="bi bi-journal-text me-1"></i>Data from: <strong>{{ recent_exam_name }}</strong>{% endif %}
         </div>
       </div>
       <div class="d-flex gap-2 mt-3 mt-md-1">

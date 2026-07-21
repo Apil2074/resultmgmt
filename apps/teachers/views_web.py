@@ -151,6 +151,9 @@ def teacher_edit(request, pk):
                 messages.error(request, f'The email {email} is already in use by another teacher.')
                 return render(request, 'teachers/form.html', {'teacher': teacher})
         teacher.email = email
+        if teacher.user and teacher.user.email != (email or ''):
+            teacher.user.email = email or ''
+            teacher.user.save()
 
         if 'photo' in request.FILES:
             from django.core.exceptions import ValidationError
@@ -367,6 +370,7 @@ def teacher_create_user(request, pk):
             with transaction.atomic():
                 user = User.objects.create_user(
                     username=username,
+                    email=teacher.email or '',
                     password=password,
                     first_name=teacher.name,
                     role=User.Role.TEACHER,
@@ -593,14 +597,25 @@ def teacher_dashboard(request):
     
     pending_marks = total_exams - published_exams  # Simplified pending logic
     
+    # Get the single most recent published exam for global KPIs (or most recent overall)
+    recent_exam = related_exams.filter(status='PUBLISHED').order_by('-start_date', '-created_at').first()
+    if not recent_exam:
+        recent_exam = related_exams.order_by('-start_date', '-created_at').first()
+    
     # Average GPA
-    avg_gpa_dict = StudentResult.objects.filter(student__class_obj__id__in=class_ids).aggregate(Avg('overall_gpa'))
-    avg_gpa = round(avg_gpa_dict['overall_gpa__avg'] or 0.0, 2)
+    if recent_exam:
+        avg_gpa_dict = StudentResult.objects.filter(exam=recent_exam, student__class_obj__id__in=class_ids).aggregate(Avg('overall_gpa'))
+        avg_gpa = round(avg_gpa_dict['overall_gpa__avg'] or 0.0, 2)
+    else:
+        avg_gpa = 0.0
     
     # Grade Distribution
     from django.db.models import Count
     import json
-    grade_counts = StudentResult.objects.filter(student__class_obj__id__in=class_ids).values('final_grade').annotate(count=Count('id')).order_by('final_grade')
+    if recent_exam:
+        grade_counts = StudentResult.objects.filter(exam=recent_exam, student__class_obj__id__in=class_ids).values('final_grade').annotate(count=Count('id')).order_by('final_grade')
+    else:
+        grade_counts = []
     
     grades = []
     counts = []
@@ -624,11 +639,15 @@ def teacher_dashboard(request):
         cls_obj = info['class_obj']
         subjects = info['subjects']
         for subject in subjects:
-            top_marks = MarkEntry.objects.filter(
+            top_marks_qs = MarkEntry.objects.filter(
                 student__class_obj=cls_obj, 
                 subject=subject,
                 session=active_session
-            ).annotate(
+            )
+            if recent_exam:
+                top_marks_qs = top_marks_qs.filter(exam=recent_exam)
+                
+            top_marks = top_marks_qs.annotate(
                 total_marks=Coalesce('theory_obtained', 0.0, output_field=DecimalField()) + Coalesce('internal_obtained', 0.0, output_field=DecimalField())
             ).order_by('-total_marks')[:3]
 
@@ -665,11 +684,15 @@ def teacher_dashboard(request):
         # --- Subject-wise average ---
         subject_averages = []
         for subject in cls_subjects:
-            avg = MarkEntry.objects.filter(
+            avg_qs = MarkEntry.objects.filter(
                 student__class_obj=cls_obj,
                 subject=subject,
                 session=active_session
-            ).aggregate(
+            )
+            if latest_ec_obj:
+                avg_qs = avg_qs.filter(exam=latest_ec_obj.exam)
+            
+            avg = avg_qs.aggregate(
                 th_avg=Avg('theory_obtained'),
                 in_avg=Avg('internal_obtained'),
             )
@@ -790,11 +813,15 @@ def teacher_dashboard(request):
         for item in my_subject_list:
             sub = item['subject']
             cls_obj = item['class_obj']
-            avg = ME.objects.filter(
+            avg_qs = ME.objects.filter(
                 subject=sub,
                 student__class_obj=cls_obj,
                 session=active_session,
-            ).aggregate(th_avg=DAvg('theory_obtained'), in_avg=DAvg('internal_obtained'))
+            )
+            if recent_exam:
+                avg_qs = avg_qs.filter(exam=recent_exam)
+                
+            avg = avg_qs.aggregate(th_avg=DAvg('theory_obtained'), in_avg=DAvg('internal_obtained'))
             th_avg = float(avg['th_avg'] or 0)
             in_avg = float(avg['in_avg'] or 0)
             total_avg = th_avg + in_avg
@@ -825,6 +852,7 @@ def teacher_dashboard(request):
         'grade_labels_json': grade_labels_json,
         'grade_data_json': grade_data_json,
         'top_performers': top_performers,
+        'recent_exam_name': recent_exam.name if recent_exam else None,
     })
 
 

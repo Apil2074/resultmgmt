@@ -173,8 +173,33 @@ class ForgotPasswordView(View):
         ).first()
 
         if not user_to_reset:
-            messages.error(request, "This email address is not registered in our system.")
-            return render(request, self.template_name)
+            # Fallback for Teachers: Check if there is an active Teacher with this email
+            # where the User account might not exist or the email is out of sync.
+            from apps.teachers.models import Teacher
+            import secrets
+            teacher = Teacher.objects.filter(email__iexact=email, is_active=True).first()
+            if teacher:
+                if not teacher.user:
+                    # Auto-create user account for this teacher
+                    username_base = teacher.email.split('@')[0]
+                    user_to_reset = User.objects.create_user(
+                        username=f"{username_base}_{teacher.pk}_{secrets.token_hex(2)}",
+                        email=teacher.email,
+                        password=secrets.token_urlsafe(16),
+                        first_name=teacher.name,
+                        role=User.Role.TEACHER,
+                        school=teacher.school
+                    )
+                    teacher.user = user_to_reset
+                    teacher.save()
+                else:
+                    # They have a user account, but the email was out of sync
+                    user_to_reset = teacher.user
+                    user_to_reset.email = email
+                    user_to_reset.save()
+            else:
+                messages.error(request, "This email address is not registered in our system.")
+                return render(request, self.template_name)
 
         # Generate token and base64 encoded user ID
         token = default_token_generator.make_token(user_to_reset)
