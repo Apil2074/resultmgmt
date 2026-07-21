@@ -38,7 +38,7 @@
           </select>
         </div>
         <div class="col-md-auto ms-auto">
-          <button type="submit" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm d-inline-flex align-items-center">
+          <button type="submit" id="enterMarksBtn" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm d-inline-flex align-items-center">
             <i class="bi bi-pencil-square me-2"></i> Enter Marks
           </button>
         </div>
@@ -54,6 +54,17 @@
       </div>
       <h4 class="text-slate-800 fw-bold">Select Class for Mark Entry</h4>
       <p class="text-muted max-width-500 mx-auto">Select an examination and a class from the options above and click <strong>Enter Marks</strong> to proceed.</p>
+    </div>
+    
+  {% endif %}
+  
+    <!-- Locked Warning State -->
+    <div id="lockedWarningState" class="alert alert-danger shadow-sm border-danger-subtle d-flex align-items-center mt-4 d-none" role="alert">
+      <i class="bi bi-lock-fill fs-4 me-3 text-danger"></i>
+      <div>
+        <strong>Exam Result has been published!</strong><br>
+        Marks cannot be entered or imported because this exam is locked.
+      </div>
     </div>
 
 
@@ -71,7 +82,6 @@
         </button>
       </div>
     </div>
-  {% endif %}
 </div>
 
 <!-- Modal for Bulk Import All Classes -->
@@ -114,6 +124,7 @@ $(document).ready(function() {
   }
 
   const examClasses = {{ exam_classes_json|safe }};
+  const examStatusMap = {{ exam_status_json|safe }};
   const examSelect = document.getElementById('examSelect');
   const classSelect = document.getElementById('classSelect');
   const selectedExamId = {{ selected_exam_id|default:"null" }};
@@ -122,6 +133,8 @@ $(document).ready(function() {
   const bulkCard = document.getElementById('bulkActionsCard');
   const downloadAllBtn = document.getElementById('downloadAllBtn');
   const importAllForm = document.getElementById('importAllForm');
+  const enterMarksBtn = document.getElementById('enterMarksBtn');
+  const lockedWarningState = document.getElementById('lockedWarningState');
 
   function updateClasses() {
     const examId = examSelect.value;
@@ -138,8 +151,24 @@ $(document).ready(function() {
       });
     }
     
+    let isLocked = false;
+    if (examId && examStatusMap[examId]) {
+      isLocked = examStatusMap[examId].is_locked;
+    }
+    
+    // Toggle Locked Warning
+    if (isLocked) {
+      lockedWarningState?.classList.remove('d-none');
+      if (enterMarksBtn) enterMarksBtn.disabled = true;
+      if (classSelect) classSelect.disabled = true;
+    } else {
+      lockedWarningState?.classList.add('d-none');
+      if (enterMarksBtn) enterMarksBtn.disabled = false;
+      if (classSelect) classSelect.disabled = false;
+    }
+    
     // Update Bulk Actions Card
-    if (examId && bulkCard) {
+    if (examId && !isLocked && bulkCard) {
       bulkCard.classList.remove('d-none');
       downloadAllBtn.href = `/marks/template-all/${examId}/`;
       importAllForm.action = `/marks/import-all/${examId}/`;
@@ -153,8 +182,6 @@ $(document).ready(function() {
     } else if (promptState) {
       promptState.classList.remove('d-none');
     }
-
-
 
     if (window.jQuery && $(classSelect).data('select2')) {
       $(classSelect).trigger('change.select2');

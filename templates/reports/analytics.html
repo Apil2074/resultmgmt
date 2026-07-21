@@ -1150,6 +1150,7 @@ document.addEventListener("DOMContentLoaded", function() {
           
           <div class="d-flex flex-column gap-2">
             {% for ex in available_exams %}
+            {% if ex.status == 'PUBLISHED' %}
             <label class="d-flex align-items-center p-3 m-0" style="border: 1px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s;">
               <input class="compare-checkbox me-3" type="checkbox" value="{{ ex.id }}" style="width: 22px; height: 22px; cursor: pointer; accent-color: #6366f1;">
               <div class="flex-grow-1">
@@ -1157,6 +1158,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 <div style="font-size: 0.75rem; color: #64748b;">{{ ex.session.name }}</div>
               </div>
             </label>
+            {% endif %}
             {% endfor %}
           </div>
         </div>

@@ -14,6 +14,22 @@
     transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(0,0,0,0.06);
   }
+  
+  .btn-danger-elegant {
+    background: #fff;
+    color: #ef4444 !important;
+    border: 1px solid #fee2e2;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 30px;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
+  }
+  .btn-danger-elegant:hover {
+    background: #ef4444;
+    color: #fff !important;
+    border-color: #ef4444;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.4);
+  }
   .icon-box {
     width: 48px;
     height: 48px;
@@ -35,8 +51,11 @@
     border-radius: 12px;
   }
   .table-custom tr:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+  }
+  .table-custom tr:has(.show) {
+    position: relative;
+    z-index: 50;
   }
   .table-custom td {
     border: 1px solid rgba(0,0,0,0.04);
@@ -135,20 +154,14 @@
             <i class="bi bi-patch-check-fill me-2"></i>Publish Results
           </button>
         {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
-          <button type="submit" name="action" value="unpublish" class="btn btn-outline-danger bg-white shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center">
+          <button type="submit" name="action" value="unpublish" class="btn btn-danger-elegant fw-bold px-4 py-2 d-flex align-items-center">
             <i class="bi bi-x-circle-fill me-2"></i>Unpublish
           </button>
         {% endif %}
       </form>
     {% endif %}
 
-    {% if user.is_school_admin or user.is_super_admin %}
-      {% if exam.is_editable or user.can_manage_school %}
-      <a href="{% url 'exam_delete' exam.id %}" class="btn btn-white bg-white text-danger border shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center" title="Delete Exam">
-        <i class="bi bi-trash3-fill me-2"></i>Delete
-      </a>
-      {% endif %}
-    {% endif %}
+
   </div>
 </div>
 
@@ -373,6 +386,23 @@
     </div>
   </div>
 </div>
+
+{% if user.is_school_admin or user.is_super_admin %}
+  {% if exam.is_editable or user.can_manage_school %}
+  <!-- Danger Zone -->
+  <div class="card shadow-sm border-0 mt-5 mb-4" style="border-radius: 16px; border: 1px solid #fee2e2 !important; background: #fffafb;">
+    <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <h5 class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-2"></i>Danger Zone</h5>
+        <p class="text-muted small mb-0" style="max-width: 600px;">Once you delete an exam, there is no going back. All related marks, grades, and results will be permanently removed from the system. Please be certain.</p>
+      </div>
+      <a href="{% url 'exam_delete' exam.id %}" class="btn btn-danger-elegant fw-bold px-4 py-2 d-flex align-items-center flex-shrink-0" title="Delete Exam">
+        <i class="bi bi-trash3-fill me-2"></i>Delete Exam
+      </a>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
 
 {% if exam.is_editable %}
 <!-- Add Classes Modal -->

@@ -397,6 +397,16 @@ def bulk_mark_import(request, exam_id, class_id):
     exam = get_object_or_404(Exam, pk=exam_id, school=school)
     cls = get_object_or_404(Class, pk=class_id, school=school)
 
+    if exam.is_locked:
+        messages.error(request, 'This exam is locked. Bulk import is disabled.')
+        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+        
+    from apps.exams.models import ExamClass
+    exam_class = ExamClass.objects.filter(exam=exam, class_obj=cls).first()
+    if exam_class and exam_class.is_locked:
+        messages.error(request, 'This class is locked. Bulk import is disabled.')
+        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+
     if request.method == 'POST' and request.FILES.get('excel_file'):
         # SECURITY: Validate file type and size before processing
         from django.core.exceptions import ValidationError
@@ -618,7 +628,7 @@ def bulk_mark_import(request, exam_id, class_id):
             logger.exception('Bulk mark import failed for exam=%s class=%s', exam_id, class_id)
             messages.error(request, f'Import failed: {str(e)}. Please check the file format and try again.')
 
-        return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+        return redirect('bulk_mark_import', exam_id=exam_id, class_id=class_id)
 
     return render(request, 'marks/bulk_import.html', {
         'exam': exam, 'class_obj': cls
@@ -841,13 +851,21 @@ def mark_entry_select(request):
         })
 
     exam_classes_json = json.dumps(exam_classes_map)
+    
+    exam_status_map = {ex.id: {'is_locked': ex.is_locked, 'status': ex.status} for ex in exams}
+    exam_status_json = json.dumps(exam_status_map)
 
     # Check for selected parameters
     exam_id = request.GET.get('exam')
     class_id = request.GET.get('class_obj')
     
     if not exam_id and exams.exists():
-        exam_id = str(exams.first().id)
+        # Prefer the most recent unlocked (unpublished) exam
+        unlocked_exam = next((ex for ex in exams if not ex.is_locked), None)
+        if unlocked_exam:
+            exam_id = str(unlocked_exam.id)
+        else:
+            exam_id = str(exams.first().id)
 
     if exam_id and class_id:
         return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
@@ -855,6 +873,7 @@ def mark_entry_select(request):
     context = {
         'exams': exams,
         'exam_classes_json': exam_classes_json,
+        'exam_status_json': exam_status_json,
         'selected_exam_id': int(exam_id) if exam_id and exam_id.isdigit() else None,
         'school': school,
     }
@@ -1074,6 +1093,11 @@ def bulk_mark_all_import(request, exam_id):
     from apps.marks.models import MarkEntry
 
     exam = get_object_or_404(Exam, pk=exam_id, school=school)
+    
+    if exam.is_locked:
+        messages.error(request, 'This exam is locked. Bulk import is disabled.')
+        return redirect('exam_detail', pk=exam_id)
+        
     if not request.FILES.get('excel_file'):
         messages.error(request, 'Please upload an Excel file.')
         return redirect('mark_entry_select')
@@ -1091,6 +1115,10 @@ def bulk_mark_all_import(request, exam_id):
         for c in Class.objects.filter(school=school):
             classes_map[c.full_name.lower().strip()] = c
             classes_map[c.name.lower().strip()] = c
+            
+            # Map the exact sheet title that the template generator creates
+            safe_title = c.full_name[:31].replace(':', '-').replace('/', '-').lower().strip()
+            classes_map[safe_title] = c
 
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
@@ -1308,4 +1336,4 @@ def bulk_mark_all_import(request, exam_id):
         logger.exception('Bulk all-class import failed for exam=%s', exam_id)
         messages.error(request, f'Bulk import failed: {str(e)}. Please check the file format and try again.')
 
-    return redirect('mark_entry_select')
+    return redirect('exam_detail', pk=exam_id)

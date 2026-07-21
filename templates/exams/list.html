@@ -30,6 +30,7 @@
           
           <div class="d-flex flex-column gap-2" style="max-height: 400px; overflow-y: auto;">
             {% for ex in exams %}
+            {% if ex.status == 'PUBLISHED' %}
             <label class="d-flex align-items-center p-3 m-0 rounded-3 border" style="cursor: pointer; transition: all 0.2s;">
               <input class="compare-chk me-3" type="checkbox" value="{{ ex.id }}" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--bs-primary);">
               <div class="flex-grow-1">
@@ -37,6 +38,7 @@
                 <div class="text-muted" style="font-size: 0.75rem;">{{ ex.session.name }} &middot; {{ ex.get_status_display }}</div>
               </div>
             </label>
+            {% endif %}
             {% empty %}
             <div class="text-muted small text-center py-4">No exams available to compare.</div>
             {% endfor %}
