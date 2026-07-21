@@ -298,6 +298,11 @@
 {% endblock %}
 
 {% block content %}
+<div class="mb-3 d-print-none">
+  <button onclick="history.back()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </button>
+</div>
 {% if not school.classes.all %}
 <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
@@ -376,7 +381,7 @@
             <!-- Student Navigation -->
             <div class="d-flex gap-2 mb-3">
               {% if prev_student_id %}
-                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ prev_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'25' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ prev_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'22' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
                   <i class="bi bi-chevron-left me-1"></i>Prev
                 </a>
               {% else %}
@@ -386,7 +391,7 @@
               {% endif %}
               
               {% if next_student_id %}
-                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ next_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
+                <a href="?exam={{ exam.id }}&class_obj={{ class_obj.id }}&student={{ next_student_id }}&template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'22' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-outline-secondary flex-fill">
                   Next<i class="bi bi-chevron-right ms-1"></i>
                 </a>
               {% else %}

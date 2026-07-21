@@ -12,6 +12,8 @@ class School(models.Model):
 
     name = models.CharField(max_length=255)
     logo = models.ImageField(upload_to='school_logos/', null=True, blank=True)
+    dashboard_background = models.ImageField(upload_to='school_backgrounds/', null=True, blank=True)
+    dashboard_background_opacity = models.DecimalField(max_digits=3, decimal_places=2, default=0.10, help_text="Opacity of the background image (0.00 to 1.00)")
     address = models.TextField()
     phone = models.CharField(max_length=30)
     email = models.EmailField()

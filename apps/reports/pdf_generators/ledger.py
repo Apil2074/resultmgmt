@@ -270,10 +270,10 @@ class LedgerPDFGenerator:
                         m_entry = self.mark_map.get((sid, subj.id))
                         if m_entry:
                             if m_entry.present_days is not None:
-                                total_present += m_entry.present_days
+                                total_present = max(total_present, m_entry.present_days)
                                 has_attendance = True
                             if m_entry.total_days:
-                                total_days += m_entry.total_days
+                                total_days = max(total_days, m_entry.total_days)
                     if has_attendance and total_days > 0:
                         attendance_map[sid] = f"{round((total_present / total_days) * 100, 1)}%"
 

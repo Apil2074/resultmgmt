@@ -1,0 +1,19 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /schools/
+Disallow: /classes/
+Disallow: /students/
+Disallow: /subjects/
+Disallow: /teachers/
+Disallow: /exams/
+Disallow: /marks/
+Disallow: /results/
+Disallow: /reports/
+Disallow: /audit/
+
+# Allow public result checking and report cards
+Allow: /results/public/
+Allow: /results/public/report/

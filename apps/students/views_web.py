@@ -6,6 +6,7 @@ import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.http import HttpResponse
 from .models import Student
 from core.security import safe_redirect_url, validate_image_upload
@@ -51,8 +52,12 @@ def student_list(request):
         classes_qs = classes_qs.filter(session=active_session)
     classes = list(classes_qs)
 
+    paginator = Paginator(students_list, 50)  # 50 students per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'students/list.html', {
-        'students': students_list,
+        'page_obj': page_obj,
         'classes': classes,
         'q': q,
         'class_id': class_id,

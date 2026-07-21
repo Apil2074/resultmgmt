@@ -24,6 +24,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # Frontend views (HTML pages)
+    path('robots.txt', TemplateView.as_view(template_name="robots.txt", content_type="text/plain")),
     path('', LandingPageView.as_view(), name='landing'),
     path('auth/', include('apps.accounts.urls_web')),
     path('dashboard/', include('apps.schools.urls_web')),

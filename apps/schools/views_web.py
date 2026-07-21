@@ -8,6 +8,9 @@ from django.contrib.auth import logout
 from django.db.models import Count, Q
 from django.db import transaction
 from .models import School, AcademicSession
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 from apps.accounts.models import User
@@ -162,29 +165,39 @@ def dashboard(request):
 
         # Average Attendance by Class
         from apps.marks.models import MarkEntry
-        from django.db.models import Sum
+        from django.db.models import Max
         
-        attendance_stats = MarkEntry.objects.filter(
+        student_attendance = MarkEntry.objects.filter(
             exam__school=school,
             exam__session=active_session,
             present_days__isnull=False,
             total_days__isnull=False,
             total_days__gt=0
-        ).values('student__class_obj__name', 'student__class_obj__numeric_level').annotate(
-            total_present=Sum('present_days'),
-            total_working=Sum('total_days')
-        ).order_by('student__class_obj__numeric_level', 'student__class_obj__name')
+        ).values('student_id', 'student__class_obj__name', 'student__class_obj__numeric_level').annotate(
+            max_present=Max('present_days'),
+            max_working=Max('total_days')
+        )
+        
+        class_att_map = {}
+        for row in student_attendance:
+            cname = row['student__class_obj__name']
+            clevel = row['student__class_obj__numeric_level']
+            if cname not in class_att_map:
+                class_att_map[cname] = {'present': 0, 'working': 0, 'level': clevel}
+            class_att_map[cname]['present'] += row['max_present']
+            class_att_map[cname]['working'] += row['max_working']
+            
+        sorted_classes = sorted(class_att_map.items(), key=lambda item: (item[1]['level'] or 0, item[0]))
         
         class_attendance_data = {}
-        for cstat in attendance_stats:
-            cname = cstat['student__class_obj__name']
-            if cname and cstat['total_working']:
-                pct = round((cstat['total_present'] / cstat['total_working']) * 100, 1)
+        for cname, att_data in sorted_classes:
+            if att_data['working'] > 0:
+                pct = round((att_data['present'] / att_data['working']) * 100, 1)
                 class_attendance_data[cname] = pct
         ctx['class_attendance_data_json'] = json.dumps(class_attendance_data)
         
         # Gender distribution by class
-        from django.db.models import Case, When, IntegerField
+        from django.db.models import Case, When, IntegerField, Sum
         gender_stats = students_qs.values('class_obj__name', 'class_obj__numeric_level').annotate(
             male_count=Sum(Case(When(gender='M', then=1), default=0, output_field=IntegerField())),
             female_count=Sum(Case(When(gender='F', then=1), default=0, output_field=IntegerField())),
@@ -308,6 +321,18 @@ def school_profile(request):
             school.logo = None
         elif 'logo' in request.FILES:
             school.logo = request.FILES['logo']
+            
+        if request.POST.get('remove_background') == 'on':
+            school.dashboard_background = None
+        elif 'dashboard_background' in request.FILES:
+            school.dashboard_background = request.FILES['dashboard_background']
+            
+        opacity = request.POST.get('dashboard_background_opacity')
+        if opacity is not None and opacity != '':
+            try:
+                school.dashboard_background_opacity = float(opacity)
+            except ValueError:
+                pass
 
         school.save()
         messages.success(request, 'School profile updated successfully.')
@@ -502,6 +527,7 @@ def create_school_and_admin(request):
                 messages.success(request, f"Successfully created school '{school.name}' and admin user '{user.username}'.")
                 return redirect('super_schools')
             except Exception as e:
+                logger.exception("Error creating school and admin:")
                 messages.error(request, f"Error creating school and admin: {str(e)}")
                 
     return render(request, 'schools/create_school_and_admin.html')

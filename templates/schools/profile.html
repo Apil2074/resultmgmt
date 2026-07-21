@@ -47,6 +47,46 @@
         </div>
       </div>
     </div>
+    
+    <!-- Dashboard Background Profile -->
+    <div class="card text-center shadow-sm mt-4">
+      <div class="card-header bg-white border-bottom py-2">
+        <h6 class="card-title mb-0 fw-semibold text-slate-800 small">
+          <i class="bi bi-image me-1 text-primary"></i>Dashboard Background
+        </h6>
+      </div>
+      <div class="card-body py-3">
+        {% if school.dashboard_background %}
+          <img src="{{ school.dashboard_background.url }}" alt="Background" class="border p-1 mb-3 rounded" style="width: 100%; height: 120px; object-fit: cover;">
+        {% else %}
+          <div class="bg-light text-muted d-flex align-items-center justify-content-center mx-auto mb-3 rounded border" style="width: 100%; height: 120px; font-size: 0.9rem;">
+            No background
+          </div>
+        {% endif %}
+        
+        {% if user.can_manage_school %}
+        <div class="px-3 text-start">
+          <label for="dashboard_background" class="form-label small fw-medium text-slate-700">Update Background</label>
+          <input type="file" class="form-control form-control-sm" id="dashboard_background" name="dashboard_background" accept="image/*">
+          <div class="form-text text-muted mb-2" style="font-size: 0.75rem;">Recommended size: 1920x1080 pixels.</div>
+          
+          <label for="dashboard_background_opacity" class="form-label small fw-medium text-slate-700 mt-2">Background Opacity</label>
+          <input type="range" class="form-range" id="dashboard_background_opacity" name="dashboard_background_opacity" min="0" max="1" step="0.05" value="{{ school.dashboard_background_opacity }}">
+          <div class="d-flex justify-content-between form-text text-muted" style="font-size: 0.75rem;">
+            <span>Transparent</span>
+            <span>Opaque</span>
+          </div>
+
+          {% if school.dashboard_background %}
+          <div class="form-check mt-3">
+            <input class="form-check-input" type="checkbox" name="remove_background" id="remove_background">
+            <label class="form-check-label text-danger small" for="remove_background">Remove background</label>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
   <div class="col-lg-8">

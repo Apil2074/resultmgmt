@@ -4,6 +4,7 @@ Results App — Web views (ledger, marksheet, processing)
 import datetime
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
@@ -39,118 +40,8 @@ def format_mark(val):
 @login_required
 def grade_ledger(request, exam_id, class_id):
     """Grade Ledger — horizontal table showing all subject marks."""
-    school = request.user.school
-    from apps.exams.models import Exam
-    from apps.classes.models import Class
-    from apps.subjects.models import Subject
-    from apps.marks.models import MarkEntry
-    from apps.results.models import SubjectResult, StudentResult
-
-    exam = get_object_or_404(Exam, pk=exam_id, school=school)
-    cls = get_object_or_404(Class, pk=class_id, school=school)
-
-    from apps.exams.models import ExamClass
-    exam_class = get_object_or_404(ExamClass, exam=exam, class_obj=cls)
-    if not exam_class.is_locked:
-        messages.warning(request, f"Results for {cls.name} have not been processed and locked yet.")
-        return redirect('grade_ledger_select')
-
-    subjects = Subject.objects.filter(
-        class_obj=cls, school=school
-    ).select_related().order_by('order')
-
-    # Get all student results
-    student_results = StudentResult.objects.filter(
-        exam=exam, student__class_obj=cls, school=school
-    ).select_related('student').order_by('class_rank', Length('student__roll_number'), 'student__roll_number')
-
-    # Build subject-keyed mark map
-    mark_map = {}
-    for me in MarkEntry.objects.filter(
-        exam=exam, school=school, student__class_obj=cls
-    ).select_related('subject_result'):
-        key = (me.student_id, me.subject_id)
-        mark_map[key] = me
-
-    # Build student specific score matrices
-    for sr in student_results:
-        sr.subject_scores = []
-        total_present = 0
-        total_days = 0
-        has_attendance = False
-        
-        for subject in subjects:
-            me = mark_map.get((sr.student_id, subject.id))
-            score_info = {
-                'subject': subject,
-                'has_theory': True,
-                'theory_full_marks': subject.theory_full_marks,
-                'theory_obtained': '—',
-                'theory_grade': '—',
-                'has_internal': subject.has_practical,
-                'internal_full_marks': subject.practical_full_marks or 0,
-                'internal_obtained': '—',
-                'internal_grade': '—',
-            }
-            if me:
-                if me.present_days is not None:
-                    total_present += me.present_days
-                    has_attendance = True
-                if me.total_days:
-                    total_days += me.total_days
-                
-                if me.special_value:
-                    val = me.get_special_value_display()
-                    score_info['theory_obtained'] = val
-                    score_info['theory_grade'] = val
-                    score_info['theory_grade_point'] = val
-                    if score_info['has_internal']:
-                        score_info['internal_obtained'] = val
-                        score_info['internal_grade'] = val
-                        score_info['internal_grade_point'] = val
-                    score_info['grade_point'] = val
-                    score_info['grade'] = val
-                else:
-                    if me.theory_obtained is not None:
-                        score_info['theory_obtained'] = float(me.theory_obtained)
-                    if hasattr(me, 'subject_result') and me.subject_result:
-                        score_info['theory_grade'] = me.subject_result.theory_grade or '—'
-                        score_info['theory_grade_point'] = me.subject_result.theory_grade_point or 0.0
-                    else:
-                        score_info['theory_grade'] = '—'
-                        score_info['theory_grade_point'] = '—'
-                    
-                    if score_info['has_internal']:
-                        if me.internal_obtained is not None:
-                            score_info['internal_obtained'] = float(me.internal_obtained)
-                        if hasattr(me, 'subject_result') and me.subject_result:
-                            score_info['internal_grade'] = me.subject_result.internal_grade or '—'
-                            score_info['internal_grade_point'] = me.subject_result.internal_grade_point or 0.0
-                        else:
-                            score_info['internal_grade'] = '—'
-                            score_info['internal_grade_point'] = '—'
-                    
-                    if hasattr(me, 'subject_result') and me.subject_result:
-                        score_info['grade_point'] = me.subject_result.grade_point or 0.0
-                        score_info['grade'] = me.subject_result.grade or '—'
-                    else:
-                        score_info['grade_point'] = '—'
-                        score_info['grade'] = '—'
-            sr.subject_scores.append(score_info)
-            
-        if has_attendance and total_days > 0:
-            sr.attendance_pct = round((total_present / total_days) * 100, 1)
-            sr.total_present = total_present
-        else:
-            sr.attendance_pct = None
-            sr.total_present = None
-
-    return render(request, 'results/ledger.html', {
-        'exam': exam,
-        'class_obj': cls,
-        'subjects': subjects,
-        'student_results': student_results,
-    })
+    url = reverse('grade_ledger_select')
+    return redirect(f"{url}?exam={exam_id}&class_obj={class_id}")
 
 
 @login_required
@@ -644,10 +535,10 @@ def grade_ledger_select(request):
                     }
                     if me:
                         if me.present_days is not None:
-                            total_present += me.present_days
+                            total_present = max(total_present, me.present_days)
                             has_attendance = True
                         if me.total_days:
-                            total_days += me.total_days
+                            total_days = max(total_days, me.total_days)
 
                         if me.special_value:
                             val = me.get_special_value_display()
@@ -696,7 +587,7 @@ def grade_ledger_select(request):
                     sr.total_present = None
 
             ledger_pages = []
-            chunk_size = 4
+            chunk_size = 12
             for i in range(0, len(subjects), chunk_size):
                 page_subjects = subjects[i:i + chunk_size]
                 page_students = []

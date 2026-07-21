@@ -337,8 +337,8 @@ def exam_analytics(request, exam_id):
         sid = me.student_id
         if sid not in attendance_map:
             attendance_map[sid] = {'present': 0, 'total': 0}
-        attendance_map[sid]['present'] += me.present_days
-        attendance_map[sid]['total'] += me.total_days
+        attendance_map[sid]['present'] = max(attendance_map[sid]['present'], me.present_days)
+        attendance_map[sid]['total'] = max(attendance_map[sid]['total'], me.total_days)
         
     attendance_excellence_count = 0
     absence_risk_count = 0
