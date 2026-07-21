@@ -635,36 +635,37 @@ def teacher_dashboard(request):
     from apps.marks.models import MarkEntry
     
     top_performers = []
-    for info in my_classes_info + my_subjects_info:
-        cls_obj = info['class_obj']
-        subjects = info['subjects']
-        for subject in subjects:
-            top_marks_qs = MarkEntry.objects.filter(
-                student__class_obj=cls_obj, 
-                subject=subject,
-                session=active_session
-            )
-            if recent_exam:
-                top_marks_qs = top_marks_qs.filter(exam=recent_exam)
-                
-            top_marks = top_marks_qs.annotate(
-                total_marks=Coalesce('theory_obtained', 0.0, output_field=DecimalField()) + Coalesce('internal_obtained', 0.0, output_field=DecimalField())
-            ).order_by('-total_marks')[:3]
-
-            leaders = []
-            for idx, mark in enumerate(top_marks):
-                leaders.append({
-                    'rank': idx + 1,
-                    'student': mark.student,
-                    'score': float(mark.total_marks) if mark.total_marks else 0.0
-                })
+    # Only show top performers for subjects actually taught by this teacher
+    for item in my_subject_list:
+        cls_obj = item['class_obj']
+        subject = item['subject']
+        
+        top_marks_qs = MarkEntry.objects.filter(
+            student__class_obj=cls_obj, 
+            subject=subject,
+            session=active_session
+        )
+        if recent_exam:
+            top_marks_qs = top_marks_qs.filter(exam=recent_exam)
             
-            if leaders:
-                top_performers.append({
-                    'class': cls_obj,
-                    'subject': subject,
-                    'leaders': leaders
-                })
+        top_marks = top_marks_qs.annotate(
+            total_marks=Coalesce('theory_obtained', 0.0, output_field=DecimalField()) + Coalesce('internal_obtained', 0.0, output_field=DecimalField())
+        ).order_by('-total_marks')[:3]
+
+        leaders = []
+        for idx, mark in enumerate(top_marks):
+            leaders.append({
+                'rank': idx + 1,
+                'student': mark.student,
+                'score': float(mark.total_marks) if mark.total_marks else 0.0
+            })
+        
+        if leaders:
+            top_performers.append({
+                'class': cls_obj,
+                'subject': subject,
+                'leaders': leaders
+            })
     
     # Sort top performers by class level, then subject
     top_performers.sort(key=lambda x: (x['class'].numeric_level, x['class'].name, x['subject'].name))
@@ -689,8 +690,8 @@ def teacher_dashboard(request):
                 subject=subject,
                 session=active_session
             )
-            if latest_ec_obj:
-                avg_qs = avg_qs.filter(exam=latest_ec_obj.exam)
+            if recent_exam:
+                avg_qs = avg_qs.filter(exam=recent_exam)
             
             avg = avg_qs.aggregate(
                 th_avg=Avg('theory_obtained'),

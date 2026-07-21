@@ -140,8 +140,10 @@ def grade_ledger(request, exam_id, class_id):
             
         if has_attendance and total_days > 0:
             sr.attendance_pct = round((total_present / total_days) * 100, 1)
+            sr.total_present = total_present
         else:
             sr.attendance_pct = None
+            sr.total_present = None
 
     return render(request, 'results/ledger.html', {
         'exam': exam,
@@ -575,6 +577,9 @@ def grade_ledger_select(request):
     exam_id = request.GET.get('exam')
     class_id = request.GET.get('class_obj')
 
+    if not exam_id and exams.exists():
+        exam_id = str(exams.first().id)
+
     context = {
         'exams': exams,
         'exam_classes_json': exam_classes_json,
@@ -685,8 +690,10 @@ def grade_ledger_select(request):
 
                 if has_attendance and total_days > 0:
                     sr.attendance_pct = round((total_present / total_days) * 100, 1)
+                    sr.total_present = total_present
                 else:
                     sr.attendance_pct = None
+                    sr.total_present = None
 
             ledger_pages = []
             chunk_size = 4

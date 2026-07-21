@@ -22,7 +22,8 @@
           <span class="fw-bold text-slate-700" style="font-size: 0.95rem;">Select Exam & Class:</span>
         </div>
         <div class="col-md-4">
-          <select name="exam" id="examSelect" class="form-select select2" required>
+          <input type="hidden" name="exam" id="hiddenExam" value="{{ selected_exam_id }}">
+          <select id="examSelect" class="form-select select2" disabled required>
             <option value="">-- Select Exam --</option>
             {% for ex in exams %}
               <option value="{{ ex.id }}" {% if ex.id == selected_exam_id %}selected{% endif %}>

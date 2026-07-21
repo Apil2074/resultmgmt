@@ -846,6 +846,9 @@ def mark_entry_select(request):
     exam_id = request.GET.get('exam')
     class_id = request.GET.get('class_obj')
     
+    if not exam_id and exams.exists():
+        exam_id = str(exams.first().id)
+
     if exam_id and class_id:
         return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
 

@@ -273,10 +273,16 @@
         {% endfor %}
 
         <td>{{ sr.total_credit_hours }}</td>
-        <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.overall_gpa|default:'NG' }}</td>
+        <td class="grade-{{ sr.final_grade|default:'NG' }}">
+          {% if sr.overall_gpa %}
+            {{ sr.overall_gpa }}
+          {% else %}
+            <span style="color: #ef4444; font-weight: bold;">0</span>
+          {% endif %}
+        </td>
         <td class="grade-{{ sr.final_grade|default:'NG' }}">{{ sr.final_grade|default:'—' }}</td>
         <td>{% if sr.class_rank %}{{ sr.class_rank }}{% else %}NG{% endif %}</td>
-        <td>{{ sr.attendance_pct|default:'—' }}%</td>
+        <td>{{ sr.total_present|floatformat:"-2"|default:'—' }}</td>
         <td class="{% if sr.is_pass %}pass-status{% else %}fail-status{% endif %}">
           {% if sr.is_pass %}P{% else %}F{% endif %}
         </td>
