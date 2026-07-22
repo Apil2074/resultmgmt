@@ -57,13 +57,20 @@
         <div class="p-3 bg-light rounded mb-4">
           <h6 class="fw-semibold text-slate-800 mb-2">Required Columns & Format:</h6>
           <ul class="mb-0 small text-slate-600">
-            <li><strong>SN*</strong> — Roll number / Serial number (unique per class)</li>
+            <li><strong>Roll No*</strong> — Roll number (unique per class)</li>
             <li><strong>Symbol No</strong> — Board exam symbol number (optional)</li>
             <li><strong>REG NO</strong> — Registration number (optional)</li>
             <li><strong>Name of Students*</strong> — Full student name</li>
-            <li><strong>Class*</strong> — Target class name and section (e.g., "Class 10 A" or "Class 10"). Dynamically created if not found.</li>
+            <li><strong>Gender</strong> — Male / Female / Other (optional)</li>
             <li><strong>Date of Birth BS.</strong> — Date of birth in BS or standard format (optional)</li>
+            <li><strong>Parent Name</strong> — Father/Mother/Guardian name (optional)</li>
+            <li><strong>Contact Number</strong> — Phone number (optional)</li>
+            <li><strong>Address</strong> — Home address (optional)</li>
           </ul>
+          <div class="mt-3 small text-primary fw-medium">
+            <i class="bi bi-info-circle me-1"></i>
+            Note: The class is determined by the Excel Sheet Name (e.g., a sheet named "Class 10 A" imports students into that class). You can import multiple classes at once using multiple sheets.
+          </div>
         </div>
 
         <a href="{% url 'student_template' %}" class="btn-download-template w-100">

@@ -118,6 +118,10 @@ class ResultProcessingService:
             if not entries: return
             subject_results = []
             for entry in entries:
+                if entry.subject.subject_type == Subject.SubjectType.OPTIONAL:
+                    if (entry.student_id, entry.subject_id) not in optional_enrollments:
+                        continue
+
                 computed = self.engine.get_subject_result(entry)
 
                 sr = SubjectResult(

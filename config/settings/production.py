@@ -25,3 +25,6 @@ CORS_ALLOWED_ORIGINS = config(
 
 # Production email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())

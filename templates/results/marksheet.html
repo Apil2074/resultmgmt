@@ -37,48 +37,74 @@
   border-radius: 10px;
 }
 .school-name {
-  font-family: 'Cinzel', serif;
+  font-family: 'Times New Roman', Times, serif;
   font-weight: 700;
-  font-size: 2.2rem;
-  color: #1e3a8a;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  line-height: 1.3;
-  margin-bottom: 8px;
-}
-.school-address {
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: #475569;
-  letter-spacing: 0.5px;
-  line-height: 1.4;
+  font-size: clamp(1.4rem, 3.5vw, 2.1rem);
+  color: #000000;
+  line-height: 1.2;
   margin-bottom: 6px;
 }
+.school-address {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
 .school-estd {
-  font-size: 0.85rem;
-  font-style: italic;
-  color: #64748b;
-  margin-top: 4px;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #000000;
+  margin-top: 2px;
   line-height: 1.4;
 }
-.marksheet-header-banner {
-  background: linear-gradient(135deg, #1e3a8a, #0f172a);
-  color: #ffffff;
-  font-family: 'Cinzel', serif;
+.exam-name-header {
+  font-family: 'Times New Roman', Times, serif;
   font-weight: 700;
-  letter-spacing: 5px;
+  font-size: 1.25rem;
+  color: #000000;
   text-transform: uppercase;
-  padding: 8px 16px;
-  font-size: 1.3rem;
-  margin-top: 16px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.gradesheet-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: #000000;
+  text-transform: uppercase;
   margin-bottom: 24px;
-  display: inline-block;
-  width: 100%;
-  text-align: center;
-  border-radius: 4px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  z-index: 1;
-  position: relative;
+  letter-spacing: 1.5px;
+}
+.header-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.header-layout .logo-side {
+  display: flex;
+  justify-content: center;
+}
+.header-layout .empty-side {
+  display: none;
+}
+@media (min-width: 768px) {
+  .header-layout {
+    flex-direction: row;
+    gap: 0;
+  }
+  .header-layout .logo-side {
+    flex: 0 0 120px;
+    justify-content: flex-start;
+  }
+  .header-layout .empty-side {
+    display: block;
+    flex: 0 0 120px;
+  }
 }
 .info-label {
   color: #1e3a8a;
@@ -278,38 +304,10 @@
 
 {% block content %}
 <!-- Marksheet Navigation Header -->
-<div class="d-flex justify-content-between align-items-center mb-4 max-width-950 mx-auto" style="max-width: 950px;">
-  <div class="d-flex gap-2">
-    {% if prev_student_id %}
-      <a href="{% url 'marksheet' exam.id prev_student_id %}" class="btn btn-outline-secondary">
-        <i class="bi bi-chevron-left me-1"></i>Previous Student
-      </a>
-    {% else %}
-      <button class="btn btn-outline-secondary" disabled>
-        <i class="bi bi-chevron-left me-1"></i>Previous Student
-      </button>
-    {% endif %}
-    
-    {% if next_student_id %}
-      <a href="{% url 'marksheet' exam.id next_student_id %}" class="btn btn-outline-secondary">
-        Next Student<i class="bi bi-chevron-right ms-1"></i>
-      </a>
-    {% else %}
-      <button class="btn btn-outline-secondary" disabled>
-        Next Student<i class="bi bi-chevron-right ms-1"></i>
-      </button>
-    {% endif %}
-  </div>
-
-  <div class="d-flex gap-2">
-    <a href="{% url 'class_detail' student.class_obj.slug %}" class="btn btn-outline-secondary">
-      <i class="bi bi-arrow-left me-1"></i>Back to Class
-    </a>
-
-    <a href="{% url 'marksheet_pdf' exam.id student.id %}" class="btn btn-primary" target="_blank">
-      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Download PDF
-    </a>
-  </div>
+<div class="d-flex justify-content-start mb-4 max-width-950 mx-auto" style="max-width: 950px;">
+  <a href="{% url 'class_detail' student.class_obj.slug %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Class
+  </a>
 </div>
 
 <!-- Marksheet Card -->
@@ -320,54 +318,57 @@
     {% endif %}
     <!-- School Heading -->
     <div class="text-center position-relative mb-2">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <div class="d-none d-sm-block" style="width: 110px; text-align: left;">
+      <div class="header-layout mb-2">
+        <div class="logo-side">
           {% if school.logo %}
-            <img src="{{ school.logo.url }}" alt="{{ school.name }}" style="height: 95px; width: auto; object-fit: contain;">
+            <img src="{{ school.logo.url }}" alt="{{ school.name }}" style="max-height: 95px; max-width: 100%; object-fit: contain;">
           {% endif %}
         </div>
-        <div class="text-center flex-grow-1 px-3">
-          <h4 class="school-name" style="margin-bottom: 2px;">{{ school.name }}</h4>
-          <p class="school-address" style="margin-bottom: 2px;">{{ school.address }}</p>
+        <div class="text-center flex-grow-1">
+          <h4 class="school-name">{{ school.name|title }}</h4>
+          <p class="school-address" style="margin-bottom: 2px;">{{ school.address|title }}</p>
           {% if school.establishment_year %}
-            <p class="school-estd" style="margin-top: 2px; margin-bottom: 0;">Estd {{ school.establishment_year }}</p>
+            <p class="school-estd" style="margin-top: 2px; margin-bottom: 0;">Estd: {{ school.establishment_year }}</p>
           {% endif %}
+          <div class="exam-name-header">
+            {{ exam.name }}
+          </div>
+          <div class="gradesheet-title">
+            GRADESHEET
+          </div>
         </div>
-        <div class="d-none d-sm-block" style="width: 110px;"></div>
-      </div>
-      <div class="marksheet-header-banner">
-        GRADE-SHEET
+        <div class="empty-side"></div>
       </div>
     </div>
 
     <!-- Student Info Grid -->
     <div class="row g-3 mb-4 px-2" style="line-height: 1.8; z-index: 1; position: relative;">
       <div class="col-md-6">
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">THE GRADE(S) SECURED BY :</span>
           <span class="info-value text-uppercase px-2 flex-grow-1" style="min-width: 150px;">{{ student.name }}</span>
         </div>
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">REGISTRATION NO :</span>
           <span class="info-value px-2 flex-grow-1" style="min-width: 120px;">{{ student.registration_number|default:"—" }}</span>
         </div>
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">CLASS :</span>
           <span class="info-value px-2 text-center flex-shrink-0" style="min-width: 60px;">{{ student.class_obj.name }}</span>
-          <span class="info-label text-uppercase text-nowrap ms-3">IN THE :</span>
-          <span class="info-value px-2 flex-grow-1 text-uppercase text-nowrap">{{ exam.name }}</span>
+          <span class="info-label text-uppercase text-nowrap ms-md-3 mt-2 mt-md-0">IN THE :</span>
+          <span class="info-value px-2 flex-grow-1 text-uppercase">{{ exam.name }}</span>
         </div>
       </div>
       <div class="col-md-6 ps-md-4">
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">SYMBOL NO :</span>
           <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ student.symbol_number|default:"—" }}</span>
         </div>
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap">DATE OF BIRTH :</span>
-          <span class="info-value px-2 flex-grow-1" style="min-width: 100px; white-space: nowrap;">{{ student.dob_full|default:"—" }}</span>
+          <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ student.dob_full|default:"—" }}</span>
         </div>
-        <div class="d-flex align-items-baseline mb-2">
+        <div class="d-flex flex-wrap align-items-baseline mb-2">
           <span class="info-label text-uppercase text-nowrap"> HELD IN :</span>
           <span class="info-value px-2 flex-grow-1" style="min-width: 100px;">{{ exam.session.name }}</span>
           <span class="info-label fw-bold small ms-1">B.S.</span>

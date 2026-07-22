@@ -226,6 +226,10 @@ def student_import(request):
     classes = Class.objects.filter(school=school)
     if active_session:
         classes = classes.filter(session=active_session)
+        
+    if not classes.exists():
+        messages.error(request, 'Please create a class first before importing students.')
+        return redirect('class_list')
 
     if request.method == 'POST' and request.FILES.get('excel_file'):
         import openpyxl
@@ -247,18 +251,15 @@ def student_import(request):
 
         try:
             wb = openpyxl.load_workbook(excel_file)
-            ws = wb.active
             created = 0
             errors = []
 
             # Track next roll number per class (class pk -> next int)
-            # Roll numbers are sequential starting from 1 per class, independent of Excel SN
             class_roll_counters = {}
 
             def get_next_roll(cls_obj):
                 """Return the next sequential roll number for this class."""
                 if cls_obj.pk not in class_roll_counters:
-                    # Seed from existing students in this class
                     existing = Student.objects.filter(
                         school=school, class_obj=cls_obj
                     ).values_list('roll_number', flat=True)
@@ -272,168 +273,136 @@ def student_import(request):
                 class_roll_counters[cls_obj.pk] += 1
                 return str(class_roll_counters[cls_obj.pk])
 
-            for row_num, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
-                if not row[0]:
-                    continue
-                def safe_str(val):
-                    if val is None: return ""
-                    if isinstance(val, float) and val.is_integer():
-                        return str(int(val))
-                    return str(val).strip()
+            import datetime
+            from apps.classes.models import Class
+            for ws in wb.worksheets:
+                class_name = ws.title
+                if class_name.lower() == 'students' and not Class.objects.filter(school=school, name__iexact=class_name).exists():
+                    # It might be the default sheet, fallback to dropdown_cls if provided
+                    cls = dropdown_cls
+                else:
+                    found_cls = Class.objects.filter(school=school, name__iexact=class_name).first()
+                    if not found_cls:
+                        for c in Class.objects.filter(school=school):
+                            if c.full_name.lower() == class_name.lower():
+                                found_cls = c
+                                break
+                    
+                    cls = found_cls
                 
-                # Skip the title row or header row
-                sn_val = safe_str(row[0]).upper()
-                if sn_val.startswith('CLASS:') or sn_val == 'SN*' or sn_val == 'SN':
+                # If no class could be matched and no dropdown class, skip
+                if not cls:
+                    errors.append(f"Sheet '{class_name}': No class found matching '{class_name}' and no default class selected.")
                     continue
 
-                try:
-                    # Column 0 is SN (serial number)
-                    # Symbol No
-                    symbol = safe_str(row[1]) if len(row) > 1 else ''
-                    # REG NO
-                    reg_num = safe_str(row[2]) if len(row) > 2 else ''
-                    # Name
-                    name = safe_str(row[3]) if len(row) > 3 else ''
-                    if not name:
-                        raise ValueError("Student name is required.")
+                for row_num, row in enumerate(ws.iter_rows(min_row=1, values_only=True), start=1):
+                    if not row[0]:
+                        continue
+                    def safe_str(val):
+                        if val is None: return ""
+                        if isinstance(val, float) and val.is_integer():
+                            return str(int(val))
+                        return str(val).strip()
                     
-                    # Gender
-                    gender_raw = safe_str(row[4]) if len(row) > 4 else ''
-                    gender = None
-                    if gender_raw:
-                        gen_cap = gender_raw.upper()
-                        if gen_cap in ('M', 'MALE'):
-                            gender = 'M'
-                        elif gen_cap in ('F', 'FEMALE'):
-                            gender = 'F'
-                        elif gen_cap in ('O', 'OTHER'):
-                            gender = 'O'
-                    
-                    # Class Name from Excel
-                    class_name = safe_str(row[5]) if len(row) > 5 else ''
-                    cls = dropdown_cls
-                    if class_name:
-                        from apps.classes.models import Class
-                        found_cls = Class.objects.filter(school=school, name__iexact=class_name).first()
-                        if not found_cls:
-                            for c in Class.objects.filter(school=school):
-                                if c.full_name.lower() == class_name.lower():
-                                    found_cls = c
-                                    break
-                        if not found_cls:
-                            # Auto-create missing class — but respect demo limits
-                            if active_session:
-                                if school.is_demo and Class.objects.filter(school=school).count() >= 1:
-                                    raise ValueError(f"Demo accounts are limited to 1 class. '{class_name}' was not auto-created.")
-                                found_cls = Class.objects.create(
-                                    school=school,
-                                    session=active_session,
-                                    name=class_name
-                                )
-                        if found_cls:
-                            cls = found_cls
-                    # DOB
-                    dob_ad = None
-                    dob_bs_str = ""
-                    dob_val = row[6] if len(row) > 6 else None
-                    
-                    # Parent Name
-                    parent_name = safe_str(row[7]) if len(row) > 7 else ''
-                    # Contact Number
-                    contact_number = safe_str(row[8]) if len(row) > 8 else ''
-                    # Address
-                    address = safe_str(row[9]) if len(row) > 9 else ''
-                    
-                    if dob_val is not None:
-                        import nepali_datetime
-                        if isinstance(dob_val, (datetime.date, datetime.datetime)):
-                            y, m, d = dob_val.year, dob_val.month, dob_val.day
-                            dob_bs_str = f"{y:04d}-{m:02d}-{d:02d}"
-                            try:
-                                np_date = nepali_datetime.date(y, m, d)
-                                dob_ad = np_date.to_datetime_date()
-                            except Exception:
-                                pass
-                        else:
-                            dob_str = str(dob_val).strip()
-                            if dob_str:
-                                dob_bs_str = dob_str
+                    sn_val = safe_str(row[0]).upper()
+                    if (sn_val == school.name.upper() or 'ACADEMIC YEAR:' in sn_val or 
+                        sn_val.startswith('CLASS:') or sn_val in ('SN*', 'SN', 'ROLL NO*', 'ROLL NO')):
+                        continue
+
+                    try:
+                        symbol = safe_str(row[1]) if len(row) > 1 else ''
+                        reg_num = safe_str(row[2]) if len(row) > 2 else ''
+                        name = safe_str(row[3]) if len(row) > 3 else ''
+                        if not name:
+                            raise ValueError("Student name is required.")
+                        
+                        gender_raw = safe_str(row[4]) if len(row) > 4 else ''
+                        gender = None
+                        if gender_raw:
+                            gen_cap = gender_raw.upper()
+                            if gen_cap in ('M', 'MALE'): gender = 'M'
+                            elif gen_cap in ('F', 'FEMALE'): gender = 'F'
+                            elif gen_cap in ('O', 'OTHER'): gender = 'O'
+                        
+                        dob_val = row[5] if len(row) > 5 else None
+                        parent_name = safe_str(row[6]) if len(row) > 6 else ''
+                        contact_number = safe_str(row[7]) if len(row) > 7 else ''
+                        address = safe_str(row[8]) if len(row) > 8 else ''
+                        
+                        dob_ad = None
+                        dob_bs_str = ""
+                        
+                        if dob_val is not None:
+                            import nepali_datetime
+                            if isinstance(dob_val, (datetime.date, datetime.datetime)):
+                                y, m, d = dob_val.year, dob_val.month, dob_val.day
+                                dob_bs_str = f"{y:04d}-{m:02d}-{d:02d}"
                                 try:
-                                    parts = [int(p) for p in dob_str.split('-')]
-                                    if len(parts) == 3:
-                                        y, m, d = parts
-                                        np_date = nepali_datetime.date(y, m, d)
-                                        dob_ad = np_date.to_datetime_date()
+                                    np_date = nepali_datetime.date(y, m, d)
+                                    dob_ad = np_date.to_datetime_date()
                                 except Exception:
                                     pass
+                            else:
+                                dob_str = str(dob_val).strip()
+                                if dob_str:
+                                    dob_bs_str = dob_str
+                                    try:
+                                        parts = [int(p) for p in dob_str.split('-')]
+                                        if len(parts) == 3:
+                                            y, m, d = parts
+                                            np_date = nepali_datetime.date(y, m, d)
+                                            dob_ad = np_date.to_datetime_date()
+                                    except Exception:
+                                        pass
 
-                    # Check if student already exists by symbol/reg number
-                    student = None
-                    if symbol:
-                        student = Student.objects.filter(school=school, symbol_number=symbol).first()
-                    if not student and reg_num:
-                        student = Student.objects.filter(school=school, registration_number=reg_num).first()
-                        
-                    # Fallback matching by roll_number (SN) and Name
-                    sn_val_raw = safe_str(row[0])
-                    if not student and sn_val_raw:
-                        if cls:
+                        student = None
+                        if symbol:
+                            student = Student.objects.filter(school=school, symbol_number=symbol).first()
+                        if not student and reg_num:
+                            student = Student.objects.filter(school=school, registration_number=reg_num).first()
+                            
+                        sn_val_raw = safe_str(row[0])
+                        if not student and sn_val_raw:
                             student = Student.objects.filter(school=school, class_obj=cls, roll_number=sn_val_raw, name__iexact=name).first()
+                        
+                        if student:
+                            if name: student.name = name
+                            if symbol: student.symbol_number = symbol
+                            if reg_num: student.registration_number = reg_num
+                            if gender: student.gender = gender
+                            if cls and student.class_obj != cls:
+                                student.class_obj = cls
+                                student.roll_number = get_next_roll(cls)
+                            elif cls:
+                                student.class_obj = cls
+                            if dob_ad: student.date_of_birth = dob_ad
+                            if dob_bs_str: student.date_of_birth_bs = dob_bs_str
+                            if parent_name: student.parent_name = parent_name
+                            if contact_number: student.contact_number = contact_number
+                            if address: student.address = address
+                            student.save()
                         else:
-                            # Try to match across the whole school if class is unknown
-                            matches = Student.objects.filter(school=school, roll_number=sn_val_raw, name__iexact=name)
-                            if matches.count() == 1:
-                                student = matches.first()
-                                cls = student.class_obj
-                    
-                    if not student and not cls:
-                        msg = f"Cannot create new student '{name}': "
-                        if class_name:
-                            msg += f"Class '{class_name}' was not found in the database."
-                        else:
-                            msg += "No class specified."
-                        raise ValueError(msg)
+                            if school.is_demo and Student.objects.filter(school=school).count() >= 10:
+                                raise ValueError("Demo accounts are limited to 10 students. Import stopped.")
+                            Student.objects.create(
+                                school=school,
+                                name=name,
+                                symbol_number=symbol,
+                                registration_number=reg_num,
+                                gender=gender,
+                                class_obj=cls,
+                                roll_number=get_next_roll(cls),
+                                date_of_birth=dob_ad,
+                                date_of_birth_bs=dob_bs_str,
+                                parent_name=parent_name,
+                                contact_number=contact_number,
+                                address=address,
+                                is_active=True
+                            )
+                            created += 1
 
-                    if student:
-                        # Update existing student
-                        if name: student.name = name
-                        if symbol: student.symbol_number = symbol
-                        if reg_num: student.registration_number = reg_num
-                        if gender: student.gender = gender
-                        if cls and student.class_obj != cls:
-                            student.class_obj = cls
-                            student.roll_number = get_next_roll(cls)
-                        elif cls:
-                            student.class_obj = cls
-                        if dob_ad: student.date_of_birth = dob_ad
-                        if dob_bs_str: student.date_of_birth_bs = dob_bs_str
-                        if parent_name: student.parent_name = parent_name
-                        if contact_number: student.contact_number = contact_number
-                        if address: student.address = address
-                        student.save()
-                    else:
-                        # Create new student — but respect demo limits
-                        if school.is_demo and Student.objects.filter(school=school).count() >= 10:
-                            raise ValueError("Demo accounts are limited to 10 students. Import stopped.")
-                        Student.objects.create(
-                            school=school,
-                            name=name,
-                            symbol_number=symbol,
-                            registration_number=reg_num,
-                            gender=gender,
-                            class_obj=cls,
-                            roll_number=get_next_roll(cls),
-                            date_of_birth=dob_ad,
-                            date_of_birth_bs=dob_bs_str,
-                            parent_name=parent_name,
-                            contact_number=contact_number,
-                            address=address,
-                            is_active=True
-                        )
-                        created += 1
-
-                except Exception as e:
-                    errors.append(f"Row {row_num}: {str(e)}")
+                    except Exception as e:
+                        errors.append(f"Sheet '{ws.title}' Row {row_num}: {str(e)}")
 
             if errors:
                 messages.warning(request, f"Imported {created} students. However, there were some errors: {', '.join(errors[:5])}{'...' if len(errors) > 5 else ''}")
@@ -451,7 +420,7 @@ def student_import(request):
 def student_export_excel(request):
     """Export student list to Excel."""
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     school = request.user.school
     active_session = school.get_active_session() if school else None
     class_id = request.GET.get('class_id')
@@ -464,38 +433,80 @@ def student_export_excel(request):
     students = students.select_related('class_obj')
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = 'Students'
-
-    # Header matching import template
-    headers = ['SN*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Class', 'Date of Birth BS.', 'Parent Name', 'Contact Number', 'Address']
+    default_ws = wb.active
+    
+    headers = ['Roll No*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Date of Birth BS.', 'Parent Name', 'Contact Number', 'Address']
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='F59E0B', end_color='F59E0B', fill_type='solid')
 
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center')
+    from collections import defaultdict
+    class_students = defaultdict(list)
+    for student in students:
+        if student.class_obj:
+            class_students[student.class_obj.name].append(student)
+        else:
+            class_students['Unknown'].append(student)
 
-    for row_num, student in enumerate(students, 2):
-        ws.cell(row=row_num, column=1, value=student.roll_number or row_num - 1)
-        ws.cell(row=row_num, column=2, value=student.symbol_number)
-        ws.cell(row=row_num, column=3, value=student.registration_number)
-        ws.cell(row=row_num, column=4, value=student.name)
-        ws.cell(row=row_num, column=5, value=student.get_gender_display() or '')
-        ws.cell(row=row_num, column=6, value=student.class_obj.full_name if student.class_obj else '')
-        ws.cell(row=row_num, column=7, value=student.date_of_birth_bs or '')
-        ws.cell(row=row_num, column=8, value=student.parent_name)
-        ws.cell(row=row_num, column=9, value=student.contact_number)
-        ws.cell(row=row_num, column=10, value=student.address)
+    if not class_students:
+        default_ws.title = 'Students'
+        for col, header in enumerate(headers, 1):
+            cell = default_ws.cell(row=1, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+    else:
+        for i, (cls_name, stu_list) in enumerate(class_students.items()):
+            import re
+            safe_title = re.sub(r'[\\*?:/\[\]]', '', cls_name)[:31]
+            if i == 0:
+                ws = default_ws
+                ws.title = safe_title
+            else:
+                ws = wb.create_sheet(title=safe_title)
+                
+            # Beautiful Headers
+            ws.merge_cells('B1:G3')
+            details = []
+            if active_session:
+                details.append(f"ACADEMIC YEAR: {active_session.name}")
+            details.append(f"CLASS: {safe_title}")
+            header_text = f"{school.name.upper()}\n{' | '.join(details)}"
+            cell_header = ws.cell(row=1, column=2, value=header_text)
+            cell_header.font = Font(bold=True, size=14, color='1E293B')
+            cell_header.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            
+            # Remove gridlines for the header rows
+            for r in range(1, 4):
+                for c in range(1, len(headers) + 1):
+                    ws.cell(row=r, column=c).fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
 
-    # Auto-width
+            for col, header in enumerate(headers, 1):
+                cell = ws.cell(row=4, column=col, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.alignment = Alignment(horizontal='center')
+
+            for row_num, student in enumerate(stu_list, 5):
+                ws.cell(row=row_num, column=1, value=student.roll_number or row_num - 4)
+                ws.cell(row=row_num, column=2, value=student.symbol_number)
+                ws.cell(row=row_num, column=3, value=student.registration_number)
+                ws.cell(row=row_num, column=4, value=student.name)
+                ws.cell(row=row_num, column=5, value=student.get_gender_display() or '')
+                ws.cell(row=row_num, column=6, value=student.date_of_birth_bs or '')
+                ws.cell(row=row_num, column=7, value=student.parent_name)
+                ws.cell(row=row_num, column=8, value=student.contact_number)
+                ws.cell(row=row_num, column=9, value=student.address)
+
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     from openpyxl.utils import get_column_letter
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = min(max_len + 4, 40)
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows(min_row=4, max_col=len(headers)):
+            for cell in row:
+                cell.border = thin_border
+                
+        for col in sheet.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = get_column_letter(col[0].column)
+            sheet.column_dimensions[col_letter].width = min(max_len + 6, 40)
 
     from apps.classes.models import Class
     target_class = Class.objects.filter(pk=class_id).first() if class_id else None
@@ -513,26 +524,68 @@ def student_export_excel(request):
 def student_import_template(request):
     """Download blank Excel template for student import."""
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = 'Students'
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     
-    headers = ['SN*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Class', 'Date of Birth BS.', 'Parent Name', 'Contact Number', 'Address']
+    school = request.user.school
+    active_session = school.get_active_session() if school else None
+    
+    from apps.classes.models import Class
+    classes = Class.objects.filter(school=school, session=active_session) if active_session else []
+    
+    wb = openpyxl.Workbook()
+    default_ws = wb.active
+    
+    headers = ['Roll No*', 'Symbol No', 'REG NO', 'Name of Students*', 'Gender', 'Date of Birth BS.', 'Parent Name', 'Contact Number', 'Address']
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill(start_color='F59E0B', end_color='F59E0B', fill_type='solid')
-    for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=h)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center')
+    
+    def setup_sheet(ws, title):
+        import re
+        safe_title = re.sub(r'[\\*?:/\[\]]', '', title)[:31]
+        ws.title = safe_title
+        
+        # Beautiful Headers
+        ws.merge_cells('B1:G3')
+        details = []
+        if active_session:
+            details.append(f"ACADEMIC YEAR: {active_session.name}")
+        details.append(f"CLASS: {safe_title}")
+        header_text = f"{school.name.upper()}\n{' | '.join(details)}"
+        cell_header = ws.cell(row=1, column=2, value=header_text)
+        cell_header.font = Font(bold=True, size=14, color='1E293B')
+        cell_header.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        
+        # Remove gridlines for the header rows
+        for r in range(1, 4):
+            for c in range(1, len(headers) + 1):
+                ws.cell(row=r, column=c).fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+        
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        for col, h in enumerate(headers, 1):
+            cell = ws.cell(row=4, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            
+        for r in range(4, 34):
+            for c in range(1, len(headers) + 1):
+                ws.cell(row=r, column=c).border = thin_border
+        
+        from openpyxl.utils import get_column_letter
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = min(max_len + 6, 40)
 
-    # Set column widths nicely
-    from openpyxl.utils import get_column_letter
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 4, 18)
+    if classes:
+        for i, cls in enumerate(classes):
+            if i == 0:
+                ws = default_ws
+            else:
+                ws = wb.create_sheet()
+            setup_sheet(ws, cls.name)
+    else:
+        setup_sheet(default_ws, 'Students')
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

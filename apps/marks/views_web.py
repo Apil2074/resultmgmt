@@ -437,17 +437,28 @@ def bulk_mark_import(request, exam_id, class_id):
             for subj in subjects:
                 try:
                     ms = subj
-                    expected_headers.append(f'{subj.name}\nTheory')
+                    expected_headers.append(f'{subj.name} - Theory')
                     if ms.has_practical:
-                        expected_headers.append(f'{subj.name}\nInternal')
+                        expected_headers.append(f'{subj.name} - Internal')
                     else:
-                        expected_headers.append(f'{subj.name}\n(No Internal)')
+                        expected_headers.append(f'{subj.name} - (No Internal)')
                 except Exception:
                     expected_headers.append(subj.name)
                     expected_headers.append('')
             expected_headers.append('Present Days')
             
-            actual_headers = list(next(ws.iter_rows(min_row=1, max_row=1, values_only=True)))
+            header_row_idx = None
+            actual_headers = []
+            for r_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=10, values_only=True), start=1):
+                if row and row[0] and str(row[0]).strip().lower() == 'roll no':
+                    header_row_idx = r_idx
+                    actual_headers = list(row)
+                    break
+                    
+            if header_row_idx is None:
+                messages.error(request, 'Could not find the header row containing "Roll No". Please use the official template.')
+                return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
+                
             actual_headers_clean = [str(h).strip() if h is not None else '' for h in actual_headers][:len(expected_headers)]
             expected_headers_clean = [str(h).strip() for h in expected_headers]
             
@@ -455,8 +466,9 @@ def bulk_mark_import(request, exam_id, class_id):
                 messages.error(request, 'Column structure mismatch detected. Please download a fresh template and do not alter the headers or column order.')
                 return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
 
-            # Check if Row 2 is the Full Marks / Total config row
-            row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
+            # Check if config row exists below headers
+            config_row_idx = header_row_idx + 1
+            row_2 = next(ws.iter_rows(min_row=config_row_idx, max_row=config_row_idx, values_only=True))
             has_config_row = False
             class_total_days = None
             
@@ -464,39 +476,8 @@ def bulk_mark_import(request, exam_id, class_id):
                 has_config_row = True
                 
             if has_config_row:
-                # 1. Parse and update subject full marks
-                col_idx = 2
-                for subject in subjects:
-                    try:
-                        ms = subject
-                        changed = False
-                        
-                        theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
-                        if theory_fm is not None:
-                            try:
-                                val = int(float(theory_fm))
-                                if ms.theory_full_marks != val:
-                                    ms.theory_full_marks = val
-                                    changed = True
-                            except Exception:
-                                pass
-                                
-                        if ms.has_practical:
-                            internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
-                            if internal_fm is not None:
-                                try:
-                                    val = int(float(internal_fm))
-                                    if ms.practical_full_marks != val:
-                                        ms.practical_full_marks = val
-                                        changed = True
-                                except Exception:
-                                    pass
-                                    
-                        if changed:
-                            ms.save()
-                    except Exception:
-                        pass
-                    col_idx += 2
+                # 1. Parse and update subject full marks (DISABLED for data integrity)
+                col_idx = 2 + (len(subjects) * 2)
                 
                 # 2. Parse class-wide total attendance days from the Present Days column in Row 2
                 if col_idx < len(row_2) and row_2[col_idx] is not None:
@@ -505,9 +486,9 @@ def bulk_mark_import(request, exam_id, class_id):
                     except Exception:
                         pass
                         
-                student_start_row = 3
+                student_start_row = header_row_idx + 2
             else:
-                student_start_row = 2
+                student_start_row = header_row_idx + 1
 
             saved = 0
             errors = []
@@ -657,32 +638,68 @@ def mark_entry_template(request, exam_id, class_id):
     ws.title = f'{exam.name[:20]} Marks'
 
     header_font = Font(bold=True, color='FFFFFF')
+    header_font_dark = Font(bold=True, color='1E293B')
     header_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
-    sub_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+    sub_fill = PatternFill(start_color='E2E8F0', end_color='E2E8F0', fill_type='solid')
 
     # Build headers
     headers = ['Roll No', 'Student Name']
     for subj in subjects:
         try:
             ms = subj
-            headers.append(f'{subj.name}\nTheory')
+            headers.append(f'{subj.name} - Theory')
             if ms.has_practical:
-                headers.append(f'{subj.name}\nInternal')
+                headers.append(f'{subj.name} - Internal')
             else:
-                headers.append(f'{subj.name}\n(No Internal)')
+                headers.append(f'{subj.name} - (No Internal)')
         except Exception:
             headers.append(subj.name)
             headers.append('')
 
     headers.append('Present Days')
+    max_col = len(headers)
+
+    title_fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+    title_font = Font(bold=True, size=16, color='1E293B')
+    subtitle_font = Font(bold=True, size=12, color='475569')
+
+    # Row 1: School Name
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+    cell_r1 = ws.cell(row=1, column=1, value=school.name.upper())
+    cell_r1.font = title_font
+    cell_r1.alignment = Alignment(horizontal='center', vertical='center')
+    for c in range(1, max_col + 1):
+        ws.cell(row=1, column=c).fill = title_fill
+    ws.row_dimensions[1].height = 30
+
+    # Row 2: Exam & Class
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
+    cell_r2 = ws.cell(row=2, column=1, value=f"EXAM: {exam.name.upper()}   |   CLASS: {cls.full_name.upper()}")
+    cell_r2.font = subtitle_font
+    cell_r2.alignment = Alignment(horizontal='center', vertical='center')
+    for c in range(1, max_col + 1):
+        ws.cell(row=2, column=c).fill = title_fill
+    ws.row_dimensions[2].height = 25
+
+    # Row 3: Blank separator
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
+    for c in range(1, max_col + 1):
+        ws.cell(row=3, column=c).fill = title_fill
+    ws.row_dimensions[3].height = 10
+    
+    default_header_font = Font(bold=True, color='000000')
 
     for col, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col, value=h)
-        cell.font = header_font
-        cell.fill = header_fill if col <= 2 else sub_fill
-        cell.alignment = Alignment(horizontal='center', wrap_text=True)
+        cell = ws.cell(row=4, column=col, value=h)
+        if col <= 2:
+            cell.font = default_header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        else:
+            cell.fill = sub_fill
+            cell.font = header_font_dark
+            cell.alignment = Alignment(horizontal='center', vertical='bottom', textRotation=90)
 
-    ws.row_dimensions[1].height = 40
+    ws.row_dimensions[4].height = 120
 
     # Load existing mark entries to pre-populate
     from apps.marks.models import MarkEntry
@@ -698,9 +715,9 @@ def mark_entry_template(request, exam_id, class_id):
     
     black_fill = PatternFill(start_color='000000', end_color='000000', fill_type='solid')
 
-    # Row 2: Full Marks / Total Attendance Row
-    ws.cell(row=2, column=1, value="")
-    cell_fm = ws.cell(row=2, column=2, value="Full Marks / Total")
+    # Row 5: Full Marks / Total Attendance Row
+    ws.cell(row=5, column=1, value="")
+    cell_fm = ws.cell(row=5, column=2, value="Full Marks / Total")
     cell_fm.font = Font(bold=True)
     cell_fm.alignment = Alignment(horizontal='right')
 
@@ -708,9 +725,9 @@ def mark_entry_template(request, exam_id, class_id):
     for subj in subjects:
         try:
             ms = subj
-            ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
+            ws.cell(row=5, column=col_idx, value=ms.theory_full_marks)
             if ms.has_practical:
-                ws.cell(row=2, column=col_idx + 1, value=ms.practical_full_marks)
+                ws.cell(row=5, column=col_idx + 1, value=ms.practical_full_marks)
         except Exception:
             pass
         col_idx += 2
@@ -727,10 +744,10 @@ def mark_entry_template(request, exam_id, class_id):
             break
 
     if class_total_days is not None:
-        ws.cell(row=2, column=col_idx, value=class_total_days)
+        ws.cell(row=5, column=col_idx, value=class_total_days)
 
-    # Populate Student Rows (Row 3 onwards)
-    for row_num, student in enumerate(students, 3):
+    # Populate Student Rows (Row 6 onwards)
+    for row_num, student in enumerate(students, 6):
         ws.cell(row=row_num, column=1, value=student.roll_number)
         ws.cell(row=row_num, column=2, value=student.name)
         
@@ -764,6 +781,37 @@ def mark_entry_template(request, exam_id, class_id):
         # Write present days column at the end
         if present_days is not None:
             ws.cell(row=row_num, column=col_idx, value=present_days)
+
+    from openpyxl.styles.borders import Border, Side
+    from openpyxl.utils import get_column_letter
+
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    max_col = len(headers)
+    max_row = len(students) + 5
+
+    for row in ws.iter_rows(min_row=4, max_row=max_row, min_col=1, max_col=max_col):
+        for cell in row:
+            cell.border = thin_border
+
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.row > max_row:
+                continue
+            if cell.row < 4:
+                continue
+            if cell.row == 4 and cell.column > 2:
+                continue
+            try:
+                lines = str(cell.value).split('\n')
+                cell_len = max(len(line) for line in lines)
+                if cell_len > max_length:
+                    max_length = cell_len
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = min(max_length + 4, 40)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -964,8 +1012,9 @@ def mark_entry_all_template(request, exam_id):
     wb.remove(default_sheet)
 
     header_font = Font(bold=True, color='FFFFFF')
+    header_font_dark = Font(bold=True, color='1E293B')
     header_fill = PatternFill(start_color='0F172A', end_color='0F172A', fill_type='solid')
-    sub_fill = PatternFill(start_color='1E293B', end_color='1E293B', fill_type='solid')
+    sub_fill = PatternFill(start_color='E2E8F0', end_color='E2E8F0', fill_type='solid')
 
     for ec in exam_classes:
         cls = ec.class_obj
@@ -985,24 +1034,59 @@ def mark_entry_all_template(request, exam_id):
         for subj in subjects:
             try:
                 ms = subj
-                headers.append(f'{subj.name}\nTheory')
+                headers.append(f'{subj.name} - Theory')
                 if ms.has_practical:
-                    headers.append(f'{subj.name}\nInternal')
+                    headers.append(f'{subj.name} - Internal')
                 else:
-                    headers.append(f'{subj.name}\n(No Internal)')
+                    headers.append(f'{subj.name} - (No Internal)')
             except Exception:
                 headers.append(subj.name)
                 headers.append('')
 
         headers.append('Present Days')
+        max_col = len(headers)
+
+        title_fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+        title_font = Font(bold=True, size=16, color='1E293B')
+        subtitle_font = Font(bold=True, size=12, color='475569')
+
+        # Row 1: School Name
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_col)
+        cell_r1 = ws.cell(row=1, column=1, value=school.name.upper())
+        cell_r1.font = title_font
+        cell_r1.alignment = Alignment(horizontal='center', vertical='center')
+        for c in range(1, max_col + 1):
+            ws.cell(row=1, column=c).fill = title_fill
+        ws.row_dimensions[1].height = 30
+
+        # Row 2: Exam & Class
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=max_col)
+        cell_r2 = ws.cell(row=2, column=1, value=f"EXAM: {exam.name.upper()}   |   CLASS: {cls.full_name.upper()}")
+        cell_r2.font = subtitle_font
+        cell_r2.alignment = Alignment(horizontal='center', vertical='center')
+        for c in range(1, max_col + 1):
+            ws.cell(row=2, column=c).fill = title_fill
+        ws.row_dimensions[2].height = 25
+
+        # Row 3: Blank separator
+        ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=max_col)
+        for c in range(1, max_col + 1):
+            ws.cell(row=3, column=c).fill = title_fill
+        ws.row_dimensions[3].height = 10
+        
+        default_header_font = Font(bold=True, color='000000')
 
         for col, h in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=h)
-            cell.font = header_font
-            cell.fill = header_fill if col <= 2 else sub_fill
-            cell.alignment = Alignment(horizontal='center', wrap_text=True)
+            cell = ws.cell(row=4, column=col, value=h)
+            if col <= 2:
+                cell.font = default_header_font
+                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            else:
+                cell.fill = sub_fill
+                cell.font = header_font_dark
+                cell.alignment = Alignment(horizontal='center', vertical='bottom', textRotation=90)
 
-        ws.row_dimensions[1].height = 40
+        ws.row_dimensions[4].height = 120
 
         # Load existing mark entries to pre-populate
         existing_marks = {}
@@ -1010,9 +1094,9 @@ def mark_entry_all_template(request, exam_id):
                                             student__in=students, subject__in=subjects):
             existing_marks[(me.student_id, me.subject_id)] = me
 
-        # Row 2: Full Marks / Total Attendance Row
-        ws.cell(row=2, column=1, value="")
-        cell_fm = ws.cell(row=2, column=2, value="Full Marks / Total")
+        # Row 5: Full Marks / Total Attendance Row
+        ws.cell(row=5, column=1, value="")
+        cell_fm = ws.cell(row=5, column=2, value="Full Marks / Total")
         cell_fm.font = Font(bold=True)
         cell_fm.alignment = Alignment(horizontal='right')
 
@@ -1020,9 +1104,9 @@ def mark_entry_all_template(request, exam_id):
         for subj in subjects:
             try:
                 ms = subj
-                ws.cell(row=2, column=col_idx, value=ms.theory_full_marks)
+                ws.cell(row=5, column=col_idx, value=ms.theory_full_marks)
                 if ms.has_practical:
-                    ws.cell(row=2, column=col_idx + 1, value=ms.practical_full_marks)
+                    ws.cell(row=5, column=col_idx + 1, value=ms.practical_full_marks)
             except Exception:
                 pass
             col_idx += 2
@@ -1039,10 +1123,10 @@ def mark_entry_all_template(request, exam_id):
                 break
 
         if class_total_days is not None:
-            ws.cell(row=2, column=col_idx, value=class_total_days)
+            ws.cell(row=5, column=col_idx, value=class_total_days)
 
-        # Populate Student Rows (Row 3 onwards)
-        for row_num, student in enumerate(students, 3):
+        # Populate Student Rows (Row 6 onwards)
+        for row_num, student in enumerate(students, 6):
             ws.cell(row=row_num, column=1, value=student.roll_number)
             ws.cell(row=row_num, column=2, value=student.name)
             
@@ -1069,6 +1153,37 @@ def mark_entry_all_template(request, exam_id):
             # Write present days column at the end
             if present_days is not None:
                 ws.cell(row=row_num, column=col_idx, value=present_days)
+
+        from openpyxl.styles.borders import Border, Side
+        from openpyxl.utils import get_column_letter
+
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        max_col = len(headers)
+        max_row = len(students) + 5
+
+        for row in ws.iter_rows(min_row=4, max_row=max_row, min_col=1, max_col=max_col):
+            for cell in row:
+                cell.border = thin_border
+
+        for col in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                if cell.row > max_row:
+                    continue
+                if cell.row < 4:
+                    continue
+                if cell.row == 4 and cell.column > 2:
+                    continue
+                try:
+                    lines = str(cell.value).split('\n')
+                    cell_len = max(len(line) for line in lines)
+                    if cell_len > max_length:
+                        max_length = cell_len
+                except:
+                    pass
+            ws.column_dimensions[col_letter].width = min(max_length + 4, 40)
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -1139,17 +1254,28 @@ def bulk_mark_all_import(request, exam_id):
             for subj in subjects:
                 try:
                     ms = subj
-                    expected_headers.append(f'{subj.name}\nTheory')
+                    expected_headers.append(f'{subj.name} - Theory')
                     if ms.has_practical:
-                        expected_headers.append(f'{subj.name}\nInternal')
+                        expected_headers.append(f'{subj.name} - Internal')
                     else:
-                        expected_headers.append(f'{subj.name}\n(No Internal)')
+                        expected_headers.append(f'{subj.name} - (No Internal)')
                 except Exception:
                     expected_headers.append(subj.name)
                     expected_headers.append('')
             expected_headers.append('Present Days')
             
-            actual_headers = list(next(ws.iter_rows(min_row=1, max_row=1, values_only=True)))
+            header_row_idx = None
+            actual_headers = []
+            for r_idx, row in enumerate(ws.iter_rows(min_row=1, max_row=10, values_only=True), start=1):
+                if row and row[0] and str(row[0]).strip().lower() == 'roll no':
+                    header_row_idx = r_idx
+                    actual_headers = list(row)
+                    break
+                    
+            if header_row_idx is None:
+                errors.append(f"Sheet '{sheet_name}': Could not find the header row containing 'Roll No'. Skipping.")
+                continue
+                
             actual_headers_clean = [str(h).strip() if h is not None else '' for h in actual_headers][:len(expected_headers)]
             expected_headers_clean = [str(h).strip() for h in expected_headers]
             
@@ -1157,8 +1283,9 @@ def bulk_mark_all_import(request, exam_id):
                 errors.append(f"Sheet '{sheet_name}': Column structure mismatch. Skipping.")
                 continue
 
-            # Check if Row 2 is the Full Marks / Total config row
-            row_2 = next(ws.iter_rows(min_row=2, max_row=2, values_only=True))
+            # Check if config row exists below headers
+            config_row_idx = header_row_idx + 1
+            row_2 = next(ws.iter_rows(min_row=config_row_idx, max_row=config_row_idx, values_only=True))
             has_config_row = False
             class_total_days = None
             
@@ -1166,44 +1293,7 @@ def bulk_mark_all_import(request, exam_id):
                 has_config_row = True
                 
             if has_config_row:
-                # SECURITY: Only allow School Admins to update the marking structure from Excel.
-                # Teachers uploading Excel should NOT be able to manipulate full marks.
-                is_admin_upload = request.user.is_school_admin or request.user.is_super_admin
-
-                # 1. Parse and update subject full marks (admin only)
-                col_idx = 2
-                for subject in subjects:
-                    try:
-                        ms = subject
-                        changed = False
-
-                        theory_fm = row_2[col_idx] if col_idx < len(row_2) else None
-                        if theory_fm is not None and is_admin_upload:
-                            try:
-                                val = int(float(theory_fm))
-                                # SECURITY: Bounds check — prevent fraudulent marking structures
-                                if 1 <= val <= 1000 and ms.theory_full_marks != val:
-                                    ms.theory_full_marks = val
-                                    changed = True
-                            except Exception:
-                                pass
-
-                        if ms.has_practical:
-                            internal_fm = row_2[col_idx + 1] if (col_idx + 1) < len(row_2) else None
-                            if internal_fm is not None and is_admin_upload:
-                                try:
-                                    val = int(float(internal_fm))
-                                    if 1 <= val <= 1000 and ms.practical_full_marks != val:
-                                        ms.practical_full_marks = val
-                                        changed = True
-                                except Exception:
-                                    pass
-
-                        if changed:
-                            ms.save()
-                    except Exception:
-                        pass
-                    col_idx += 2
+                col_idx = 2 + (len(subjects) * 2)
                 
                 # 2. Parse class-wide total attendance days from the Present Days column in Row 2
                 if col_idx < len(row_2) and row_2[col_idx] is not None:
@@ -1212,9 +1302,9 @@ def bulk_mark_all_import(request, exam_id):
                     except Exception:
                         pass
                         
-                student_start_row = 3
+                student_start_row = header_row_idx + 2
             else:
-                student_start_row = 2
+                student_start_row = header_row_idx + 1
 
             for row_num, row in enumerate(ws.iter_rows(min_row=student_start_row, values_only=True), start=student_start_row):
                 try:

@@ -383,6 +383,11 @@ def ledger_excel(request, exam_id, class_id):
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center", vertical="center")
         
+    from apps.subjects.models import StudentSubjectEnrollment
+    optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+        student__class_obj=cls, student__school=school
+    ).values_list('student_id', 'subject_id'))
+
     # Add Data
     for idx, sr in enumerate(student_results, 1):
         row = [
@@ -395,6 +400,15 @@ def ledger_excel(request, exam_id, class_id):
         
         for subject in subjects:
             me = mark_map.get((sr.student_id, subject.id))
+            is_unenrolled = subject.subject_type == 'OPTIONAL' and (sr.student_id, subject.id) not in optional_enrollments
+            
+            if is_unenrolled:
+                cols = 3
+                if True: cols += 1
+                if subject.has_practical: cols += 1
+                row.extend(["-"] * cols)
+                continue
+
             if not me or not me.subject_result:
                 # Add empty columns based on subject structure
                 cols = 3
@@ -514,6 +528,11 @@ def grade_ledger_select(request):
             ).select_related('subject_result'):
                 mark_map[(me.student_id, me.subject_id)] = me
 
+            from apps.subjects.models import StudentSubjectEnrollment
+            optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+                student__class_obj=cls, student__school=school
+            ).values_list('student_id', 'subject_id'))
+
             for sr in student_results:
                 sr.subject_scores = []
                 total_present = 0
@@ -522,6 +541,7 @@ def grade_ledger_select(request):
 
                 for subject in subjects:
                     me = mark_map.get((sr.student_id, subject.id))
+                    is_unenrolled = subject.subject_type == 'OPTIONAL' and (sr.student_id, subject.id) not in optional_enrollments
                     score_info = {
                         'subject': subject,
                         'has_theory': True,
@@ -532,8 +552,18 @@ def grade_ledger_select(request):
                         'internal_full_marks': subject.practical_full_marks or 0,
                         'internal_obtained': '—',
                         'internal_grade': '—',
+                        'is_unenrolled': is_unenrolled,
                     }
-                    if me:
+                    if is_unenrolled:
+                        score_info['theory_obtained'] = '-'
+                        score_info['theory_grade'] = '-'
+                        score_info['theory_grade_point'] = '-'
+                        score_info['internal_obtained'] = '-'
+                        score_info['internal_grade'] = '-'
+                        score_info['internal_grade_point'] = '-'
+                        score_info['grade_point'] = '-'
+                        score_info['grade'] = '-'
+                    elif me:
                         if me.present_days is not None:
                             total_present = max(total_present, me.present_days)
                             has_attendance = True
@@ -733,6 +763,11 @@ def marksheet_select(request):
                 'NG': 'Not Graded',
             }
 
+            from apps.subjects.models import StudentSubjectEnrollment
+            optional_enrollments = set(StudentSubjectEnrollment.objects.filter(
+                student__class_obj=cls, student__school=school
+            ).values_list('student_id', 'subject_id'))
+
             students_data = []
 
             for st in students_to_process:
@@ -741,11 +776,17 @@ def marksheet_select(request):
                 except StudentResult.DoesNotExist:
                     result = None
 
-                mark_entries = MarkEntry.objects.filter(
+                mark_entries_qs = MarkEntry.objects.filter(
                     exam=exam, student=st, school=school
                 ).select_related(
                     'subject', 'subject_result'
                 ).order_by('subject__order')
+
+                mark_entries = []
+                for me in mark_entries_qs:
+                    if me.subject.subject_type == 'OPTIONAL' and (st.id, me.subject_id) not in optional_enrollments:
+                        continue
+                    mark_entries.append(me)
 
                 for me in mark_entries:
                     sr = getattr(me, 'subject_result', None)
