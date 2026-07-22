@@ -2,6 +2,7 @@
 Students App — Student model
 """
 from django.db import models
+from core.thread_locals import SchoolScopedManager
 from django.db.models.functions import Length
 
 
@@ -38,6 +39,9 @@ class Student(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SchoolScopedManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = 'Student'

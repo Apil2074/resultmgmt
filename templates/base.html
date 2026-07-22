@@ -510,7 +510,69 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <!-- Select2 JS -->
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-  
+
+  <!-- Global Confirm Modal -->
+  <div class="modal fade" id="globalConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header border-bottom bg-light">
+          <h5 class="modal-title fw-bold" id="globalConfirmTitle"><i class="bi bi-question-circle text-primary me-2"></i>Confirm Action</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4 py-4">
+          <p class="mb-0 text-slate-800 fs-6" id="globalConfirmMessage">Are you sure you want to proceed?</p>
+        </div>
+        <div class="modal-footer border-top-0 bg-light">
+          <button type="button" class="btn btn-secondary fw-medium px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary fw-bold px-4" id="globalConfirmBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let _globalConfirmCallback = null;
+    let _globalCancelCallback = null;
+    
+    function showConfirmModal(message, onConfirm, isDanger = false, onCancel = null) {
+      document.getElementById('globalConfirmMessage').textContent = message;
+      
+      const confirmBtn = document.getElementById('globalConfirmBtn');
+      const title = document.getElementById('globalConfirmTitle');
+      
+      if (isDanger) {
+        confirmBtn.className = 'btn btn-danger fw-bold px-4';
+        confirmBtn.innerHTML = '<i class="bi bi-trash-fill me-1"></i> Confirm';
+        title.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Warning';
+      } else {
+        confirmBtn.className = 'btn btn-primary fw-bold px-4';
+        confirmBtn.innerHTML = 'Confirm';
+        title.innerHTML = '<i class="bi bi-question-circle text-primary me-2"></i>Confirm Action';
+      }
+      
+      _globalConfirmCallback = onConfirm;
+      _globalCancelCallback = onCancel;
+      const modal = new bootstrap.Modal(document.getElementById('globalConfirmModal'));
+      modal.show();
+    }
+
+    document.getElementById('globalConfirmBtn').addEventListener('click', function() {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('globalConfirmModal'));
+      modal.hide();
+      if (typeof _globalConfirmCallback === 'function') {
+        _globalConfirmCallback();
+      }
+      _globalCancelCallback = null; // Prevent cancel callback from firing
+    });
+    
+    document.getElementById('globalConfirmModal').addEventListener('hidden.bs.modal', function () {
+      if (typeof _globalCancelCallback === 'function') {
+        _globalCancelCallback();
+      }
+      _globalCancelCallback = null;
+    });
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>

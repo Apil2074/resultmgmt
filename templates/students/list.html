@@ -76,6 +76,7 @@
             <th class="d-none d-md-table-cell" style="width: 40px; padding-left: 20px;">
               <input type="checkbox" id="selectAll" class="form-check-input shadow-sm" style="border-radius:4px;">
             </th>
+            <th style="width: 60px;">S.N.</th>
             <th style="width: 250px;">STUDENT</th>
             <th>CLASS</th>
             <th class="d-none d-md-table-cell">REG. NUMBER</th>
@@ -88,6 +89,9 @@
           <tr>
             <td class="d-none d-md-table-cell" style="padding-left: 20px;">
               <input type="checkbox" name="student_ids" value="{{ student.pk }}" class="student-checkbox form-check-input shadow-sm" style="border-radius:4px;">
+            </td>
+            <td>
+              <span class="text-muted fw-medium" style="font-size:0.9rem;">{{ page_obj.start_index|add:forloop.counter0 }}</span>
             </td>
             <td>
               <div class="d-flex align-items-center gap-3">
@@ -124,7 +128,11 @@
                   {% if user.is_school_admin or user.is_super_admin %}
                   <li><button type="button" class="dropdown-item py-2 btn-edit-student" data-url="{% url 'student_edit_modal' student.pk %}"><i class="bi bi-pencil text-warning me-2"></i> Edit</button></li>
                   <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item py-2 text-danger" href="{% url 'student_delete' student.pk %}"><i class="bi bi-trash me-2"></i> Delete</a></li>
+                  <li>
+                    <button type="button" class="dropdown-item py-2 text-danger" onclick="confirmSingleDelete('{% url 'student_delete' student.pk %}', '{{ student.name|escapejs }}')">
+                      <i class="bi bi-trash me-2"></i> Delete
+                    </button>
+                  </li>
                   {% endif %}
                 </ul>
               </div>
@@ -179,6 +187,12 @@
   </div>
   {% endif %}
 </div>
+
+<!-- Hidden Form for Single Deletions (placed outside the bulk form) -->
+<form id="singleDeleteForm" method="POST" style="display: none;">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+</form>
 
 <!-- Bulk Delete Modal -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1" aria-labelledby="bulkDeleteModalLabel" aria-hidden="true">
@@ -359,5 +373,13 @@
       });
     }
   });
+
+  function confirmSingleDelete(url, studentName) {
+    showConfirmModal(`Are you sure you want to permanently delete student ${studentName}?`, () => {
+      const form = document.getElementById('singleDeleteForm');
+      form.action = url;
+      form.submit();
+    }, true);
+  }
 </script>
 {% endblock %}

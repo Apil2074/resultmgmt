@@ -73,7 +73,7 @@ def mark_entry(request, exam_id, class_id):
     # Load existing mark entries
     existing_marks = {}
     for me in MarkEntry.objects.filter(exam=exam, school=school,
-                                        student__in=students, subject__in=subjects):
+                                        student__in=students, subject__in=subjects).select_related('student', 'subject'):
         existing_marks[(me.student_id, me.subject_id)] = me
 
     # Enrich student objects for the template
@@ -253,7 +253,7 @@ def save_marks_bulk(request):
     exam_id = data_list[0].get('exam_id')
     exam = get_object_or_404(Exam, pk=exam_id, school=school)
     
-    student_ids = [d.get('student_id') for d in data_list]
+    student_ids = [int(d.get('student_id')) for d in data_list if d.get('student_id')]
     students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
     
     if students:
@@ -279,8 +279,8 @@ def save_marks_bulk(request):
 
     is_teacher = getattr(request.user, 'is_teacher', False)
 
-    student_ids = [d.get('student_id') for d in data_list]
-    subject_ids = [d.get('subject_id') for d in data_list]
+    student_ids = [int(d.get('student_id')) for d in data_list if d.get('student_id')]
+    subject_ids = [int(d.get('subject_id')) for d in data_list if d.get('subject_id')]
     
     students = {s.id: s for s in Student.objects.filter(id__in=student_ids, school=school)}
     subjects = {s.id: s for s in Subject.objects.filter(id__in=subject_ids, school=school)}
@@ -298,11 +298,11 @@ def save_marks_bulk(request):
     updates = []
     creates = []
     
-    existing_marks = {(m.student_id, m.subject_id): m for m in MarkEntry.objects.filter(exam=exam, student_id__in=student_ids, subject_id__in=subject_ids)}
+    existing_marks = {(m.student_id, m.subject_id): m for m in MarkEntry.objects.filter(exam=exam, student_id__in=student_ids, subject_id__in=subject_ids).select_related('student', 'subject')}
 
     for data in data_list:
-        student_id = data.get('student_id')
-        subject_id = data.get('subject_id')
+        student_id = int(data.get('student_id')) if data.get('student_id') else None
+        subject_id = int(data.get('subject_id')) if data.get('subject_id') else None
         student = students.get(student_id)
         subject = subjects.get(subject_id)
         
@@ -705,7 +705,7 @@ def mark_entry_template(request, exam_id, class_id):
     from apps.marks.models import MarkEntry
     existing_marks = {}
     for me in MarkEntry.objects.filter(exam=exam, school=school,
-                                        student__in=students, subject__in=subjects):
+                                        student__in=students, subject__in=subjects).select_related('student', 'subject'):
         existing_marks[(me.student_id, me.subject_id)] = me
 
     from apps.subjects.models import StudentSubjectEnrollment
@@ -941,14 +941,53 @@ def exam_progress_ajax(request, exam_id):
     exam_classes = exam.exam_classes.select_related('class_obj').all()
     
     total_expected = 0
+    total_entered = 0
+    class_progress_list = []
+    
     for ec in exam_classes:
         cls = ec.class_obj
-        num_students = Student.objects.filter(class_obj=cls, is_active=True).count()
-        num_subjects = Subject.objects.filter(class_obj=cls).count()
-        total_expected += (num_students * num_subjects)
+        num_active_students = Student.objects.filter(class_obj=cls, is_active=True).count()
         
-    total_entered = MarkEntry.objects.filter(exam=exam).count()
-    
+        cls_expected = 0
+        compulsory_count = Subject.objects.filter(
+            class_obj=cls, 
+            subject_type__in=[Subject.SubjectType.COMPULSORY, Subject.SubjectType.NON_CREDIT]
+        ).count()
+        cls_expected += (num_active_students * compulsory_count)
+        
+        optional_subjects = Subject.objects.filter(class_obj=cls, subject_type=Subject.SubjectType.OPTIONAL)
+        if optional_subjects.exists():
+            from apps.subjects.models import StudentSubjectEnrollment
+            enrolled_count = StudentSubjectEnrollment.objects.filter(
+                subject__in=optional_subjects,
+                student__class_obj=cls,
+                student__is_active=True
+            ).count()
+            cls_expected += enrolled_count
+            
+        total_expected += cls_expected
+        
+        from django.db.models import Q
+        cls_entered = MarkEntry.objects.filter(
+            Q(theory_obtained__isnull=False) | 
+            Q(internal_obtained__isnull=False) | 
+            Q(special_value__isnull=False),
+            exam=exam,
+            student__class_obj=cls
+        ).count()
+        total_entered += cls_entered
+        
+        cls_percentage = 0
+        if cls_expected > 0:
+            cls_percentage = round((cls_entered / cls_expected) * 100, 1)
+            if cls_percentage > 100: cls_percentage = 100
+            
+        class_progress_list.append({
+            'class_name': cls.full_name,
+            'percentage': cls_percentage,
+            'is_locked': ec.is_locked
+        })
+        
     percentage = 0
     if total_expected > 0:
         percentage = round((total_entered / total_expected) * 100, 1)
@@ -958,7 +997,8 @@ def exam_progress_ajax(request, exam_id):
         'exam_id': exam.id,
         'total_expected': total_expected,
         'total_entered': total_entered,
-        'percentage': percentage
+        'percentage': percentage,
+        'class_progress': class_progress_list
     })
 
 
@@ -1091,7 +1131,7 @@ def mark_entry_all_template(request, exam_id):
         # Load existing mark entries to pre-populate
         existing_marks = {}
         for me in MarkEntry.objects.filter(exam=exam, school=school,
-                                            student__in=students, subject__in=subjects):
+                                            student__in=students, subject__in=subjects).select_related('student', 'subject'):
             existing_marks[(me.student_id, me.subject_id)] = me
 
         # Row 5: Full Marks / Total Attendance Row

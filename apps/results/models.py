@@ -2,6 +2,7 @@
 Results App — SubjectResult and StudentResult models
 """
 from django.db import models
+from core.thread_locals import SchoolScopedManager
 
 
 class SubjectResult(models.Model):
@@ -34,6 +35,9 @@ class SubjectResult(models.Model):
     remarks = models.CharField(max_length=100, blank=True)
 
     calculated_at = models.DateTimeField(auto_now=True)
+
+    objects = SchoolScopedManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = 'Subject Result'
@@ -88,10 +92,16 @@ class StudentResult(models.Model):
 
     calculated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolScopedManager()
+    all_objects = models.Manager()
+
     class Meta:
         verbose_name = 'Student Result'
         unique_together = ['exam', 'student']
         ordering = ['class_rank', 'student__roll_number']
+        indexes = [
+            models.Index(fields=['school', 'exam', 'student']),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.session and self.exam:

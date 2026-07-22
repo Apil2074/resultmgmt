@@ -358,7 +358,7 @@ def ledger_excel(request, exam_id, class_id):
     ws.title = f"Ledger - {cls.name}"[:31]
 
     # Header Row
-    headers = ["SN", "Symbol No", "Reg No", "Student Name", "Date of Birth"]
+    headers = ["SN", "Symbol No", "Reg No", "Student Name"]
     
     for subject in subjects:
         if True:
@@ -394,8 +394,7 @@ def ledger_excel(request, exam_id, class_id):
             idx,
             sr.student.symbol_number or "",
             sr.student.registration_number or "",
-            sr.student.name,
-            sr.student.dob_full or ""
+            sr.student.name
         ]
         
         for subject in subjects:

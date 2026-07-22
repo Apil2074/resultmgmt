@@ -33,6 +33,10 @@
 
         <div class="border-top pt-3 text-start mt-3">
           <div class="row mb-2">
+            <div class="col-5 text-muted small">S.N.:</div>
+            <div class="col-7 text-slate-700 fw-semibold">{{ student.id }}</div>
+          </div>
+          <div class="row mb-2">
             <div class="col-5 text-muted small">Reg. No:</div>
             <div class="col-7 text-slate-700 fw-semibold">{{ student.registration_number|default:"-" }}</div>
           </div>
@@ -64,9 +68,12 @@
         <a href="{% url 'student_edit' student.pk %}" class="btn btn-sm btn-outline-primary">
           <i class="bi bi-pencil-fill me-1"></i>Edit Profile
         </a>
-        <a href="{% url 'student_delete' student.pk %}" class="btn btn-sm btn-outline-danger">
-          <i class="bi bi-trash-fill"></i> Delete
-        </a>
+        <form method="POST" action="{% url 'student_delete' student.pk %}" class="d-inline" onsubmit="event.preventDefault(); showConfirmModal('Are you sure you want to permanently delete student {{ student.name|escapejs }}?', () => this.submit(), true);">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash-fill"></i> Delete
+          </button>
+        </form>
       </div>
       {% endif %}
     </div>

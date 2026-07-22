@@ -2,6 +2,7 @@
 Marks App — MarkEntry model
 """
 from django.db import models
+from core.thread_locals import SchoolScopedManager
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 
@@ -58,11 +59,17 @@ class MarkEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = SchoolScopedManager()
+    all_objects = models.Manager()
+
     class Meta:
         verbose_name = 'Mark Entry'
         verbose_name_plural = 'Mark Entries'
         unique_together = ['exam', 'student', 'subject']
         ordering = ['student__roll_number', 'subject__order']
+        indexes = [
+            models.Index(fields=['school', 'exam', 'student']),
+        ]
 
     def __str__(self):
         return f"{self.student.name} — {self.subject.name} — {self.exam.name}"

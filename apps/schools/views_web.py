@@ -7,7 +7,9 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.db.models import Count, Q
 from django.db import transaction
-from .models import School, AcademicSession
+from django.core.exceptions import ValidationError
+from .models import School, AcademicSession, SystemSetting
+from core.security import validate_image_upload
 import logging
 
 logger = logging.getLogger(__name__)
@@ -320,12 +322,22 @@ def school_profile(request):
         if request.POST.get('remove_logo') == 'on':
             school.logo = None
         elif 'logo' in request.FILES:
-            school.logo = request.FILES['logo']
+            try:
+                validate_image_upload(request.FILES['logo'])
+                school.logo = request.FILES['logo']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'schools/profile.html', {'school': school})
             
         if request.POST.get('remove_background') == 'on':
             school.dashboard_background = None
         elif 'dashboard_background' in request.FILES:
-            school.dashboard_background = request.FILES['dashboard_background']
+            try:
+                validate_image_upload(request.FILES['dashboard_background'])
+                school.dashboard_background = request.FILES['dashboard_background']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'schools/profile.html', {'school': school})
             
         opacity = request.POST.get('dashboard_background_opacity')
         if opacity is not None and opacity != '':
@@ -355,19 +367,67 @@ def session_list(request):
         if action == 'create':
             name = request.POST.get('name', '').strip()
             import_teachers = request.POST.get('import_teachers') == 'yes'
+            import_subjects = request.POST.get('import_subjects') == 'yes'
             if name:
                 session, created = AcademicSession.objects.get_or_create(
                     school=school, name=name
                 )
                 if created:
                     messages.success(request, f'Session "{name}" created.')
-                    if import_teachers:
-                        active_session = school.get_active_session()
-                        if active_session:
+                    active_session = school.get_active_session()
+                    if active_session:
+                        if import_teachers:
                             teachers = active_session.teachers.all()
                             if teachers.exists():
                                 session.teachers.add(*teachers)
                                 messages.success(request, f'Imported {teachers.count()} teachers from active session "{active_session.name}".')
+                        
+                        if import_subjects:
+                            from apps.classes.models import Class
+                            from apps.subjects.models import Subject
+                            classes_created = 0
+                            subjects_created = 0
+                            
+                            old_classes = Class.objects.filter(school=school, session=active_session)
+                            for old_cls in old_classes:
+                                new_cls, cls_created = Class.objects.get_or_create(
+                                    school=school,
+                                    session=session,
+                                    name=old_cls.name,
+                                    section=old_cls.section,
+                                    defaults={
+                                        'numeric_level': old_cls.numeric_level,
+                                        'class_teacher': None
+                                    }
+                                )
+                                if cls_created:
+                                    classes_created += 1
+                                
+                                old_subjects = Subject.objects.filter(class_obj=old_cls)
+                                for old_subj in old_subjects:
+                                    _, subj_created = Subject.objects.get_or_create(
+                                        school=school,
+                                        class_obj=new_cls,
+                                        code=old_subj.code,
+                                        defaults={
+                                            'session': session,
+                                            'name': old_subj.name,
+                                            'theory_credit_hour': old_subj.theory_credit_hour,
+                                            'has_practical': old_subj.has_practical,
+                                            'practical_credit_hour': old_subj.practical_credit_hour,
+                                            'practical_code': old_subj.practical_code,
+                                            'theory_full_marks': old_subj.theory_full_marks,
+                                            'theory_pass_marks': old_subj.theory_pass_marks,
+                                            'practical_full_marks': old_subj.practical_full_marks,
+                                            'practical_pass_marks': old_subj.practical_pass_marks,
+                                            'subject_type': old_subj.subject_type,
+                                            'order': old_subj.order
+                                        }
+                                    )
+                                    if subj_created:
+                                        subjects_created += 1
+                            
+                            messages.success(request, f'Imported {classes_created} classes and {subjects_created} subjects from active session "{active_session.name}".')
                 else:
                     messages.warning(request, f'Session "{name}" already exists.')
             else:
@@ -376,29 +436,46 @@ def session_list(request):
         elif action == 'edit':
             session_id = request.POST.get('session_id')
             new_name = request.POST.get('name', '').strip()
-            if new_name:
-                session = get_object_or_404(AcademicSession, pk=session_id, school=school)
-                session.name = new_name
-                session.save()
-                messages.success(request, f'Session renamed to "{new_name}".')
+            if not session_id:
+                messages.error(request, 'Invalid session.')
+            elif new_name:
+                session = AcademicSession.objects.filter(pk=session_id, school=school).first()
+                if session:
+                    session.name = new_name
+                    session.save()
+                    messages.success(request, f'Session renamed to "{new_name}".')
+                else:
+                    messages.error(request, 'Session not found.')
             else:
                 messages.error(request, 'Session name is required.')
 
         elif action == 'activate':
             session_id = request.POST.get('session_id')
-            session = get_object_or_404(AcademicSession, pk=session_id, school=school)
-            session.is_active = True
-            session.save()
-            messages.success(request, f'Session "{session.name}" is now active.')
+            if not session_id:
+                messages.error(request, 'Invalid session.')
+            else:
+                session = AcademicSession.objects.filter(pk=session_id, school=school).first()
+                if session:
+                    session.is_active = True
+                    session.save()
+                    messages.success(request, f'Session "{session.name}" is now active.')
+                else:
+                    messages.error(request, 'Session not found.')
 
         elif action == 'delete':
             session_id = request.POST.get('session_id')
-            session = get_object_or_404(AcademicSession, pk=session_id, school=school)
-            if not session.is_active:
-                session.delete()
-                messages.success(request, 'Session deleted.')
+            if not session_id:
+                messages.error(request, 'Invalid session.')
             else:
-                messages.error(request, 'Cannot delete the active session.')
+                session = AcademicSession.objects.filter(pk=session_id, school=school).first()
+                if session:
+                    if not session.is_active:
+                        session.delete()
+                        messages.success(request, 'Session deleted.')
+                    else:
+                        messages.error(request, 'Cannot delete the active session.')
+                else:
+                    messages.error(request, 'Session not found.')
 
         return redirect('session_list')
 
@@ -556,7 +633,12 @@ def edit_school(request, school_id):
         if request.POST.get('remove_logo') == 'on':
             school.logo = None
         elif 'logo' in request.FILES:
-            school.logo = request.FILES['logo']
+            try:
+                validate_image_upload(request.FILES['logo'])
+                school.logo = request.FILES['logo']
+            except ValidationError as e:
+                messages.error(request, str(e.message))
+                return render(request, 'schools/form.html', {'school': school})
 
         school.save()
 
@@ -905,10 +987,15 @@ def super_settings(request):
             if app_name:
                 settings_obj.app_name = app_name
             if 'app_logo' in request.FILES:
-                # Delete old logo file if it exists
-                if settings_obj.app_logo:
-                    settings_obj.app_logo.delete(save=False)
-                settings_obj.app_logo = request.FILES['app_logo']
+                try:
+                    validate_image_upload(request.FILES['app_logo'])
+                    # Delete old logo file if it exists
+                    if settings_obj.app_logo:
+                        settings_obj.app_logo.delete(save=False)
+                    settings_obj.app_logo = request.FILES['app_logo']
+                except ValidationError as e:
+                    messages.error(request, str(e.message))
+                    return render(request, 'schools/super_settings.html', {'settings': settings_obj})
             settings_obj.save()
             messages.success(request, 'App branding updated successfully.')
             return redirect('super_settings')

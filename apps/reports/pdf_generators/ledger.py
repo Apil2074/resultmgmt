@@ -67,7 +67,7 @@ class LedgerPDFGenerator:
 
         # Dynamic partitioning of subjects to fit A4 Landscape width (28.1 cm printable area)
         PRINTABLE_WIDTH = 28.1 * cm
-        LEFT_WIDTH = 7.8 * cm
+        LEFT_WIDTH = 6.7 * cm
         RIGHT_WIDTH = 6.2 * cm
         
         pages = []
@@ -126,13 +126,12 @@ class LedgerPDFGenerator:
                 Paragraph('Symbol No', h_style),
                 Paragraph('REG NO', h_style),
                 Paragraph('Student Name', h_style),
-                Paragraph('Date of Birth', h_style),
             ]
-            header2 = ['', '', '', '', Paragraph('Credit Hour', h_sub_style)]
-            header3 = ['', '', '', '', Paragraph('Full Marks', h_sub_style)]
-            header4 = ['', '', '', '', Paragraph('DOB', h_sub_style)]
+            header2 = ['', '', '', '']
+            header3 = ['', '', '', '']
+            header4 = ['', '', '', '']
             
-            col_idx = 5
+            col_idx = 4
             span_rules = []
             
             # Student info columns span 4 rows vertically
@@ -191,12 +190,12 @@ class LedgerPDFGenerator:
                     header4.append(Paragraph('In', h_sub_style))
                     header4.append(Paragraph('Th GP', h_sub_style))
                     header4.append(Paragraph('In GP', h_sub_style))
-                    header4.append(Paragraph('AVG GPA', h_sub_style))
+                    header4.append(Paragraph('GPA', h_sub_style))
                     header4.append(Paragraph('Grade', h_sub_style))
                 else:
                     header4.append(Paragraph('Th', h_sub_style))
                     header4.append(Paragraph('Th GP', h_sub_style))
-                    header4.append(Paragraph('AVG GPA', h_sub_style))
+                    header4.append(Paragraph('GPA', h_sub_style))
                     header4.append(Paragraph('Grade', h_sub_style))
                     
                 col_idx += n_cols
@@ -232,7 +231,7 @@ class LedgerPDFGenerator:
             remaining_width = printable_width - LEFT_WIDTH - current_right_width
             unit_width = remaining_width / total_weights if total_weights > 0 else 0.85 * cm
             
-            col_widths = [0.5*cm, 1.2*cm, 2.0*cm, 3.0*cm, 1.1*cm] # Left columns (sum to 7.8 cm)
+            col_widths = [0.5*cm, 1.2*cm, 2.0*cm, 3.0*cm] # Left columns (sum to 6.7 cm)
             for s in page_subjs:
                 try:
                     ms = s
@@ -288,7 +287,6 @@ class LedgerPDFGenerator:
                     Paragraph(student.symbol_number or '—', c_style),
                     Paragraph(student.registration_number or '—', c_style),
                     Paragraph(student.name, name_style),
-                    Paragraph(dob_str, c_style),
                 ]
                 
                 for subj in page_subjs:
@@ -373,12 +371,11 @@ class LedgerPDFGenerator:
                 ('ROWBACKGROUNDS', (0, 4), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
             ]
             
-            # Color subject headers
-            for idx in range(5, col_idx - (6 if include_summary else 0)):
+            for idx in range(4, col_idx - (6 if include_summary else 0)):
                 t_styles.append(('BACKGROUND', (idx, 0), (idx, 0), colors.HexColor('#e2e8f0')))
                 
             # Color AVG GPA and Grade columns
-            col_c = 5
+            col_c = 4
             for subj in page_subjs:
                 try:
                     ms = subj

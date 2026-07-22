@@ -251,7 +251,7 @@
         {% if user.is_school_admin or user.is_super_admin %}
         <form method="POST" action="{% url 'exam_generate_aggregate' exam.id %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 shadow-sm fw-semibold" onclick="return confirm('This will clear existing marks and recalculate based on the rules. Continue?');">
+          <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 shadow-sm fw-semibold" onclick="event.preventDefault(); showConfirmModal('This will clear existing marks and recalculate based on the rules. Continue?', () => this.form.submit(), true);">
             <i class="bi bi-calculator-fill me-2"></i>Generate Aggregate Marks
           </button>
         </form>

@@ -633,14 +633,14 @@
             }
 
             function gradePointToLetter(gp) {
-                if (gp >= 4.0) return 'A+ — Distinction';
-                if (gp >= 3.6) return 'A — Excellent';
-                if (gp >= 3.2) return 'B+ — Very Good';
-                if (gp >= 2.8) return 'B — Good';
-                if (gp >= 2.4) return 'C+ — Satisfactory';
-                if (gp >= 2.0) return 'C — Acceptable';
-                if (gp >= 1.6) return 'D — Partial';
-                return 'F — Not Graded';
+                if (gp > 3.60) return 'A+ — Distinction';
+                if (gp > 3.20) return 'A — Excellent';
+                if (gp > 2.80) return 'B+ — Very Good';
+                if (gp > 2.40) return 'B — Good';
+                if (gp > 2.00) return 'C+ — Satisfactory';
+                if (gp > 1.60) return 'C — Acceptable';
+                if (gp >= 1.60) return 'D — Partial';
+                return 'NG — Not Graded';
             }
 
             function updateRowGP(row) {
@@ -657,6 +657,7 @@
                 const rows = document.querySelectorAll('.calc-row');
                 let totalCredits = 0;
                 let totalPoints = 0;
+                let hasFailedSubject = false;
 
                 rows.forEach(row => {
                     const obtained = parseFloat(row.querySelector('.obtained-marks').value) || 0;
@@ -669,17 +670,25 @@
                     const gpDisplay = row.querySelector('.gp-display');
                     if (gpDisplay) gpDisplay.textContent = gp.toFixed(1);
 
+                    if (pct < 35) {
+                        hasFailedSubject = true;
+                    }
+
                     totalCredits += credit;
                     totalPoints  += gp * credit;
                 });
 
-                const gpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+                let gpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
+                
+                if (hasFailedSubject) {
+                    gpa = 0.0;
+                }
 
                 // GPA = term GPA (all entered subjects this session)
                 simulatedGpaText.textContent  = gpa.toFixed(2);
                 // CGPA displayed as same value (cumulative equals term for single semester input)
                 simulatedCgpaText.textContent = gpa.toFixed(2);
-                gradeLetterDisplay.textContent = gradePointToLetter(gpa);
+                gradeLetterDisplay.textContent = gradePointToLetter(parseFloat(gpa.toFixed(2)));
             }
 
             // Listen to all input changes inside the rows container

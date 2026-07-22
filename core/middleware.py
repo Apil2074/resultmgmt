@@ -1,6 +1,7 @@
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.urls import resolve, Resolver404
+from core.thread_locals import set_current_school
 
 class SchoolRequiredMiddleware:
     """
@@ -52,5 +53,15 @@ class SchoolRequiredMiddleware:
             if not is_exempt and not getattr(request.user, 'school', None):
                 messages.error(request, 'No school is assigned to your account. You must have an assigned school to manage this section.')
                 return redirect('dashboard')
+                
+            if hasattr(request.user, 'school') and request.user.school:
+                set_current_school(request.user.school)
+            else:
+                set_current_school(None)
 
-        return self.get_response(request)
+        try:
+            response = self.get_response(request)
+        finally:
+            set_current_school(None)
+            
+        return response

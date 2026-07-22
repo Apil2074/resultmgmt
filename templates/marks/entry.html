@@ -4,6 +4,50 @@
 
 {% block extra_css %}
 <style>
+  /* Header styling and layout */
+  .marks-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Eraser Icon Hover Effect */
+  .column-clear-icon {
+    opacity: 0.7;
+    transition: all 0.2s ease-in-out;
+  }
+  .column-clear-icon:hover {
+    opacity: 1;
+    transform: scale(1.2) translateY(-1px);
+    text-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+  }
+
+  /* Clear Mode Toggle Button */
+  .btn-clear-toggle {
+    background: rgba(239, 68, 68, 0.05);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 0.25rem 0.8rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-clear-toggle:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-clear-toggle.active {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  }
+
 /* Custom scrollbar for horizontal scrolling */
 .marks-grid {
   overflow-x: auto;
@@ -135,11 +179,20 @@ input[type=number]::-webkit-outer-spin-button {
 {% endblock %}
 
 {% block content %}
-<div class="page-header flex-column align-items-start gap-3 w-100 mb-4">
+<div class="page-header d-flex flex-column align-items-start gap-3 w-100 mb-4">
   
-  <div class="page-subtitle mb-0 fs-5 text-slate-700">
-    <strong class="fs-4 text-slate-900 fw-bold">{{ exam.name }}</strong> &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ class_obj.full_name }}
-    &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ students.count }} students
+  <div class="d-flex justify-content-between align-items-start w-100">
+    <div class="page-subtitle mb-0 fs-5 text-slate-700 text-start">
+      <strong class="fs-4 text-slate-900 fw-bold">{{ exam.name }}</strong> &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ class_obj.full_name }}
+      &nbsp;<span class="text-muted opacity-75">|</span>&nbsp; {{ students.count }} students
+    </div>
+    {% if not exam_class.is_locked %}
+    <div class="text-end">
+      <button id="toggleClearModeBtn" class="btn btn-clear-toggle d-inline-flex align-items-center gap-1" title="Enable Column Clear Mode" onclick="toggleClearMode()">
+        <i class="bi bi-eraser-fill"></i> <span>Clear Mode</span>
+      </button>
+    </div>
+    {% endif %}
   </div>
 
   <div class="d-flex justify-content-between align-items-end flex-wrap w-100 gap-3">
@@ -181,9 +234,10 @@ input[type=number]::-webkit-outer-spin-button {
     </div>
 
     {% if available_classes %}
-    <div class="ms-auto align-self-end">
-      <label class="form-label mb-1 fw-bold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">SWITCH CLASS:</label>
-      <select class="form-select shadow-sm" onchange="if(this.value) window.location.href=this.value;" style="min-width: 250px;">
+    <div class="ms-auto align-self-end text-end">
+      <div class="text-start">
+        <label class="form-label mb-1 fw-bold text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">SWITCH CLASS:</label>
+        <select class="form-select shadow-sm" onchange="if(this.value) window.location.href=this.value;" style="min-width: 250px;">
         {% for c in available_classes %}
         <option value="{% url 'mark_entry' exam.id c.id %}" {% if c.id == class_obj.id %}selected{% endif %}>
           {{ c.full_name }}
@@ -209,15 +263,14 @@ input[type=number]::-webkit-outer-spin-button {
 
 
 <!-- Mark Entry Table -->
-<div class="card">
-  <div class="marks-grid">
+<div class="card" style="min-width: 0; width: 100%;">
+  <div class="marks-grid" style="width: 100%; min-width: 0;">
 {% if not subjects %}
   <div class="alert alert-info d-flex justify-content-between align-items-center" style="margin:1rem;">
     <span>No subjects are defined for this class.</span>
     <a href="{% url 'subject_list' %}?class_id={{ class_obj.id }}" class="btn btn-primary btn-sm">Add Subjects</a>
   </div>
 {% endif %}
-<div class="table-responsive border-0 w-100">
 <table class="marks-entry-table data-table" id="marksTable">
   <thead>
         <!-- Row 1: Subject names spanning columns -->
@@ -250,7 +303,7 @@ input[type=number]::-webkit-outer-spin-button {
         <tr>
           {% for subject in subjects %}
             <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
-              Th.
+              Th. <i class="bi bi-eraser-fill text-danger ms-1 column-clear-icon cursor-pointer" style="display:none;" onclick="clearColumn('{{ subject.id }}', 'theory')" title="Clear Theory Marks"></i>
               <input type="number" 
                      class="full-marks-input" 
                      value="{{ subject.theory_full_marks }}" 
@@ -262,7 +315,7 @@ input[type=number]::-webkit-outer-spin-button {
             </th>
             {% if subject.has_practical %}
             <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}">
-              Int.
+              Int. <i class="bi bi-eraser-fill text-danger ms-1 column-clear-icon cursor-pointer" style="display:none;" onclick="clearColumn('{{ subject.id }}', 'internal')" title="Clear Internal Marks"></i>
               <input type="number" 
                      class="full-marks-input" 
                      value="{{ subject.practical_full_marks }}" 
@@ -273,7 +326,9 @@ input[type=number]::-webkit-outer-spin-button {
                      data-bs-toggle="tooltip" title="{{ subject.name }} - Full Marks (Internal)">
             </th>
             {% endif %}
-            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}" style="border-right: 2px solid #cbd5e1 !important;" title="{{ subject.name }} - Special Status">Special</th>
+            <th class="{% if forloop.counter0|divisibleby:2 %}bg-band-even{% else %}bg-band-odd{% endif %}" style="border-right: 2px solid #cbd5e1 !important;" title="{{ subject.name }} - Special Status">
+              Special <i class="bi bi-eraser-fill text-danger ms-1 column-clear-icon cursor-pointer" style="display:none;" onclick="clearColumn('{{ subject.id }}', 'special')" title="Clear Special Status"></i>
+            </th>
           {% endfor %}
           {% if not request.user.is_teacher or is_class_teacher %}
           <th>Present Days</th>
@@ -362,7 +417,6 @@ input[type=number]::-webkit-outer-spin-button {
         {% endfor %}
       </tbody>
   </table>
-</div>
   </div>
 </div>
 {% endblock %}
@@ -398,8 +452,6 @@ let saveTimers = {};
 let pendingSaves = {};
 
 function handleGlobalTotalDaysChange() {
-  // when the global total days input changes, save all currently rendered attendance values 
-  // so the new total is updated across all records on the server.
   const totalDaysInput = document.getElementById('global_total_days');
   const totalDaysVal = parseInt(totalDaysInput.value);
   if (totalDaysVal < 0) {
@@ -410,6 +462,54 @@ function handleGlobalTotalDaysChange() {
     scheduleSave(input);
   });
 }
+
+  // --- CLEAR MODE LOGIC ---
+  let clearModeActive = false;
+  function toggleClearMode() {
+    clearModeActive = !clearModeActive;
+    const btn = document.getElementById('toggleClearModeBtn');
+    const icons = document.querySelectorAll('.column-clear-icon');
+    
+    if (clearModeActive) {
+      btn.classList.add('active');
+      icons.forEach(i => i.style.display = 'inline-block');
+    } else {
+      btn.classList.remove('active');
+      icons.forEach(i => i.style.display = 'none');
+    }
+  }
+
+  function clearColumn(subjectId, fieldType) {
+    showConfirmModal(`Are you sure you want to clear all ${fieldType} marks for this subject?`, () => {
+      let inputs;
+      if (fieldType === 'special') {
+        inputs = document.querySelectorAll(`select.special-select[data-subject="${subjectId}"]`);
+      } else {
+        inputs = document.querySelectorAll(`input.mark-input[data-subject="${subjectId}"][data-field="${fieldType}"]`);
+      }
+      
+      inputs.forEach(input => {
+        if (!input.disabled && input.value !== '') {
+          input.value = '';
+          
+          const studentId = input.dataset.student;
+          const key = studentId + '_' + subjectId;
+          
+          if (!pendingSaves[key]) {
+            pendingSaves[key] = { student_id: studentId, subject_id: subjectId };
+          }
+          pendingSaves[key][fieldType] = '';
+          
+          input.classList.remove('saved', 'error');
+          // Clear any associated timers so we don't accidentally send individual requests
+          if (saveTimers[key]) clearTimeout(saveTimers[key]);
+        }
+      });
+      
+      // Bulk save all cleared cells
+      saveAllPending();
+    }, true);
+  }
 
 function scheduleSave(input) {
   const studentId = input.dataset.student;
@@ -596,7 +696,7 @@ async function saveAllPending() {
 
     if (res.ok) {
       showSaved();
-      // Mark all as saved
+      // Flash UI and clear pending
       for (const key of keys) {
         const data = pendingSaves[key];
         document.querySelectorAll(`[data-student="${data.student_id}"][data-subject="${data.subject_id}"]`)
@@ -607,7 +707,7 @@ async function saveAllPending() {
           });
         delete pendingSaves[key];
       }
-      alert("All marks saved successfully!");
+      // alert("All marks saved successfully!"); // Removed alert to prevent annoying popups on column clear
     } else {
       const err = await res.json();
       console.error('Bulk save failed:', err.error);

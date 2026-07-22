@@ -42,7 +42,7 @@
             <h6 class="mb-0 fw-bold text-slate-800">{{ notification.title }}</h6>
             <div class="d-flex align-items-center gap-2">
               <small class="text-muted">{{ notification.created_at|date:"M d, Y h:i A" }}</small>
-              <form action="{% url 'delete_notification' notification.pk %}" method="post" class="d-inline m-0 p-0" onsubmit="return confirm('Are you sure you want to delete this notification?');">
+              <form action="{% url 'delete_notification' notification.pk %}" method="post" class="d-inline m-0 p-0" onsubmit="event.preventDefault(); showConfirmModal('Are you sure you want to delete this notification?', () => this.submit(), true);">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-link text-danger p-0 m-0 border-0 bg-transparent" title="Delete notification">
                   <i class="bi bi-trash"></i>

@@ -293,7 +293,7 @@
 
   // Deselect All Checks across all rows and columns
   document.getElementById('clearAllBtn').addEventListener('click', function() {
-    if (confirm("Are you sure you want to clear all optional subject mapping selections for all visible students?")) {
+    showConfirmModal("Are you sure you want to clear all optional subject mapping selections for all visible students?", () => {
       document.querySelectorAll('.student-row').forEach(function(row) {
         if (row.style.display !== 'none') {
           const checkboxes = row.querySelectorAll('.form-check-input');
@@ -308,7 +308,7 @@
           }
         }
       });
-    }
+    }, true);
   });
 </script>
 {% endblock %}

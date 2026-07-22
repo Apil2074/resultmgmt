@@ -47,6 +47,10 @@ class School(models.Model):
         return self.academic_sessions.filter(is_active=True).first()
 
 
+class ActiveSessionManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_archived=False)
+
 class AcademicSession(models.Model):
     """Academic year / session (e.g. 2080, 2081, 2082)."""
 
@@ -57,7 +61,11 @@ class AcademicSession(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = ActiveSessionManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = 'Academic Session'

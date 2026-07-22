@@ -97,7 +97,7 @@
                   {% csrf_token %}
                   <input type="hidden" name="action" value="delete_rule">
                   <input type="hidden" name="rule_id" value="{{ rule.id }}">
-                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to remove this source exam?');">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="event.preventDefault(); showConfirmModal('Are you sure you want to remove this source exam?', () => this.form.submit(), true);">
                     <i class="bi bi-trash"></i>
                   </button>
                 </form>

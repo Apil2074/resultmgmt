@@ -2,6 +2,7 @@
 Exams App — Exam and ExamClass models
 """
 from django.db import models
+from core.thread_locals import SchoolScopedManager
 from django.utils import timezone
 
 
@@ -35,6 +36,9 @@ class Exam(models.Model):
     is_aggregate = models.BooleanField(default=False, help_text="If true, this exam's marks are aggregated from other exams.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = SchoolScopedManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = 'Exam'

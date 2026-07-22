@@ -403,19 +403,13 @@
 
             <!-- Print & Downloads -->
             <div class="d-grid gap-2">
-              <button type="button" class="btn btn-outline-dark" onclick="printMarksheetPDF('{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}?template_version={{ template_version|default:"default" }}&exam_title={{ exam_title|default:""|urlencode }}&font_size={{ font_size|default:"10" }}&line_spacing={{ line_spacing|default:"1.2" }}')">
+              <button type="button" class="btn btn-outline-dark" onclick="printMarksheet('{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}')">
                 <i class="bi bi-printer-fill me-2"></i>Print Marksheet
               </button>
-              {% if selected_student_id != 'all' %}
-              <a href="{% url 'marksheet_pdf' exam.id selected_student_id %}?template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-primary" target="_blank">
+              
+              <button type="button" class="btn btn-primary" onclick="exportMarksheetPDF('{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}')">
                 <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
-              </a>
-              {% else %}
-              <a href="{% url 'class_marksheets_pdf' exam.id class_obj.id %}?template_version={{ template_version|default:'default' }}&exam_title={{ exam_title|default:''|urlencode }}&font_size={{ font_size|default:'10' }}&line_spacing={{ line_spacing|default:'1.2' }}" class="btn btn-primary" target="_blank">
-                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Export to PDF
-              </a>
-              {% endif %}
-
+              </button>
             </div>
             {% endif %}
           </div>
@@ -457,9 +451,21 @@
 <script src="https://printjs-4de6.kxcdn.com/print.min.js"></script>
 <link rel="stylesheet" href="https://printjs-4de6.kxcdn.com/print.min.css">
 <script>
-function printMarksheetPDF(pdfUrl) {
+function getPdfParams() {
+  const template = document.getElementById('templateSelect').value || 'default';
+  const title = document.getElementById('examTitle').value || '';
+  const font = document.getElementById('fontSize').value || '10';
+  const spacing = document.getElementById('lineSpacing').value || '1.2';
+  return `?template_version=${encodeURIComponent(template)}&exam_title=${encodeURIComponent(title)}&font_size=${encodeURIComponent(font)}&line_spacing=${encodeURIComponent(spacing)}`;
+}
+
+function exportMarksheetPDF(baseUrl) {
+  window.open(baseUrl + getPdfParams(), '_blank');
+}
+
+function printMarksheet(baseUrl) {
   printJS({
-    printable: pdfUrl,
+    printable: baseUrl + getPdfParams(),
     type: 'pdf',
     showModal: true,
     modalMessage: 'Generating Document for Printing...'

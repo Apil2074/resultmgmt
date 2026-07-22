@@ -22,16 +22,22 @@
   padding: 28px 32px;
   margin-bottom: 28px;
   position: relative;
-  overflow: hidden;
 }
-.an-hero::before {
+.an-hero-bg-shapes {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.an-hero-bg-shapes::before {
   content: '';
   position: absolute;
   top: -60px; right: -60px;
   width: 280px; height: 280px;
   background: radial-gradient(circle, rgba(139,92,246,.3) 0%, transparent 70%);
 }
-.an-hero::after {
+.an-hero-bg-shapes::after {
   content: '';
   position: absolute;
   bottom: -80px; left: 20%;
@@ -163,6 +169,7 @@
 
 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
 <div class="an-hero">
+  <div class="an-hero-bg-shapes"></div>
   <div class="d-flex justify-content-between align-items-start flex-wrap gap-3" style="position:relative; z-index:10;">
     <div>
       <div class="an-hero-title">📊 {{ exam.name }}</div>
@@ -532,49 +539,6 @@
 
 </div>
 
-<!-- ─── ROW 7: Grade Velocity ────────── -->
-<div class="row g-4 mb-4">
-  <!-- Grade Velocity -->
-  <div class="col-lg-12">
-    <div class="an-card" style="border-top:3px solid #8b5cf6;height:100%;">
-      <div class="an-card-title">
-        <i class="bi bi-speedometer2" style="color:#8b5cf6;"></i> Grade Velocity — Borderline Students
-        <span class="ms-auto badge rounded-pill" style="background:#f5f3ff;color:#7c3aed;font-size:.68rem;font-weight:600;text-transform:none;letter-spacing:0;">GPA 2.0 – 2.6 zone</span>
-      </div>
-      <p class="text-muted mb-3" style="font-size:.78rem;">{{ borderline_count }} student{{ borderline_count|pluralize }} in the intervention zone — one push could flip them to pass</p>
-      {% if borderline_students %}
-      <div class="table-responsive" style="max-height:200px;overflow-y:auto;">
-        <table class="table table-sm table-hover align-middle mb-0 an-table">
-          <thead class="position-sticky top-0" style="z-index:1;">
-            <tr><th>Student</th><th>Class</th><th>GPA</th><th>Grade</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {% for s in borderline_students %}
-            <tr>
-              <td class="fw-semibold">{{ s.name }}</td>
-              <td class="text-muted" style="font-size:.8rem;">{{ s.class }}</td>
-              <td>
-                <span class="grade-chip bg-warning text-dark">{{ s.gpa }}</span>
-              </td>
-              <td>{{ s.grade }}</td>
-              <td>
-                {% if s.is_pass %}
-                  <span class="badge bg-success bg-opacity-15 text-success">Pass</span>
-                {% else %}
-                  <span class="badge bg-danger bg-opacity-15 text-danger">Fail</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="text-center text-muted py-4"><i class="bi bi-emoji-smile fs-2 d-block mb-2"></i>No students in borderline zone</div>
-      {% endif %}
-    </div>
-  </div>
-</div>
 
 <!-- ─── ROW 8: Top Improvers & Biggest Decliners ─────────── -->
 {% if prior_exam %}

@@ -118,10 +118,17 @@ document.addEventListener('change', function(e) {
           <div style="font-size:1rem; font-weight:700; color:var(--color-text);">{{ exam.name }}</div>
           <div style="font-size:0.75rem; color:var(--color-text-muted);">{{ exam.session.name }}</div>
         </div>
-        <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% else %}badge-gray{% endif %}">
-          {% if exam.status == 'PUBLISHED' %}<i class="bi bi-patch-check-fill me-1"></i>{% endif %}
-          {{ exam.get_status_display }}
-        </span>
+        <div class="text-end">
+          <span class="badge {% if exam.status == 'PUBLISHED' %}badge-green{% else %}badge-gray{% endif %}">
+            {% if exam.status == 'PUBLISHED' %}<i class="bi bi-patch-check-fill me-1"></i>{% endif %}
+            {{ exam.get_status_display }}
+          </span>
+          {% if exam.status != 'PUBLISHED' and not exam.is_aggregate %}
+          <span class="badge bg-primary-subtle text-primary ms-1 exam-progress-badge" data-exam-id="{{ exam.id }}" style="display:none;" title="Marks Entry Progress">
+            <i class="bi bi-bar-chart-fill me-1"></i><span class="progress-text"></span>
+          </span>
+          {% endif %}
+        </div>
         {% if exam.is_aggregate %}
         <span class="badge bg-info ms-2">Aggregate</span>
         {% endif %}
@@ -173,6 +180,23 @@ document.addEventListener('change', function(e) {
     </div>
   </div>
   {% endfor %}
+</div>
+
+<!-- Classwise Progress Modal -->
+<div class="modal fade" id="classProgressModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: var(--radius-lg);">
+      <div class="modal-header border-bottom px-4 pt-4 pb-3">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-bar-chart-fill text-primary me-2"></i>Classwise Progress
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4 py-3" id="classProgressBody">
+        <!-- Progress bars will be injected here -->
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Create Exam Modal -->
@@ -319,6 +343,62 @@ document.addEventListener('change', function(e) {
         });
         isBsToggleCreate.dispatchEvent(new Event('change'));
       }
+      // Store progress data globally
+      window.examProgressData = {};
+      
+      // Load exam progress
+      const progressBadges = document.querySelectorAll('.exam-progress-badge');
+      progressBadges.forEach(badge => {
+          const examId = badge.getAttribute('data-exam-id');
+          fetch(`/marks/exam-progress/${examId}/`)
+              .then(res => res.json())
+              .then(data => {
+                  window.examProgressData[examId] = data;
+                  badge.querySelector('.progress-text').textContent = data.percentage + '%';
+                  badge.style.display = 'inline-block';
+                  badge.style.cursor = 'pointer';
+                  badge.addEventListener('click', () => showClassProgress(examId));
+              })
+              .catch(err => console.error(err));
+      });
+      
+      window.showClassProgress = function(examId) {
+          const data = window.examProgressData[examId];
+          if (!data || !data.class_progress) return;
+          
+          const body = document.getElementById('classProgressBody');
+          body.innerHTML = '';
+          
+          data.class_progress.forEach(cls => {
+              const html = `
+                <div class="d-flex align-items-center mb-3">
+                  <div style="width: 130px;" class="fw-semibold small text-slate-700 text-truncate pe-2" title="${cls.class_name}">
+                    ${cls.class_name}
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="progress" style="height: 8px;">
+                      <div class="progress-bar ${cls.percentage === 100 ? 'bg-success' : 'bg-primary'}" 
+                           role="progressbar" 
+                           style="width: ${cls.percentage}%" 
+                           aria-valuenow="${cls.percentage}" 
+                           aria-valuemin="0" 
+                           aria-valuemax="100"></div>
+                    </div>
+                  </div>
+                  <div style="width: 50px;" class="small text-muted fw-bold text-end pe-2">
+                    ${cls.percentage}%
+                  </div>
+                  <div style="width: 90px;" class="text-end">
+                    ${cls.is_locked ? '<span class="badge bg-danger-subtle text-danger"><i class="bi bi-lock-fill"></i> Locked</span>' : '<span class="badge bg-success-subtle text-success"><i class="bi bi-unlock-fill"></i> Unlocked</span>'}
+                  </div>
+                </div>
+              `;
+              body.insertAdjacentHTML('beforeend', html);
+          });
+          
+          const modal = new bootstrap.Modal(document.getElementById('classProgressModal'));
+          modal.show();
+      };
     }
   });
 </script>
