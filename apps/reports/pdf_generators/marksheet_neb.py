@@ -404,6 +404,7 @@ class NEB11MarksheetPDFGenerator(MarksheetPDFGenerator):
             leftMargin=0.8*cm,
             topMargin=0.4*cm,
             bottomMargin=0.4*cm,
+            title=f"Marksheet - {self.student.name}",
         )
         
         story = self.get_story()
@@ -428,7 +429,7 @@ class NEB11ClassMarksheetsPDFGenerator:
     Combines the output of NEB11MarksheetPDFGenerator for multiple students into one document.
     """
 
-    def __init__(self, school, exam, cls_obj, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.2, exam_title=""):
+    def __init__(self, school, exam, cls_obj, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.0, exam_title=""):
         """
         Initialize the Class NEB11 Marksheets generator.
         """
@@ -453,6 +454,7 @@ class NEB11ClassMarksheetsPDFGenerator:
             leftMargin=0.8*cm,
             topMargin=0.8*cm,
             bottomMargin=0.8*cm,
+            title=f"Marksheets - {self.cls_obj.name}",
         )
         
         story = []

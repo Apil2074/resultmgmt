@@ -98,70 +98,70 @@
     </div>
   </div>
 
-  <!-- Card 3: User Growth -->
+  <!-- Card 3: Total Students -->
   <div class="col-md-3">
     <div class="card sa-card p-3 h-100">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div class="rounded-3 p-2" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981;">
-          <i class="bi bi-graph-up fs-5"></i>
+          <i class="bi bi-mortarboard fs-5"></i>
         </div>
       </div>
-      <div class="text-muted small fw-semibold">User Growth</div>
-      <h2 class="fw-bold text-slate-800 my-1">{{ user_growth_rate }}%</h2>
-      <div class="text-muted small" style="font-size: 0.75rem;">Month-over-month</div>
+      <div class="text-muted small fw-semibold">Total Students</div>
+      <h2 class="fw-bold text-slate-800 my-1">{{ total_students }}</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Across all tenants</div>
     </div>
   </div>
 
-  <!-- Card 4: MAU -->
+  <!-- Card 4: Total Teachers -->
   <div class="col-md-3">
     <div class="card sa-card p-3 h-100">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div class="rounded-3 p-2" style="background-color: rgba(100, 116, 139, 0.1); color: #64748b;">
-          <i class="bi bi-people fs-5"></i>
+          <i class="bi bi-person-workspace fs-5"></i>
         </div>
       </div>
-      <div class="text-muted small fw-semibold">MAU</div>
-      <h2 class="fw-bold text-slate-800 my-1">{{ mau_count }}</h2>
-      <div class="text-muted small" style="font-size: 0.75rem;">Platform engagement</div>
+      <div class="text-muted small fw-semibold">Total Teachers</div>
+      <h2 class="fw-bold text-slate-800 my-1">{{ total_teachers }}</h2>
+      <div class="text-muted small" style="font-size: 0.75rem;">Across all tenants</div>
     </div>
   </div>
 </div>
 
 <!-- Row 2: KPI Grid 2 -->
 <div class="row g-3 mb-4">
-  <!-- Card 5: Active Schools -->
+  <!-- Card 5: Published Results -->
   <div class="col-md-3">
     <div class="card sa-card p-3 h-100">
       <div class="d-flex align-items-center gap-2 mb-2">
-        <span class="d-inline-block rounded-circle bg-primary" style="width: 8px; height: 8px;"></span>
-        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Active Schools (7D)</span>
+        <i class="bi bi-file-earmark-check-fill text-primary small"></i>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Published Results</span>
       </div>
-      <h3 class="fw-bold text-slate-800 m-0">{{ active_schools_count }}</h3>
-      <div class="text-muted small mt-1" style="font-size: 0.75rem;">System usage</div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ published_results_count }}</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">System-wide</div>
     </div>
   </div>
 
-  <!-- Card 6: Renewal Rate -->
+  <!-- Card 6: Demo Accounts -->
   <div class="col-md-3">
     <div class="card sa-card p-3 h-100">
       <div class="d-flex align-items-center gap-2 mb-2">
-        <i class="bi bi-arrow-repeat text-warning small"></i>
-        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Renewal Rate</span>
+        <i class="bi bi-clock-history text-warning small"></i>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Demo Accounts</span>
       </div>
-      <h3 class="fw-bold text-slate-800 m-0">{{ subscription_renewal_rate }}%</h3>
-      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Business health</div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ demo_accounts_count }}</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Trial or evaluation</div>
     </div>
   </div>
 
-  <!-- Card 7: Health Score -->
+  <!-- Card 7: Active Users Today -->
   <div class="col-md-3">
     <div class="card sa-card p-3 h-100">
       <div class="d-flex align-items-center gap-2 mb-2">
-        <i class="bi bi-shield-check text-success small"></i>
-        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Health Score</span>
+        <i class="bi bi-person-check-fill text-success small"></i>
+        <span class="text-muted small fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">Active Users Today</span>
       </div>
-      <h3 class="fw-bold text-slate-800 m-0">{{ customer_health_score }}<span class="text-muted fs-6">/100</span></h3>
-      <div class="text-muted small mt-1" style="font-size: 0.75rem;">SaaS metric</div>
+      <h3 class="fw-bold text-slate-800 m-0">{{ active_users_today }}</h3>
+      <div class="text-muted small mt-1" style="font-size: 0.75rem;">Daily engagement</div>
     </div>
   </div>
 

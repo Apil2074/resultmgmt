@@ -18,7 +18,7 @@ class MarksheetPDFGenerator:
         'NG': 'Not Graded',
     }
 
-    def __init__(self, school, exam, student, result, mark_entries, base_font_size=22.0, line_spacing=1.2, exam_title=""):
+    def __init__(self, school, exam, student, result, mark_entries, base_font_size=22.0, line_spacing=1.0, exam_title=""):
         """
         Initialize the generator with context objects required for the marksheet.
         
@@ -77,7 +77,7 @@ class MarksheetPDFGenerator:
             'school_name': ParagraphStyle(
                 'SchoolNameNEB', fontSize=sfs, fontName='Times-Bold',
                 alignment=TA_CENTER, textColor=colors.black,
-                leading=sfs * 1.2 * bls, spaceAfter=2
+                leading=sfs * 1.2, spaceAfter=2
             ),
             'address': ParagraphStyle(
                 'AddressNEB', fontSize=12, fontName='Times-Roman',
@@ -111,34 +111,34 @@ class MarksheetPDFGenerator:
                 textColor=colors.HexColor('#0f172a'), alignment=TA_CENTER
             ),
             'th': ParagraphStyle(
-                'TableHeader', fontSize=7.5, fontName='Times-Bold',
+                'TableHeader', fontSize=9, fontName='Times-Bold',
                 textColor=colors.HexColor('#1e3a8a'), alignment=TA_CENTER
             ),
             'th_left': ParagraphStyle(
-                'TableHeaderLeft', fontSize=7.5, fontName='Times-Bold',
+                'TableHeaderLeft', fontSize=9, fontName='Times-Bold',
                 textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
             ),
             'cell': ParagraphStyle(
-                'TableCell', fontSize=7.5, fontName='Times-Bold', alignment=TA_CENTER
+                'TableCell', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER
             ),
             'cell_bold': ParagraphStyle(
-                'TableCellBold', fontSize=7.5, fontName='Times-Bold', alignment=TA_CENTER
+                'TableCellBold', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER
             ),
             'cell_left': ParagraphStyle(
-                'TableCellLeft', fontSize=7.5, fontName='Times-Bold', alignment=TA_LEFT
+                'TableCellLeft', fontSize=9, fontName='Times-Bold', alignment=TA_LEFT
             ),
             'cell_danger': ParagraphStyle(
-                'TableCellDanger', fontSize=7.5, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#EF4444')
+                'TableCellDanger', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#EF4444')
             ),
             'cell_fg': ParagraphStyle(
-                'TableCellFG', fontSize=8.5, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#1d4ed8')
+                'TableCellFG', fontSize=9, fontName='Times-Bold', alignment=TA_CENTER, textColor=colors.HexColor('#1d4ed8')
             ),
             'footer_label': ParagraphStyle(
-                'FooterLabel', fontName='Times-Bold', fontSize=8.5,
+                'FooterLabel', fontName='Times-Bold', fontSize=9,
                 textColor=colors.HexColor('#1e3a8a'), alignment=TA_RIGHT
             ),
             'th_non_credit': ParagraphStyle(
-                'ThNonCredit', fontName='Times-Bold', fontSize=8.5,
+                'ThNonCredit', fontName='Times-Bold', fontSize=9,
                 textColor=colors.HexColor('#1e3a8a'), alignment=TA_LEFT
             ),
             'note_title': ParagraphStyle(
@@ -162,11 +162,11 @@ class MarksheetPDFGenerator:
                 textColor=colors.black, alignment=TA_CENTER
             ),
             'att_label': ParagraphStyle(
-                'AttLabel', fontSize=8, fontName='Times-Bold',
+                'AttLabel', fontSize=9, fontName='Times-Bold',
                 textColor=colors.HexColor('#1e293b')
             ),
             'att_val': ParagraphStyle(
-                'AttVal', fontSize=8, fontName='Times-Bold',
+                'AttVal', fontSize=10, fontName='Times-Bold',
                 textColor=colors.black, alignment=TA_CENTER
             ),
             'sig_label': ParagraphStyle(
@@ -187,6 +187,7 @@ class MarksheetPDFGenerator:
             leftMargin=0.8*cm,
             topMargin=0.2*cm,
             bottomMargin=0.2*cm,
+            title=f"Marksheet - {self.student.name}",
         )
         story = self._build_story()
         doc.build(story, onFirstPage=self._header_footer, onLaterPages=self._header_footer)
@@ -696,7 +697,7 @@ class MarksheetPDFGenerator:
                 Paragraph('DAYS', att_label_style)
             ]
         ]
-        att_table = Table(att_table_data, colWidths=[2.3*cm, 1.2*cm, 1.3*cm, 1.2*cm, 1.1*cm])
+        att_table = Table(att_table_data, colWidths=[3*cm, 1.6*cm, 1.3*cm, 1.2*cm, 1.1*cm])
         att_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -720,7 +721,7 @@ class MarksheetPDFGenerator:
                 Paragraph(display_date, att_val_style)
             ]
         ]
-        issue_table = Table(issue_table_data, colWidths=[2.5*cm, 2.5*cm])
+        issue_table = Table(issue_table_data, colWidths=[2.7*cm, 2.6*cm])
         issue_table.setStyle(TableStyle([
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
@@ -777,7 +778,7 @@ class ClassMarksheetsPDFGenerator:
     Each student's marksheet will appear on a new page.
     """
 
-    def __init__(self, school, exam, cls, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.2, exam_title=""):
+    def __init__(self, school, exam, cls, student_results, student_mark_map, base_font_size=22.0, line_spacing=1.0, exam_title=""):
         """
         Initialize the Class Marksheets generator.
         
@@ -811,6 +812,7 @@ class ClassMarksheetsPDFGenerator:
             leftMargin=0.8*cm,
             topMargin=0.4*cm,
             bottomMargin=0.4*cm,
+            title=f"Marksheets - {self.cls.name}",
         )
         
         story = []

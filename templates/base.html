@@ -573,6 +573,31 @@
     });
   </script>
 
+  <!-- FCM Token Registration for Authenticated Users -->
+  {% if user.is_authenticated %}
+  <script>
+    window.addEventListener('fcm_token_ready', function() {
+      if (window.FCM_TOKEN) {
+        fetch('/api/v1/auth/register-fcm-token/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({ token: window.FCM_TOKEN })
+        })
+        .then(response => response.json())
+        .then(data => console.log('FCM Token registered:', data))
+        .catch(error => console.error('Error registering FCM token:', error));
+      }
+    });
+    // Trigger if already available
+    if (window.FCM_TOKEN) {
+        window.dispatchEvent(new Event('fcm_token_ready'));
+    }
+  </script>
+  {% endif %}
+
   {% block extra_js %}{% endblock %}
 </body>
 </html>

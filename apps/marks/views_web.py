@@ -416,13 +416,13 @@ def bulk_mark_import(request, exam_id, class_id):
             messages.error(request, str(ve.message))
             return redirect('mark_entry', exam_id=exam_id, class_id=class_id)
 
-        import openpyxl
         from apps.students.models import Student
         from apps.subjects.models import Subject, StudentSubjectEnrollment
 
         try:
-            wb = openpyxl.load_workbook(request.FILES['excel_file'])
-            ws = wb.active
+            import openpyxl
+            wb = openpyxl.load_workbook(request.FILES['excel_file'], data_only=True)
+            sheet = wb.active
             # Read header row to get subject IDs
             subjects = list(Subject.objects.filter(class_obj=cls, school=school).order_by('order'))
             students_qs = Student.objects.filter(class_obj=cls, school=school)
@@ -1236,8 +1236,11 @@ def mark_entry_all_template(request, exam_id):
     return response
 
 
+from django.db import transaction
+
 @login_required
 @require_POST
+@transaction.atomic
 def bulk_mark_all_import(request, exam_id):
     """Import marks/attendance for all classes from a multi-sheet Excel file."""
     school = request.user.school
@@ -1259,7 +1262,7 @@ def bulk_mark_all_import(request, exam_id):
 
     try:
         import openpyxl
-        wb = openpyxl.load_workbook(request.FILES['excel_file'])
+        wb = openpyxl.load_workbook(request.FILES['excel_file'], data_only=True)
         
         saved_total = 0
         skipped_sheets = []
@@ -1274,6 +1277,8 @@ def bulk_mark_all_import(request, exam_id):
             # Map the exact sheet title that the template generator creates
             safe_title = c.full_name[:31].replace(':', '-').replace('/', '-').lower().strip()
             classes_map[safe_title] = c
+
+        mark_entries_to_upsert = []
 
         for sheet_name in wb.sheetnames:
             ws = wb[sheet_name]
@@ -1440,15 +1445,24 @@ def bulk_mark_all_import(request, exam_id):
                         except ValidationError as ve:
                             raise ValueError(f"Sheet '{sheet_name}', Row {row_num} (Student {roll}): {', '.join(ve.messages) if hasattr(ve, 'messages') else str(ve)}")
     
-                        MarkEntry.objects.update_or_create(
-                            exam=exam, student=student, subject=subject,
-                            defaults=defaults
-                        )
-                        saved_total += 1
+                        mark_entries_to_upsert.append(me)
+                        
                 except ValueError as ve:
                     errors.append(str(ve))
                 except Exception as e:
                     errors.append(f"Sheet '{sheet_name}', Row {row_num} (Student {roll}): {str(e)}")
+
+        if mark_entries_to_upsert:
+            try:
+                MarkEntry.objects.bulk_create(
+                    mark_entries_to_upsert,
+                    update_conflicts=True,
+                    unique_fields=['exam_id', 'student_id', 'subject_id'],
+                    update_fields=['school_id', 'special_value', 'theory_obtained', 'internal_obtained', 'present_days', 'total_days', 'entered_by_id', 'session_id']
+                )
+                saved_total = len(mark_entries_to_upsert)
+            except Exception as e:
+                errors.append(f"Database error during bulk save: {str(e)}")
 
         if saved_total > 0:
             msg = f'Successfully imported {saved_total} mark entries across classes.'

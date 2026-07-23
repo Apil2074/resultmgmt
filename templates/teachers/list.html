@@ -11,6 +11,12 @@
     You must <a href="{% url 'session_list' %}" class="alert-link text-decoration-underline">start an academic session</a> before managing this section.
   </div>
 </div>
+{% else %}
+<div class="d-flex justify-content-end mb-3">
+  <div class="d-inline-flex align-items-center bg-white border rounded-pill px-3 py-1.5 shadow-sm text-primary fw-medium" style="font-size: 0.85rem;">
+    <i class="bi bi-calendar3 me-2"></i> Academic Year: {{ active_session.name }}
+  </div>
+</div>
 {% endif %}
 
 <!-- Modern Enterprise Header -->

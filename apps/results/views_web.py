@@ -159,13 +159,13 @@ def marksheet_pdf(request, exam_id, student_id):
     template_version = request.GET.get('template_version', 'default')
     exam_title = request.GET.get('exam_title', '')
     try:
-        font_size = float(request.GET.get('font_size', 10.0))
+        font_size = float(request.GET.get('font_size', 22.0))
     except ValueError:
-        font_size = 10.0
+        font_size = 22.0
     try:
-        line_spacing = float(request.GET.get('line_spacing', 1.2))
+        line_spacing = float(request.GET.get('line_spacing', 1.0))
     except ValueError:
-        line_spacing = 1.2
+        line_spacing = 1.0
 
     if template_version == 'neb11':
         from apps.reports.pdf_generators import NEB11MarksheetPDFGenerator
@@ -230,13 +230,13 @@ def class_marksheets_pdf(request, exam_id, class_id):
     template_version = request.GET.get('template_version', 'default')
     exam_title = request.GET.get('exam_title', '')
     try:
-        font_size = float(request.GET.get('font_size', 10.0))
+        font_size = float(request.GET.get('font_size', 22.0))
     except ValueError:
-        font_size = 10.0
+        font_size = 22.0
     try:
-        line_spacing = float(request.GET.get('line_spacing', 1.2))
+        line_spacing = float(request.GET.get('line_spacing', 1.0))
     except ValueError:
-        line_spacing = 1.2
+        line_spacing = 1.0
 
     if template_version == 'neb11':
         from apps.reports.pdf_generators import NEB11ClassMarksheetsPDFGenerator
@@ -703,8 +703,8 @@ def marksheet_select(request):
 
     template_version = request.GET.get('template_version', 'default')
     exam_title = request.GET.get('exam_title', '')
-    font_size = request.GET.get('font_size', '10')
-    line_spacing = request.GET.get('line_spacing', '1.2')
+    font_size = request.GET.get('font_size', '22')
+    line_spacing = request.GET.get('line_spacing', '1.0')
 
     context = {
         'exams': exams,

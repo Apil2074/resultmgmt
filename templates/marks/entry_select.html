@@ -3,6 +3,79 @@
 {% block page_title %}📝 Mark Entry Selector{% endblock %}
 
 {% block content %}
+<style>
+  #marksImportOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  #marksImportOverlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .marks-anim-container {
+    position: relative;
+    width: 350px;
+    height: 120px;
+    margin-bottom: 2rem;
+    border-bottom: 3px solid #cbd5e1;
+  }
+  
+  .cloud-icon {
+    position: absolute;
+    right: 20px;
+    bottom: -15px;
+    font-size: 5rem;
+    color: #3b82f6;
+    z-index: 10;
+  }
+  
+  .paper-anim {
+    position: absolute;
+    left: -40px;
+    bottom: 0px;
+    font-size: 2.5rem;
+    color: #475569;
+    animation: slideAndUpload 2s ease-in-out infinite;
+  }
+  
+  .paper-anim:nth-child(2) { animation-delay: 0.6s; color: #10b981; }
+  .paper-anim:nth-child(3) { animation-delay: 1.2s; color: #f59e0b; }
+  
+  @keyframes slideAndUpload {
+    0% { transform: translate(0, 0) rotate(-10deg) scale(0.5); opacity: 0; }
+    20% { opacity: 1; transform: translate(60px, -20px) rotate(0deg) scale(1); }
+    50% { transform: translate(150px, -10px) rotate(10deg) scale(1.1); }
+    80% { opacity: 1; transform: translate(240px, -20px) rotate(0deg) scale(0.8); }
+    100% { transform: translate(280px, 0px) rotate(-10deg) scale(0.5); opacity: 0; }
+  }
+</style>
+
+<!-- Fullscreen Animated Overlay for Marks -->
+<div id="marksImportOverlay">
+  <div class="marks-anim-container">
+    <i class="bi bi-file-earmark-text paper-anim"></i>
+    <i class="bi bi-file-earmark-check-fill paper-anim"></i>
+    <i class="bi bi-file-earmark-bar-graph-fill paper-anim"></i>
+    <i class="bi bi-hdd-rack-fill cloud-icon bg-white px-2"></i>
+  </div>
+  <h4 class="fw-bold text-slate-800 mb-2">Importing Marks...</h4>
+  <p class="text-muted">Processing bulk exam data. This may take a moment.</p>
+</div>
+
 {% if not school.classes.all %}
 <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
@@ -189,6 +262,17 @@ $(document).ready(function() {
   }
 
   $('#examSelect').on('change', function() { updateClasses(); });
+
+  if (importAllForm) {
+    importAllForm.addEventListener('submit', function(e) {
+      if (this.checkValidity()) {
+        const overlay = document.getElementById('marksImportOverlay');
+        if (overlay) {
+          overlay.classList.add('active');
+        }
+      }
+    });
+  }
 
   if (selectedExamId) {
     examSelect.value = selectedExamId;

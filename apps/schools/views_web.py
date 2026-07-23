@@ -288,8 +288,17 @@ def dashboard(request):
         }
 
     elif user.is_super_admin:
+        from apps.students.models import Student
+        from apps.teachers.models import Teacher
+        from apps.results.models import StudentResult
+        from apps.exams.models import Exam
         ctx['total_schools'] = School.objects.count()
-        ctx['total_students'] = 0
+        ctx['total_students'] = Student.objects.filter(is_active=True).count()
+        ctx['total_teachers'] = Teacher.objects.count()
+        ctx['published_results_count'] = Exam.objects.filter(status=Exam.Status.PUBLISHED).count()
+        ctx['demo_accounts_count'] = School.objects.filter(is_demo=True).count()
+        from django.utils import timezone
+        ctx['active_users_today'] = User.objects.filter(last_login__date=timezone.now().date()).count()
         ctx['all_schools'] = School.objects.annotate(
             student_count=Count('students')
         ).order_by('name')
@@ -493,7 +502,8 @@ def super_schools(request):
     
     schools = School.objects.annotate(
         student_count=Count('students', distinct=True),
-        admin_count=Count('users', filter=Q(users__role='SCHOOL_ADMIN'), distinct=True)
+        admin_count=Count('users', filter=Q(users__role='SCHOOL_ADMIN'), distinct=True),
+        teacher_count=Count('teachers', distinct=True)
     ).order_by('name')
     
     return render(request, 'schools/super_schools_list.html', {
@@ -861,13 +871,6 @@ def super_ticket_detail(request, ticket_id):
         'status_choices': SupportTicket.Status.choices
     })
 
-@login_required
-def super_schools(request):
-    if not request.user.is_super_admin:
-        messages.error(request, "Access denied. Super Admin only.")
-        return redirect('dashboard')
-    schools = School.objects.all().order_by('-created_at')
-    return render(request, 'schools/super_schools_list.html', {'schools': schools})
 
 @login_required
 def super_notifications(request):

@@ -224,6 +224,23 @@ def handle_student_deletion(sender, instance, **kwargs):
 
 
 # ---------------------------------------------------------------------------
+# Device Tokens for Push Notifications
+# ---------------------------------------------------------------------------
+class StudentDeviceToken(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='parent_fcm_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Student Device Token'
+        verbose_name_plural = 'Student Device Tokens'
+
+    def __str__(self):
+        return f"{self.student.name} Parent - {self.token[:10]}..."
+
+
+# ---------------------------------------------------------------------------
 # File cleanup signals — delete old student photos when replaced or deleted
 # ---------------------------------------------------------------------------
 from core.signals import delete_old_image_on_change, delete_image_on_delete

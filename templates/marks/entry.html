@@ -175,10 +175,244 @@ input[type=number]::-webkit-outer-spin-button {
     z-index: auto !important;
   }
 }
+
+  /* Lock & Process Overlay */
+  #lockProcessOverlay, #unlockProcessOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  #lockProcessOverlay.active, #unlockProcessOverlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .process-anim-container {
+    position: relative;
+    width: 320px;
+    height: 120px;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .computer-container {
+    position: relative;
+    z-index: 5;
+    margin-left: 40px;
+  }
+  .computer-icon {
+    font-size: 5rem;
+    color: #3b82f6;
+  }
+  .gear-icon {
+    position: absolute;
+    font-size: 1.5rem;
+    color: #f59e0b;
+    top: 25px;
+    left: 32px;
+    animation: spinGear 1.5s linear infinite;
+  }
+  .printer-container {
+    position: relative;
+    z-index: 6;
+    margin-right: 40px;
+  }
+  .printer-icon {
+    font-size: 4.5rem;
+    color: #64748b;
+  }
+  .paper-in {
+    position: absolute;
+    font-size: 2.5rem;
+    color: #10b981;
+    left: 0;
+    animation: paperInAnim 3.5s ease-in-out infinite;
+    z-index: 4;
+  }
+  .paper-out {
+    position: absolute;
+    font-size: 2.5rem;
+    color: #10b981;
+    right: 45px;
+    top: 60px;
+    animation: paperOutAnim 3.5s ease-in-out infinite;
+    z-index: 5;
+    opacity: 0;
+  }
+  
+  .data-line {
+    position: absolute;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    width: 60px;
+    left: 130px;
+    top: 65px;
+    animation: dataFlow 3.5s linear infinite;
+    border-radius: 2px;
+  }
+  
+  @keyframes spinGear {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes paperInAnim {
+    0% { transform: translateX(-20px) scale(0.8); opacity: 0; }
+    15% { transform: translateX(10px) scale(1); opacity: 1; }
+    30% { transform: translateX(50px) scale(0.5); opacity: 0; }
+    100% { opacity: 0; }
+  }
+  
+  @keyframes paperOutAnim {
+    0% { opacity: 0; transform: translateY(-20px) scale(0.5); }
+    50% { opacity: 0; transform: translateY(-20px) scale(0.5); }
+    65% { opacity: 1; transform: translateY(10px) scale(1); }
+    80% { opacity: 1; transform: translateY(35px) scale(1); }
+    95% { opacity: 0; transform: translateY(50px) scale(0.8); }
+    100% { opacity: 0; }
+  }
+  
+  @keyframes dataFlow {
+    0% { opacity: 0; transform: translateX(-10px); }
+    30% { opacity: 0; }
+    35% { opacity: 1; transform: translateX(0); }
+    50% { opacity: 1; transform: translateX(20px); }
+    55% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  
+  /* Unlock Animation Custom Styles */
+  .unlock-anim-wrapper {
+    position: relative;
+    width: 150px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .lock-closed {
+    position: absolute;
+    font-size: 4.5rem;
+    color: #94a3b8;
+    animation: lockClosedToggle 2.5s infinite;
+    z-index: 5;
+  }
+  
+  .lock-opened {
+    position: absolute;
+    font-size: 5rem;
+    color: #10b981;
+    opacity: 0;
+    animation: lockOpenedToggle 2.5s infinite;
+    z-index: 5;
+  }
+  
+  .key-slide {
+    position: absolute;
+    font-size: 2.5rem;
+    color: #fbbf24;
+    left: 10px;
+    animation: slideKey 2.5s infinite;
+    z-index: 6;
+  }
+  
+  .sparkle {
+    position: absolute;
+    color: #f59e0b;
+    font-size: 1.5rem;
+    opacity: 0;
+    z-index: 4;
+  }
+  
+  .sp-1 { top: 0; left: 20px; animation: sparkleAnim 2.5s infinite; }
+  .sp-2 { top: -10px; right: 20px; animation: sparkleAnim 2.5s infinite 0.1s; }
+  .sp-3 { bottom: 20px; right: 10px; animation: sparkleAnim 2.5s infinite 0.2s; }
+
+  @keyframes lockClosedToggle {
+    0% { opacity: 1; transform: scale(1); }
+    35% { opacity: 1; transform: scale(1); }
+    36% { opacity: 0; transform: scale(1); }
+    85% { opacity: 0; transform: scale(1); }
+    86% { opacity: 1; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes lockOpenedToggle {
+    0% { opacity: 0; transform: scale(0.8) translateY(0); }
+    35% { opacity: 0; transform: scale(0.8) translateY(0); }
+    36% { opacity: 1; transform: scale(1.1) translateY(-5px); }
+    45% { opacity: 1; transform: scale(1) translateY(-2px); }
+    85% { opacity: 1; transform: scale(1) translateY(-2px); }
+    86% { opacity: 0; transform: scale(0.8) translateY(0); }
+    100% { opacity: 0; transform: scale(0.8) translateY(0); }
+  }
+  
+  @keyframes slideKey {
+    0% { transform: translateX(-30px) rotate(0deg); opacity: 0; }
+    15% { transform: translateX(25px) rotate(0deg); opacity: 1; }
+    25% { transform: translateX(35px) rotate(90deg); opacity: 1; }
+    35% { transform: translateX(35px) rotate(90deg); opacity: 0; }
+    100% { transform: translateX(35px) rotate(90deg); opacity: 0; }
+  }
+  
+  @keyframes sparkleAnim {
+    0% { transform: scale(0) rotate(0deg); opacity: 0; }
+    35% { transform: scale(0) rotate(0deg); opacity: 0; }
+    45% { transform: scale(1.5) rotate(90deg); opacity: 1; }
+    65% { transform: scale(0.5) rotate(180deg); opacity: 0; }
+    100% { transform: scale(0) rotate(180deg); opacity: 0; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- Fullscreen Animated Overlay for Lock & Process -->
+<div id="lockProcessOverlay">
+  <div class="process-anim-container">
+    <i class="bi bi-file-earmark-spreadsheet-fill paper-in"></i>
+    <div class="computer-container">
+      <i class="bi bi-display computer-icon"></i>
+      <i class="bi bi-gear-fill gear-icon"></i>
+    </div>
+    <div class="data-line"></div>
+    <div class="printer-container">
+      <i class="bi bi-printer-fill printer-icon"></i>
+    </div>
+    <i class="bi bi-file-earmark-check-fill paper-out"></i>
+  </div>
+  <h4 class="fw-bold text-slate-800 mb-2">Processing Results...</h4>
+  <p class="text-muted">Calculating grades, generating reports, and securely locking marks.</p>
+</div>
+
+<!-- Fullscreen Animated Overlay for Unlock Process -->
+<div id="unlockProcessOverlay">
+  <div class="unlock-anim-wrapper">
+    <i class="bi bi-key-fill key-slide"></i>
+    <i class="bi bi-lock-fill lock-closed"></i>
+    <i class="bi bi-unlock-fill lock-opened"></i>
+    <div class="sparkle sp-1"><i class="bi bi-stars"></i></div>
+    <div class="sparkle sp-2"><i class="bi bi-stars"></i></div>
+    <div class="sparkle sp-3"><i class="bi bi-stars"></i></div>
+  </div>
+  <h4 class="fw-bold mb-2 mt-3" style="color: #10b981;">Access Restored!</h4>
+  <p class="text-muted">Unlocking mark entry for this class...</p>
+</div>
+
 <div class="page-header d-flex flex-column align-items-start gap-3 w-100 mb-4">
   
   <div class="d-flex justify-content-between align-items-start w-100">
@@ -212,7 +446,7 @@ input[type=number]::-webkit-outer-spin-button {
     </button>
     {% endif %}
     {% if request.user.can_manage_school %}
-      <form method="POST" action="{% url 'toggle_class_lock' exam.id class_obj.id %}" style="display:inline;" onsubmit="event.preventDefault(); {% if exam_class.is_locked %}confirmAction('Are you sure you want to unlock marks for editing?', () => this.submit());{% else %}validateAndLock(this);{% endif %}">
+      <form method="POST" action="{% url 'toggle_class_lock' exam.id class_obj.id %}" style="display:inline;" onsubmit="event.preventDefault(); {% if exam_class.is_locked %}confirmAction('Are you sure you want to unlock marks for editing?', () => { document.getElementById('unlockProcessOverlay').classList.add('active'); this.submit(); });{% else %}validateAndLock(this);{% endif %}">
         {% csrf_token %}
         {% if exam_class.is_locked %}
           <input type="hidden" name="action" value="unlock">
@@ -812,7 +1046,10 @@ function validateAndLock(formElement) {
     warningMessage = `⚠️ WARNING: There are ${missingCount} missing marks without a special status (e.g. AB/WH). Are you sure you want to lock and process results with missing data?`;
   }
   
-  confirmAction(warningMessage, () => formElement.submit());
+  confirmAction(warningMessage, () => {
+    document.getElementById('lockProcessOverlay').classList.add('active');
+    formElement.submit();
+  });
 }
 
 // Excel-Like Grid Navigation (#10)

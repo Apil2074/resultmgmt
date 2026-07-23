@@ -209,7 +209,10 @@ def parse_class_and_section(class_str):
     return class_str, ''
 
 
+from django.db import transaction
+
 @login_required
+@transaction.atomic
 def student_import(request):
     if request.user.role not in [request.user.Role.SUPER_ADMIN, request.user.Role.SCHOOL_ADMIN]:
         messages.error(request, 'Access denied.')
@@ -238,6 +241,7 @@ def student_import(request):
         
         excel_file = request.FILES['excel_file']
         class_id = request.POST.get('class_id')
+        force_class = request.POST.get('force_class') == '1'
         dropdown_cls = Class.objects.filter(pk=class_id, school=school).first() if class_id else None
 
         active_session = school.get_active_session()
@@ -250,7 +254,7 @@ def student_import(request):
             )
 
         try:
-            wb = openpyxl.load_workbook(excel_file)
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
             created = 0
             errors = []
 
@@ -277,13 +281,15 @@ def student_import(request):
             from apps.classes.models import Class
             for ws in wb.worksheets:
                 class_name = ws.title
-                if class_name.lower() == 'students' and not Class.objects.filter(school=school, name__iexact=class_name).exists():
+                if force_class and dropdown_cls:
+                    cls = dropdown_cls
+                elif class_name.lower() == 'students' and not Class.objects.filter(school=school, session=active_session, name__iexact=class_name).exists():
                     # It might be the default sheet, fallback to dropdown_cls if provided
                     cls = dropdown_cls
                 else:
-                    found_cls = Class.objects.filter(school=school, name__iexact=class_name).first()
+                    found_cls = Class.objects.filter(school=school, session=active_session, name__iexact=class_name).first()
                     if not found_cls:
-                        for c in Class.objects.filter(school=school):
+                        for c in Class.objects.filter(school=school, session=active_session):
                             if c.full_name.lower() == class_name.lower():
                                 found_cls = c
                                 break

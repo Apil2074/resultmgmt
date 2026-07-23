@@ -19,6 +19,9 @@
                     <a href="?logout=1" class="btn btn-sm btn-outline-danger mt-3">
                         <i class="bi bi-box-arrow-right"></i> Logout
                     </a>
+                    <button id="enablePushBtn" class="btn btn-sm btn-outline-primary mt-3 ms-2 d-none" onclick="registerParentFCM({{ student.id }})">
+                        <i class="bi bi-bell"></i> Enable Push Notifications
+                    </button>
                 </div>
             </div>
 
@@ -92,4 +95,61 @@
 
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function checkFCMToken() {
+        if (window.FCM_TOKEN) {
+            const btn = document.getElementById('enablePushBtn');
+            if (btn) btn.classList.remove('d-none');
+        }
+    }
+    
+    // Check if token is already available
+    checkFCMToken();
+    
+    // Also listen for the event
+    window.addEventListener('fcm_token_ready', function() {
+        checkFCMToken();
+    });
+
+    function registerParentFCM(studentId) {
+        if (!window.FCM_TOKEN) return;
+        
+        const btn = document.getElementById('enablePushBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enabling...';
+
+        fetch('/api/v1/students/register-parent-fcm-token/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ 
+                token: window.FCM_TOKEN,
+                student_id: studentId 
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-bell"></i> Enable Push Notifications';
+            } else {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+                btn.innerHTML = '<i class="bi bi-check-circle"></i> Notifications Enabled';
+            }
+        })
+        .catch(error => {
+            console.error('Error registering FCM token:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-bell"></i> Enable Push Notifications';
+            alert('An error occurred while enabling notifications.');
+        });
+    }
+</script>
 {% endblock %}

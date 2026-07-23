@@ -303,6 +303,60 @@
     <i class="bi bi-arrow-left me-1"></i> Back
   </button>
 </div>
+
+<!-- Fullscreen Animated Overlay for PDF Generation -->
+<div id="pdfProcessOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 255, 255, 0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;">
+  <div class="process-anim-container" style="position: relative; width: 320px; height: 120px; margin-bottom: 2rem; display: flex; justify-content: center; align-items: center;">
+    <i class="bi bi-file-earmark-text pdf-doc" style="font-size: 4.5rem; color: #1e3a8a; position: absolute; z-index: 5;"></i>
+    <i class="bi bi-stars pdf-sparkle sp-1" style="color: #f59e0b; position: absolute; font-size: 1.5rem; top: 10px; left: 100px;"></i>
+    <i class="bi bi-stars pdf-sparkle sp-2" style="color: #10b981; position: absolute; font-size: 1.2rem; top: 80px; right: 110px;"></i>
+    <i class="bi bi-stars pdf-sparkle sp-3" style="color: #3b82f6; position: absolute; font-size: 1.8rem; top: -10px; right: 100px;"></i>
+    <i class="bi bi-file-earmark-pdf-fill pdf-final" style="font-size: 4.5rem; color: #ef4444; position: absolute; z-index: 6; opacity: 0;"></i>
+    <i class="bi bi-gear-fill pdf-gear" style="font-size: 2.5rem; color: #64748b; position: absolute; z-index: 4; right: 90px; top: 40px;"></i>
+  </div>
+  <h4 class="fw-bold text-slate-800 mb-2">Generating PDF...</h4>
+  <p class="text-muted">Compiling data and formatting your document.</p>
+</div>
+
+<style>
+  #pdfProcessOverlay.active {
+    opacity: 1 !important;
+    pointer-events: all !important;
+  }
+  .pdf-doc {
+    animation: docPulse 2.5s infinite;
+  }
+  .pdf-final {
+    animation: finalShow 2.5s infinite;
+  }
+  .pdf-gear {
+    animation: spinGear 2s linear infinite;
+  }
+  .pdf-sparkle {
+    animation: sparkleAnim 1.5s infinite;
+  }
+  .sp-1 { animation-delay: 0s; }
+  .sp-2 { animation-delay: 0.3s; }
+  .sp-3 { animation-delay: 0.6s; }
+
+  @keyframes docPulse {
+    0%, 40% { transform: scale(1); opacity: 1; }
+    50%, 100% { transform: scale(0.95); opacity: 0; }
+  }
+  @keyframes finalShow {
+    0%, 40% { opacity: 0; transform: scale(0.8) translateY(10px); }
+    50%, 90% { opacity: 1; transform: scale(1) translateY(0); }
+    100% { opacity: 0; transform: scale(1.1) translateY(-10px); }
+  }
+  @keyframes spinGear {
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes sparkleAnim {
+    0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+    50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+  }
+</style>
+
 {% if not school.classes.all %}
 <div class="alert alert-warning shadow-sm border-warning-subtle d-flex align-items-center mb-4" role="alert">
   <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
@@ -361,17 +415,17 @@
               </div>
 
               <div class="col-12">
-                <label for="examTitle" class="form-label fw-semibold text-slate-700 small mb-1">Exam Title (Optional)</label>
+                <label title="It helps rename the default exam title from the exam settings." for="examTitle" class="form-label fw-semibold text-slate-700 small mb-1">Exam Title (Optional)</label>
                 <input type="text" name="exam_title" id="examTitle" class="form-control form-control-sm" value="{{ exam_title|default:'' }}" placeholder="e.g., First Term Examination">
               </div>
               
               <div class="col-6">
-                <label for="fontSize" class="form-label fw-semibold text-slate-700 small mb-1">School Font Size</label>
-                <input type="number" name="font_size" id="fontSize" class="form-control form-control-sm" value="{{ font_size|default:'22' }}" step="0.5" min="6" max="24">
+                <label title="It adjusts the size of school name on header in the generated pdf" for="fontSize" class="form-label fw-semibold text-slate-700 small mb-1">School Font Size</label>
+                <input type="number"  name="font_size" id="fontSize" class="form-control form-control-sm" value="{{ font_size|default:'22' }}" step="0.5" min="6" max="24">
               </div>
               <div class="col-6">
-                <label for="lineSpacing" class="form-label fw-semibold text-slate-700 small mb-1">Row Spacing</label>
-                <input type="number" name="line_spacing" id="lineSpacing" class="form-control form-control-sm" value="{{ line_spacing|default:'1.2' }}" step="0.1" min="0.8" max="3">
+                <label title="row height contols the space between the subjects on table " for="lineSpacing" class="form-label fw-semibold text-slate-700 small mb-1">Table row height</label>
+                <input type="number" name="line_spacing" id="lineSpacing" class="form-control form-control-sm" value="{{ line_spacing|default:'1.0' }}" step="0.1" min="0.8" max="3">
               </div>
             </form>
             
@@ -431,16 +485,49 @@
           <p class="text-muted max-width-500 mx-auto">Select an examination, class, and student from the options on the left and click <strong>View Marksheet</strong> to load the report card.</p>
         </div>
       {% else %}
+        <div class="pdf-preview-container w-100 position-relative" style="height: calc(100vh - 40px); background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);">
+          <!-- Loading Spinner -->
+          <div id="pdfSpinner" class="position-absolute top-50 start-50 translate-middle text-center" style="z-index: 10;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+              <span class="visually-hidden">Loading PDF...</span>
+            </div>
+            <div class="mt-3 text-slate-700 fw-bold fs-5">Generating PDF Preview...</div>
+            <div class="text-muted small">This may take a few seconds</div>
+          </div>
+          
+          <!-- Embedded PDF -->
+          <iframe 
+            id="pdfPreviewIframe"
+            src="" 
+            width="100%" 
+            height="100%" 
+            style="border: none; position: relative; z-index: 20; background: transparent;"
+            onload="document.getElementById('pdfSpinner').style.display='none';"
+          ></iframe>
+        </div>
 
-        {% for data in students_data %}
-        {% with student=data.student result=data.result credit_mark_entries=data.credit_mark_entries non_credit_mark_entries=data.non_credit_mark_entries present_days=data.present_days total_days=data.total_days %}
-        {% if template_version == 'neb11' %}
-          {% include 'results/partials/neb11_marksheet.html' %}
-        {% else %}
-          {% include 'results/partials/default_marksheet.html' %}
-        {% endif %}
-        {% endwith %}
-        {% endfor %}
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+            const baseUrl = '{% if selected_student_id == "all" %}{% url "class_marksheets_pdf" exam.id class_obj.id %}{% else %}{% url "marksheet_pdf" exam.id selected_student_id %}{% endif %}';
+            
+            // Re-use the existing getPdfParams logic from the bottom of the file
+            // to ensure the preview gets the exact same parameters as the export button.
+            // We append #view=FitH to make the PDF fit horizontally.
+            function getPreviewUrl() {
+              const template = '{{ template_version|default:"default" }}';
+              const title = '{{ exam_title|default:""|escapejs }}';
+              const font = '{{ font_size|default:"22" }}';
+              const spacing = '{{ line_spacing|default:"1.0" }}';
+              const params = `?template_version=${encodeURIComponent(template)}&exam_title=${encodeURIComponent(title)}&font_size=${encodeURIComponent(font)}&line_spacing=${encodeURIComponent(spacing)}`;
+              return baseUrl + params + '#view=FitH&pagemode=none';
+            }
+            
+            const iframe = document.getElementById('pdfPreviewIframe');
+            if (iframe) {
+              iframe.src = getPreviewUrl();
+            }
+          });
+        </script>
       {% endif %}
     </div>
   </div>
@@ -460,7 +547,16 @@ function getPdfParams() {
 }
 
 function exportMarksheetPDF(baseUrl) {
-  window.open(baseUrl + getPdfParams(), '_blank');
+  const overlay = document.getElementById('pdfProcessOverlay');
+  if (overlay) overlay.classList.add('active');
+  
+  setTimeout(() => {
+    window.open(baseUrl + getPdfParams(), '_blank');
+  }, 1000);
+
+  setTimeout(() => {
+    if (overlay) overlay.classList.remove('active');
+  }, 4000);
 }
 
 function printMarksheet(baseUrl) {

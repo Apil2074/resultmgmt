@@ -96,6 +96,23 @@ class Notification(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# Device Tokens for Push Notifications
+# ---------------------------------------------------------------------------
+class UserDeviceToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fcm_tokens')
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'User Device Token'
+        verbose_name_plural = 'User Device Tokens'
+
+    def __str__(self):
+        return f"{self.user.username} - {self.token[:10]}..."
+
+
+# ---------------------------------------------------------------------------
 # File cleanup signals — delete old images when replaced or record deleted
 # ---------------------------------------------------------------------------
 from core.signals import delete_old_image_on_change, delete_image_on_delete

@@ -226,7 +226,10 @@ def teacher_bulk_delete(request):
     return redirect('teacher_list')
 
 
+from django.db import transaction
+
 @login_required
+@transaction.atomic
 def teacher_import(request):
     """Import teachers from Excel."""
     school = request.user.school
@@ -238,7 +241,7 @@ def teacher_import(request):
         excel_file = request.FILES['excel_file']
         
         try:
-            wb = openpyxl.load_workbook(excel_file)
+            wb = openpyxl.load_workbook(excel_file, data_only=True)
             ws = wb.active
             created = 0
             errors = []

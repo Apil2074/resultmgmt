@@ -3,6 +3,81 @@
 {% block page_title %}👥 Import Students from Excel{% endblock %}
 
 {% block content %}
+<style>
+  #importOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  #importOverlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .anim-container {
+    position: relative;
+    width: 350px;
+    height: 120px;
+    border-bottom: 3px solid #cbd5e1;
+    margin-bottom: 2rem;
+  }
+  
+  .school-building {
+    position: absolute;
+    right: 10px;
+    bottom: -5px;
+    font-size: 5rem;
+    color: #3b82f6;
+    z-index: 10;
+  }
+  
+  .student-anim {
+    position: absolute;
+    left: -40px;
+    bottom: 0;
+    font-size: 2.5rem;
+    color: #475569;
+    animation: walkIn 2s linear infinite;
+  }
+  
+  .student-anim:nth-child(2) { animation-delay: 0.6s; color: #10b981; }
+  .student-anim:nth-child(3) { animation-delay: 1.2s; color: #f59e0b; }
+  
+  @keyframes walkIn {
+    0% { transform: translateX(0px) translateY(0); opacity: 0; }
+    10% { opacity: 1; }
+    25% { transform: translateX(80px) translateY(-5px); }
+    50% { transform: translateX(160px) translateY(0); }
+    75% { transform: translateX(240px) translateY(-5px); }
+    90% { opacity: 1; }
+    100% { transform: translateX(300px) translateY(0); opacity: 0; }
+  }
+</style>
+
+<!-- Fullscreen Animated Overlay -->
+<div id="importOverlay">
+  <div class="anim-container">
+    <i class="bi bi-person-walking student-anim"></i>
+    <i class="bi bi-person-walking student-anim"></i>
+    <i class="bi bi-person-walking student-anim"></i>
+    <i class="bi bi-building school-building bg-white px-2 rounded"></i>
+  </div>
+  <h4 class="fw-bold text-slate-800 mb-2">Importing Students...</h4>
+  <p class="text-muted">Please wait while we assign students to their classes.</p>
+</div>
+
 <div class="row">
   <div class="col-lg-7 mb-4">
     <div class="card shadow-sm">
@@ -12,18 +87,25 @@
         </h5>
       </div>
       <div class="card-body p-4">
-        <form method="POST" enctype="multipart/form-data">
+        <form method="POST" enctype="multipart/form-data" id="importForm">
           {% csrf_token %}
           
           <div class="mb-4 form-group">
             <label for="class_id" class="form-label fw-medium text-slate-700">Target Class (Optional)</label>
             <select class="form-select" id="class_id" name="class_id">
-              <option value="" selected>Import into Class specified in Excel (Or select default class)</option>
+              <option value="" selected>Import into Class specified by Sheet name</option>
               {% for cls in classes %}
                 <option value="{{ cls.id }}">{{ cls.full_name }}</option>
               {% endfor %}
             </select>
-            <div class="form-text">Select a class to serve as a fallback if any student rows do not specify a class in the Excel sheet.</div>
+            <div class="form-text">Select a class to serve as a fallback if a sheet name doesn't match an existing class.</div>
+            
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" value="1" id="force_class" name="force_class">
+              <label class="form-check-label text-slate-700 small" for="force_class">
+                Force import all sheets into this selected class (ignore sheet names)
+              </label>
+            </div>
           </div>
 
           <div class="mb-4 form-group">
@@ -32,9 +114,20 @@
             <div class="form-text">Choose the Excel spreadsheet filled with student details.</div>
           </div>
 
-          <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+          <!-- Progress Area (Hidden by default) -->
+          <div id="progressArea" class="d-none mt-4 pt-3 border-top">
+            <div class="d-flex justify-content-between mb-2">
+              <span class="small fw-semibold text-primary"><i class="bi bi-arrow-repeat spin me-2"></i>Importing students...</span>
+              <span class="small text-muted">Please wait, do not close this page</span>
+            </div>
+            <div class="progress" style="height: 10px; border-radius: 10px;">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 100%"></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top" id="actionButtons">
             <a href="{% url 'student_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
-            <button type="submit" class="btn btn-primary px-4">
+            <button type="submit" class="btn btn-primary px-4" id="submitBtn">
               <i class="bi bi-upload me-2"></i>Upload and Import
             </button>
           </div>
@@ -80,4 +173,15 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('importForm');
+    form.addEventListener('submit', function(e) {
+      if (form.checkValidity()) {
+        document.getElementById('importOverlay').classList.add('active');
+      }
+    });
+  });
+</script>
 {% endblock %}

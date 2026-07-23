@@ -26,11 +26,10 @@
              alt="Current App Logo"
              style="height:64px;width:64px;object-fit:contain;border-radius:10px;border:1px solid #e2e8f0;background:#f8fafc;padding:6px;">
         <div>
-          <div class="fw-medium text-slate-700 small mb-1">Current Logo</div>
-          <a href="{% url 'remove_school_logo' %}" class="btn btn-outline-danger btn-sm" 
-                  onclick="event.preventDefault(); showConfirmModal('Remove the current logo?', () => window.location.href = this.href, true)">
+          <button type="submit" name="action" value="remove_logo" class="btn btn-outline-danger btn-sm" 
+                  onclick="if(!confirm('Remove the current logo?')) return false;">
             <i class="bi bi-trash me-1"></i>Remove Logo
-          </a>
+          </button>
         </div>
       </div>
       {% endif %}

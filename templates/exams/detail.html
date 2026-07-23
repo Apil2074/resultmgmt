@@ -141,8 +141,8 @@
   
   <div class="d-flex flex-wrap gap-2">
     {% if exam.is_editable %}
-      <a href="{% url 'exam_edit' exam.id %}" class="btn btn-white border shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center bg-white">
-        <i class="bi bi-pencil me-2 text-primary"></i>Edit Exam
+      <a href="{% url 'exam_edit' exam.id %}" class="btn btn-light bg-white border shadow-sm fw-bold rounded-3 px-4 py-2 d-flex align-items-center hover-elevate" style="transition: all 0.2s;">
+        <i class="bi bi-pencil-fill me-2 text-primary"></i>Edit Exam
       </a>
     {% endif %}
     
@@ -150,18 +150,16 @@
       <form method="POST" action="{% url 'exam_workflow' exam.id %}" class="m-0">
         {% csrf_token %}
         {% if exam.status == 'DRAFT' %}
-          <button type="submit" name="action" value="publish" class="btn btn-success shadow-sm fw-semibold rounded-3 px-3 py-1 d-flex align-items-center">
+          <button type="submit" name="action" value="publish" class="btn btn-success shadow-sm fw-bold rounded-3 px-4 py-2 d-flex align-items-center hover-elevate" style="transition: all 0.2s;">
             <i class="bi bi-patch-check-fill me-2"></i>Publish Results
           </button>
         {% elif exam.status == 'PUBLISHED' and user.can_manage_school %}
-          <button type="submit" name="action" value="unpublish" class="btn btn-danger-elegant fw-bold px-4 py-2 d-flex align-items-center">
+          <button type="submit" name="action" value="unpublish" class="btn btn-danger-elegant fw-bold px-4 py-2 d-flex align-items-center hover-elevate">
             <i class="bi bi-x-circle-fill me-2"></i>Unpublish
           </button>
         {% endif %}
       </form>
     {% endif %}
-
-
   </div>
 </div>
 

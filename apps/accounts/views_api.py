@@ -14,7 +14,7 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 
 from core.permissions import IsSuperAdmin, IsSchoolAdminOrAbove
-from .models import User
+from .models import User, UserDeviceToken
 from .serializers import UserSerializer, ChangePasswordSerializer, ProfileUpdateSerializer
 
 logger = logging.getLogger(__name__)
@@ -116,3 +116,22 @@ class UserListCreateAPIView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()
+
+
+class RegisterFCMTokenAPIView(APIView):
+    """
+    Register an FCM token for the currently authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Save or update token
+        device_token, created = UserDeviceToken.objects.update_or_create(
+            user=request.user,
+            token=token
+        )
+        return Response({'message': 'Token registered successfully'})
