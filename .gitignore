@@ -1,6 +1,7 @@
 .env
 venv/
 db.sqlite3
+firebase_credentials.json
 
 # Python cache files
 __pycache__/

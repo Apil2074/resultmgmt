@@ -257,3 +257,20 @@ LOGGING = {
         },
     },
 }
+
+# Firebase Configuration
+import firebase_admin
+from firebase_admin import credentials
+import os
+
+FIREBASE_CREDENTIALS_FILE = config('FIREBASE_CREDENTIALS_FILE', default=str(BASE_DIR / 'firebase_credentials.json'))
+
+try:
+    if os.path.exists(FIREBASE_CREDENTIALS_FILE):
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(FIREBASE_CREDENTIALS_FILE)
+            firebase_admin.initialize_app(cred)
+    else:
+        print(f"Warning: Firebase credentials file not found at {FIREBASE_CREDENTIALS_FILE}. Push notifications will not work.")
+except Exception as e:
+    print(f"Failed to initialize Firebase: {e}")

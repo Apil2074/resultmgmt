@@ -55,6 +55,30 @@ class Exam(models.Model):
         self.published_by = user
         self.save()
 
+        # Trigger Push Notifications
+        try:
+            from core.fcm_utils import send_notification_to_teachers, send_notification_to_students_parents
+            from apps.students.models import Student
+            
+            # 1. Notify Teachers
+            send_notification_to_teachers(
+                title="Results Published",
+                body=f"Results for '{self.name}' have been published by {user.get_full_name()}.",
+                data={'exam_id': str(self.id), 'type': 'exam_published'}
+            )
+            
+            # 2. Notify Parents of students in this exam
+            students_in_exam = Student.objects.filter(class_obj__exam_classes__exam=self)
+            send_notification_to_students_parents(
+                students=students_in_exam,
+                title="Results Published",
+                body=f"Results for '{self.name}' have been published! Tap to view.",
+                data={'exam_id': str(self.id), 'type': 'exam_published'}
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send push notifications on exam publish: {e}")
+
     def unpublish(self):
         self.status = self.Status.DRAFT
         self.is_locked = False
