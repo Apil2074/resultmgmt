@@ -59,6 +59,8 @@ MIDDLEWARE = [
     'core.middleware.SchoolRequiredMiddleware',
 ]
 
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
