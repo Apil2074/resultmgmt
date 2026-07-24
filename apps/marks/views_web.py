@@ -288,7 +288,10 @@ def save_marks_bulk(request):
     if request.user.is_teacher:
         if not hasattr(request.user, 'teacher_profile'):
             return JsonResponse({'error': 'Unauthorized'}, status=403)
-        assigned_subjects = set(Subject.objects.filter(id__in=subject_ids, class_obj__class_teacher=request.user.teacher_profile).values_list('id', flat=True))
+        teacher_profile = request.user.teacher_profile
+        assigned_subj_ids = set(teacher_profile.subject_assignments.filter(subject_id__in=subject_ids).values_list('subject_id', flat=True))
+        class_teacher_subj_ids = set(Subject.objects.filter(id__in=subject_ids, class_obj__class_teacher=teacher_profile).values_list('id', flat=True))
+        assigned_subjects = assigned_subj_ids | class_teacher_subj_ids
 
     from apps.subjects.models import StudentSubjectEnrollment
     optional_enrollments = set(StudentSubjectEnrollment.objects.filter(

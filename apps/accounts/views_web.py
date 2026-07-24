@@ -608,3 +608,30 @@ class DemoActivationView(View):
         else:
             messages.error(request, "The activation link is invalid or has expired.")
             return redirect('login')
+
+def jwt_auto_login(request):
+    """
+    Seamless bridge for Flutter WebView.
+    Accepts a JWT token, validates it, and sets a session cookie.
+    """
+    token = request.GET.get('token')
+    next_url = request.GET.get('next', '/')
+    
+    if not token:
+        return redirect('login')
+        
+    try:
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+        
+        jwt_auth = JWTAuthentication()
+        validated_token = jwt_auth.get_validated_token(token)
+        user = jwt_auth.get_user(validated_token)
+        
+        if user and user.is_active:
+            login(request, user)
+            return redirect(next_url)
+    except Exception as e:
+        logger.error(f"JWT Auto-login failed: {e}")
+        
+    return redirect('login')

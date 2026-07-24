@@ -49,6 +49,7 @@ urlpatterns = [
         path('exams/', include('apps.exams.urls_api')),
         path('marks/', include('apps.marks.urls_api')),
         path('results/', include('apps.results.urls_api')),
+        path('teachers/', include('apps.teachers.urls_api')),
         path('reports/', include('apps.reports.urls_api')),
     ])),
 ]

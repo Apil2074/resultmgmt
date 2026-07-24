@@ -65,3 +65,17 @@ class SchoolRequiredMiddleware:
             set_current_school(None)
             
         return response
+
+class FlutterAppMiddleware:
+    """
+    Detects if the request is coming from the Flutter app by checking the User-Agent.
+    Sets request.is_flutter_app = True if so.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        request.is_flutter_app = 'RMS-Flutter-App' in user_agent
+        response = self.get_response(request)
+        return response

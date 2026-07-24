@@ -34,7 +34,7 @@ def send_push_notification(tokens, title, body, data=None):
     )
     
     try:
-        response = messaging.send_multicast(message)
+        response = messaging.send_each_for_multicast(message)
         logger.info(f"Successfully sent {response.success_count} messages; {response.failure_count} failures")
         
         # Optionally, handle failure responses to remove stale tokens

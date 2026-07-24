@@ -57,6 +57,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.audit.middleware.AuditMiddleware',
     'core.middleware.SchoolRequiredMiddleware',
+    'core.middleware.FlutterAppMiddleware',
 ]
 
 X_FRAME_OPTIONS = 'SAMEORIGIN'
@@ -160,6 +161,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+        'core.permissions.HasActiveSubscriptionPermission',
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',

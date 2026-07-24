@@ -580,6 +580,7 @@
       if (window.FCM_TOKEN) {
         fetch('/api/v1/auth/register-fcm-token/', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
@@ -594,9 +595,102 @@
     // Trigger if already available
     if (window.FCM_TOKEN) {
         window.dispatchEvent(new Event('fcm_token_ready'));
+    } else if (window.FCMBridge) {
+        // Request token from Flutter
+        window.FCMBridge.postMessage('get_token');
+    } else {
+        // Just in case FCMBridge is injected slightly later
+        setTimeout(() => {
+            if (window.FCMBridge && !window.FCM_TOKEN) {
+                window.FCMBridge.postMessage('get_token');
+            }
+        }, 1000);
     }
   </script>
   {% endif %}
+
+  <!-- Global Form Submit Lockout -->
+  <script>
+    document.addEventListener('submit', function(e) {
+      if (e.target && e.target.tagName === 'FORM') {
+        const submitBtns = e.target.querySelectorAll('button[type="submit"], input[type="submit"]');
+        submitBtns.forEach(btn => {
+          if (!btn.disabled) {
+            // Use setTimeout to allow the form to actually submit before disabling
+            setTimeout(() => {
+              btn.disabled = true;
+              const originalText = btn.innerHTML;
+              if (btn.tagName === 'BUTTON') {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' + originalText;
+              }
+            }, 10);
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Pagination Checkbox Persistence -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const bulkForm = document.getElementById('bulkDeleteForm');
+      if (!bulkForm) return;
+
+      const currentPath = window.location.pathname;
+      const storageKey = 'bulk_selection_' + currentPath;
+      let selectedIds = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+
+      // Checkboxes in the DOM
+      const checkboxes = bulkForm.querySelectorAll('tbody input[type="checkbox"]');
+      
+      // Restore checked state on load
+      checkboxes.forEach(chk => {
+        if (selectedIds.includes(chk.value)) {
+          chk.checked = true;
+          // If there's a listener for enabling a bulk delete button, trigger it
+          chk.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        chk.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (!selectedIds.includes(e.target.value)) selectedIds.push(e.target.value);
+          } else {
+            selectedIds = selectedIds.filter(id => id !== e.target.value);
+          }
+          sessionStorage.setItem(storageKey, JSON.stringify(selectedIds));
+        });
+      });
+
+      // Handle "Select All" if it exists
+      const selectAllChk = bulkForm.querySelector('#selectAll') || bulkForm.querySelector('thead input[type="checkbox"]');
+      if (selectAllChk) {
+        selectAllChk.addEventListener('change', (e) => {
+          checkboxes.forEach(chk => {
+            // Only fire if the state is actually changing
+            if (chk.checked !== e.target.checked) {
+              chk.checked = e.target.checked;
+              chk.dispatchEvent(new Event('change', { bubbles: true })); 
+            }
+          });
+        });
+      }
+
+      // Inject hidden inputs on submit
+      bulkForm.addEventListener('submit', () => {
+        const inputName = checkboxes.length > 0 ? checkboxes[0].name : 'ids';
+        selectedIds.forEach(id => {
+          if (!bulkForm.querySelector(`input[type="checkbox"][value="${id}"]`)) {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = inputName;
+            hiddenInput.value = id;
+            bulkForm.appendChild(hiddenInput);
+          }
+        });
+        sessionStorage.removeItem(storageKey);
+      });
+    });
+  </script>
 
   {% block extra_js %}{% endblock %}
 </body>

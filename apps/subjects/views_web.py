@@ -45,13 +45,15 @@ def subject_list(request):
             practical_credits = request.POST.getlist('practical_credit_hour[]')
             orders = request.POST.getlist('order[]')
             
-            created_classes_count = 0
-            successfully_created_count = 0
+            from django.db import transaction
+
             subject_count = len(codes)
+            subjects_to_create = []
+            has_error = False
+            seen_codes = set()
 
             for cid in class_ids:
                 cls = get_object_or_404(Class, pk=cid, school=school)
-                class_has_created_subject = False
                 for i in range(subject_count):
                     code = codes[i].strip()
                     name = names[i].strip()
@@ -62,7 +64,8 @@ def subject_list(request):
                         theory_credit_hour = float(theory_credits[i]) if (i < len(theory_credits) and theory_credits[i]) else 3.0
                     except ValueError:
                         messages.error(request, f"Invalid theory credit hour value for {name}.")
-                        continue
+                        has_error = True
+                        break
 
                     subject_type = subject_types[i] if i < len(subject_types) else 'COMPULSORY'
                     
@@ -70,7 +73,8 @@ def subject_list(request):
                         order = int(orders[i]) if (i < len(orders) and orders[i]) else 0
                     except ValueError:
                         messages.error(request, f"Invalid display order value for {name}.")
-                        continue
+                        has_error = True
+                        break
                     
                     has_practical = (has_practicals[i] == 'yes') if i < len(has_practicals) else False
                     practical_code = practical_codes[i].strip() if (has_practical and i < len(practical_codes)) else ''
@@ -79,33 +83,57 @@ def subject_list(request):
                         practical_ch = float(practical_credits[i]) if (has_practical and i < len(practical_credits) and practical_credits[i]) else 0.0
                     except ValueError:
                         messages.error(request, f"Invalid practical credit hour value for {name}.")
-                        continue
+                        has_error = True
+                        break
 
+                    if (cid, code) in seen_codes:
+                        messages.error(request, f"Duplicate subject code '{code}' in your submission for class '{cls.name}'.")
+                        has_error = True
+                        break
+                        
+                    if Subject.objects.filter(class_obj=cls, code=code, school=school).exists():
+                        messages.error(request, f"Subject with code '{code}' already exists for class '{cls.name}'.")
+                        has_error = True
+                        break
+                        
+                    seen_codes.add((cid, code))
+                        
+                    sub = Subject(
+                        school=school,
+                        class_obj=cls,
+                        code=code,
+                        name=name,
+                        theory_credit_hour=theory_credit_hour,
+                        has_practical=has_practical,
+                        practical_credit_hour=practical_ch,
+                        practical_code=practical_code,
+                        subject_type=subject_type,
+                        order=order,
+                    )
+                    
                     try:
-                        Subject.objects.create(
-                            school=school,
-                            class_obj=cls,
-                            code=code,
-                            name=name,
-                            theory_credit_hour=theory_credit_hour,
-                            has_practical=has_practical,
-                            practical_credit_hour=practical_ch,
-                            practical_code=practical_code,
-                            subject_type=subject_type,
-                            order=order,
-                        )
-                        successfully_created_count += 1
-                        class_has_created_subject = True
+                        sub.clean()
                     except ValidationError as ve:
                         messages.error(request, f"Validation error for '{name}': {ve.message if hasattr(ve, 'message') else ve}")
-                        continue
-                    except IntegrityError:
-                        messages.error(request, f"Subject with code '{code}' already exists for class '{cls.name}'.")
-                        continue
-                if class_has_created_subject:
-                    created_classes_count += 1
-            if successfully_created_count > 0:
-                messages.success(request, f'{successfully_created_count} subject(s) created across {created_classes_count} class(es).')
+                        has_error = True
+                        break
+                        
+                    subjects_to_create.append(sub)
+                    
+                if has_error:
+                    break
+
+            if has_error:
+                messages.error(request, 'No subjects were created due to errors. Please correct them and try again.')
+            elif subjects_to_create:
+                try:
+                    with transaction.atomic():
+                        Subject.objects.bulk_create(subjects_to_create)
+                        
+                    unique_classes = len(set([sub.class_obj_id for sub in subjects_to_create]))
+                    messages.success(request, f'{len(subjects_to_create)} subject(s) created successfully across {unique_classes} class(es).')
+                except Exception as e:
+                    messages.error(request, f"An unexpected error occurred during creation: {str(e)}")
         elif action == 'delete':
             subj = get_object_or_404(Subject, pk=request.POST.get('subject_id'), school=school)
             subj.delete()

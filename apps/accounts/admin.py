@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
+from django.contrib.auth.admin import UserAdmin
+from .models import User, UserDeviceToken
+
+@admin.register(UserDeviceToken)
+class UserDeviceTokenAdmin(admin.ModelAdmin):
+    list_display = ('user', 'token', 'created_at')
+    search_fields = ('user__username', 'token')
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):

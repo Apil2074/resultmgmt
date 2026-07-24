@@ -1,5 +1,5 @@
 from django.urls import path
-from .views_web import LoginView, logout_view, ChangePasswordView, profile_view, ForgotPasswordView, ResetPasswordConfirmView, LandingPageView, send_notification, send_teacher_notification, mark_notification_read, delete_notification, RegisterDemoView, DemoActivationView
+from .views_web import LoginView, logout_view, ChangePasswordView, profile_view, ForgotPasswordView, ResetPasswordConfirmView, LandingPageView, send_notification, send_teacher_notification, mark_notification_read, delete_notification, RegisterDemoView, DemoActivationView, jwt_auto_login
 
 urlpatterns = [
     path('register/', RegisterDemoView.as_view(), name='register_demo'),
@@ -14,4 +14,5 @@ urlpatterns = [
     path('notifications/send-teacher/', send_teacher_notification, name='send_teacher_notification'),
     path('notifications/read/<int:pk>/', mark_notification_read, name='mark_notification_read'),
     path('notifications/delete/<int:pk>/', delete_notification, name='delete_notification'),
+    path('jwt-auto-login/', jwt_auto_login, name='jwt_auto_login'),
 ]

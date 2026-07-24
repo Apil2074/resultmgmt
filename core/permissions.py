@@ -73,3 +73,24 @@ class ReadOnly(BasePermission):
     """Allow GET/HEAD/OPTIONS only."""
     def has_permission(self, request, view):
         return request.method in ('GET', 'HEAD', 'OPTIONS')
+
+
+from rest_framework.exceptions import PermissionDenied
+
+class HasActiveSubscriptionPermission(BasePermission):
+    """
+    Enforces that authenticated users must have a school with an active subscription.
+    Super Admins are exempt.
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return True
+            
+        if request.user.is_super_admin:
+            return True
+            
+        if request.user.school:
+            if not request.user.school.has_active_subscription():
+                raise PermissionDenied("Your school's subscription has expired. Please contact support.")
+                
+        return True

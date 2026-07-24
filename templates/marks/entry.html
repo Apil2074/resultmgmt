@@ -1052,11 +1052,16 @@ function validateAndLock(formElement) {
   });
 }
 
-// Excel-Like Grid Navigation (#10)
+// Excel-Like Grid Navigation (#10) & QA Input Guards
 document.addEventListener('keydown', function(e) {
   if (e.target.classList.contains('mark-input') || e.target.classList.contains('special-select')) {
-    if (e.target.type === 'number' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-      e.preventDefault(); // Prevent native number spinner
+    if (e.target.type === 'number') {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault(); // Prevent native number spinner
+      }
+      if (['e', 'E', '+', '-'].includes(e.key)) {
+        e.preventDefault(); // QA Fix 2: Block invalid characters
+      }
     }
     
     // Only handle movement keys: Up, Down, Enter, Shift+Left, Shift+Right
@@ -1093,6 +1098,58 @@ document.addEventListener('wheel', function(e) {
   if (document.activeElement && document.activeElement.type === 'number') {
     document.activeElement.blur();
   }
+});
+
+// QA Fix 4: Offline Resilience (Local Storage Auto-save)
+const draftKey = `draft_marks_{{ class_obj.id }}_{{ exam.id }}`;
+
+document.getElementById('marksForm').addEventListener('change', function() {
+  const formData = new FormData(this);
+  const data = Object.fromEntries(formData.entries());
+  delete data.csrfmiddlewaretoken; // Don't save token
+  localStorage.setItem(draftKey, JSON.stringify(data));
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const draft = localStorage.getItem(draftKey);
+  if (draft) {
+    const alertHtml = `
+      <div class="alert alert-warning alert-dismissible fade show mb-4 d-flex align-items-center" role="alert" id="draftAlert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+          <strong>Unsaved Draft Found!</strong> You have marks saved locally from a previous session.
+          <button class="btn btn-sm btn-warning ms-3 fw-bold" id="restoreDraftBtn">Restore Draft</button>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" id="discardDraftBtn" aria-label="Close"></button>
+      </div>
+    `;
+    const formEl = document.getElementById('marksForm');
+    formEl.insertAdjacentHTML('beforebegin', alertHtml);
+
+    document.getElementById('restoreDraftBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      const data = JSON.parse(draft);
+      for (const [key, value] of Object.entries(data)) {
+        const input = document.querySelector(`[name="${key}"]`);
+        if (input) {
+          input.value = value;
+          // Trigger change so calculations update
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      document.getElementById('draftAlert').remove();
+    });
+
+    document.getElementById('discardDraftBtn').addEventListener('click', () => {
+      localStorage.removeItem(draftKey);
+    });
+  }
+});
+
+document.getElementById('marksForm').addEventListener('submit', function() {
+  // Clear draft on submit
+  localStorage.removeItem(draftKey);
 });
 </script>
 {% endblock %}
