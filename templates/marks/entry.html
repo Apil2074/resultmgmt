@@ -1103,21 +1103,26 @@ document.addEventListener('wheel', function(e) {
 // QA Fix 4: Offline Resilience (Local Storage Auto-save)
 const draftKey = `draft_marks_{{ class_obj.id }}_{{ exam.id }}`;
 
-document.getElementById('marksForm').addEventListener('change', function() {
-  const formData = new FormData(this);
-  const data = Object.fromEntries(formData.entries());
-  delete data.csrfmiddlewaretoken; // Don't save token
-  localStorage.setItem(draftKey, JSON.stringify(data));
+document.getElementById('marksForm').addEventListener('change', function(e) {
+  if (e.target.classList.contains('mark-input') || e.target.classList.contains('special-select')) {
+    const data = JSON.parse(localStorage.getItem(draftKey) || '{}');
+    const studentId = e.target.dataset.student;
+    const subjectId = e.target.dataset.subject || '';
+    const field = e.target.dataset.field || '';
+    const valKey = `${studentId}_${subjectId}_${field}`;
+    data[valKey] = e.target.value;
+    localStorage.setItem(draftKey, JSON.stringify(data));
+  }
 });
 
 window.addEventListener('DOMContentLoaded', () => {
   const draft = localStorage.getItem(draftKey);
-  if (draft) {
+  if (draft && draft !== '{}') {
     const alertHtml = `
       <div class="alert alert-warning alert-dismissible fade show mb-4 d-flex align-items-center" role="alert" id="draftAlert">
         <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
         <div>
-          <strong>Unsaved Draft Found!</strong> You have marks saved locally from a previous session.
+          <strong>Unsaved Offline Draft Found!</strong> You have marks saved locally from a previous session where your internet may have disconnected.
           <button class="btn btn-sm btn-warning ms-3 fw-bold" id="restoreDraftBtn">Restore Draft</button>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert" id="discardDraftBtn" aria-label="Close"></button>
@@ -1130,12 +1135,19 @@ window.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const data = JSON.parse(draft);
       for (const [key, value] of Object.entries(data)) {
-        const input = document.querySelector(`[name="${key}"]`);
-        if (input) {
-          input.value = value;
-          // Trigger change so calculations update
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-          input.dispatchEvent(new Event('change', { bubbles: true }));
+        const parts = key.split('_');
+        if (parts.length === 3) {
+          const studentId = parts[0];
+          const subjectId = parts[1];
+          const field = parts[2];
+          const input = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="${field}"]`);
+          if (input && input.value !== value) {
+            input.value = value;
+            // Schedule save for the restored input to sync to server
+            if (typeof scheduleSave === 'function') {
+                scheduleSave(input);
+            }
+          }
         }
       }
       document.getElementById('draftAlert').remove();
@@ -1147,9 +1159,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-document.getElementById('marksForm').addEventListener('submit', function() {
-  // Clear draft on submit
-  localStorage.removeItem(draftKey);
+document.getElementById('saveAllBtn').addEventListener('click', function() {
+  // Wait a moment for ajax to fire, then clear draft
+  setTimeout(() => localStorage.removeItem(draftKey), 1500);
 });
 </script>
 {% endblock %}
