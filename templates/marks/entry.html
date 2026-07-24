@@ -1143,14 +1143,25 @@ window.addEventListener('DOMContentLoaded', () => {
           const input = document.querySelector(`[data-student="${studentId}"][data-subject="${subjectId}"][data-field="${field}"]`);
           if (input && input.value !== value) {
             input.value = value;
-            // Schedule save for the restored input to sync to server
-            if (typeof scheduleSave === 'function') {
-                scheduleSave(input);
+            // Stage for bulk save without triggering individual AJAX calls
+            if (typeof pendingSaves !== 'undefined') {
+              const pendKey = `${studentId}_${subjectId}`;
+              if (!pendingSaves[pendKey]) {
+                pendingSaves[pendKey] = { student_id: studentId, subject_id: subjectId };
+              }
+              pendingSaves[pendKey][field] = value;
+              // Visual indicator
+              input.style.border = '2px solid var(--color-warning)';
             }
           }
         }
       }
       document.getElementById('draftAlert').remove();
+      
+      // Trigger a single bulk save for all restored marks
+      if (typeof saveAllPending === 'function') {
+        saveAllPending();
+      }
     });
 
     document.getElementById('discardDraftBtn').addEventListener('click', () => {
